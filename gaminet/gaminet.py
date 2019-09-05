@@ -526,7 +526,6 @@ class GAMINet(tf.keras.Model):
             fig.add_subplot(ax)
             idx = idx + 1
 
-        # fig.tight_layout()
         if max_ids > 0:
             if save_eps:
                 fig.savefig("%s.png" % save_path, bbox_inches='tight', dpi=100)
