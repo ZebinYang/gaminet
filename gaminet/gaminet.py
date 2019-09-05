@@ -30,7 +30,8 @@ class GAMINet(tf.keras.Model):
                  beta_threshold=0.01,
                  verbose=False,
                  val_ratio=0.2,
-                 early_stop_thres=100):
+                 early_stop_thres=100,
+                 random_state=0):
 
         super(GAMINet, self).__init__()
         # Parameter initiation
@@ -56,6 +57,10 @@ class GAMINet(tf.keras.Model):
         self.verbose = verbose
         self.val_ratio = val_ratio
         self.early_stop_thres = early_stop_thres
+        self.random_state = random_state
+        
+        np.random.seed(random_state)
+        tf.random.set_seed(random_state)
 
         self.categ_variable_num = 0
         self.numerical_input_num = 0
@@ -214,10 +219,12 @@ class GAMINet(tf.keras.Model):
 
         self.err_val = []
         self.err_train = []
-        tr_x = train_x[:int(round((1 - self.val_ratio) * train_x.shape[0])), :]
-        tr_y = train_y[:int(round((1 - self.val_ratio) * train_x.shape[0])), :]
-        val_x = train_x[int(round((1 - self.val_ratio) * train_x.shape[0])):, :]
-        val_y = train_y[int(round((1 - self.val_ratio) * train_x.shape[0])):, :]
+        if self.task_type == "Regression":
+            tr_x, val_x, tr_y, val_y = train_test_split(train_x, train_y, test_size=self.val_ratio, 
+                                          random_state=self.random_state)
+        elif self.task_type == "Classification":
+            tr_x, val_x, tr_y, val_y = train_test_split(train_x, train_y, test_size=self.val_ratio, 
+                                      stratify=train_y, random_state=self.random_state)
 
         # 1. Training
         last_improvement = 0
@@ -332,6 +339,8 @@ class GAMINet(tf.keras.Model):
 
         self.tr_x = tr_x
         self.tr_y = tr_y
+        self.val_x = val_x
+        self.val_y = val_y
         self.evaluate(tr_x, tr_y, training=True)
 
     def local_explain(self, x, y=None, folder="./results", name="demo", save_png=False, save_eps=False):
