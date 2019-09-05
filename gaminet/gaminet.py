@@ -246,7 +246,7 @@ class GAMINet(tf.keras.Model):
                 self.train_step_init(tf.cast(batch_xx, tf.float32), batch_yy)
 
             self.err_train.append(self.evaluate(tr_x, tr_y, training=True))
-            self.err_val.append(self.evaluate(val_x, val_y, training=True))
+            self.err_val.append(self.evaluate(val_x, val_y, training=False))
             if self.verbose & (epoch % 1 == 0):
                 print("Training epoch: %d, train loss: %0.5f, val loss: %0.5f" %
                       (epoch + 1, self.err_train[-1], self.err_val[-1]))
@@ -287,7 +287,7 @@ class GAMINet(tf.keras.Model):
                 self.train_step_interact(tf.cast(batch_xx, tf.float32), batch_yy)
 
             self.err_train.append(self.evaluate(tr_x, tr_y, training=True))
-            self.err_val.append(self.evaluate(val_x, val_y, training=True))
+            self.err_val.append(self.evaluate(val_x, val_y, training=False))
             if self.verbose & (epoch % 1 == 0):
                 print("Training epoch: %d, train loss: %0.5f, val loss: %0.5f" %
                       (epoch + 1, self.err_train[-1], self.err_val[-1]))
@@ -326,7 +326,7 @@ class GAMINet(tf.keras.Model):
                 self.train_step_finetune(tf.cast(batch_xx, tf.float32), batch_yy)
 
             self.err_train.append(self.evaluate(tr_x, tr_y, training=True))
-            self.err_val.append(self.evaluate(val_x, val_y, training=True))
+            self.err_val.append(self.evaluate(val_x, val_y, training=False))
             if self.verbose & (epoch % 1 == 0):
                 print("Tuning epoch: %d, train loss: %0.5f, val loss: %0.5f" %
                       (epoch + 1, self.err_train[-1], self.err_val[-1]))
@@ -342,7 +342,6 @@ class GAMINet(tf.keras.Model):
         self.tr_y = tr_y
         self.val_x = val_x
         self.val_y = val_y
-        self.evaluate(tr_x, tr_y, training=True)
 
     def local_explain(self, x, y=None, folder="./results", name="demo", save_png=False, save_eps=False):
         
@@ -527,7 +526,7 @@ class GAMINet(tf.keras.Model):
             fig.add_subplot(ax)
             idx = idx + 1
 
-        fig.tight_layout()
+        # fig.tight_layout()
         if max_ids > 0:
             if save_eps:
                 fig.savefig("%s.png" % save_path, bbox_inches='tight', dpi=100)
