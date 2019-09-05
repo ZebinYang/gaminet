@@ -4,6 +4,7 @@ import pandas as pd
 import tensorflow as tf
 from tensorflow.keras import layers
 from matplotlib import pyplot as plt
+import matplotlib.gridspec as gridspec
 
 from .layers import *
 from .utils import get_interaction_list
@@ -14,8 +15,8 @@ class GAMINet(tf.keras.Model):
     def __init__(self, input_num,
                  meta_info=None, 
                  subnet_arch=[10, 6],
-                 inter_num=10,
-                 inter_subnet_arch=[100, 60],
+                 interact_num=10,
+                 interact_arch=[100, 60],
                  task_type="Regression",
                  activation_func=tf.tanh,
                  bn_flag=True,
@@ -40,8 +41,8 @@ class GAMINet(tf.keras.Model):
         self.task_type = task_type
         self.subnet_arch = subnet_arch
         self.activation_func = activation_func
-        self.inter_subnet_arch = inter_subnet_arch
-        self.inter_num = min(inter_num, int(round(input_num * (input_num - 1) / 2)))
+        self.interact_arch = interact_arch
+        self.interact_num = min(interact_num, int(round(input_num * (input_num - 1) / 2)))
 
         self.lr_bp = lr_bp
         self.l1_inter = l1_inter
@@ -86,13 +87,13 @@ class GAMINet(tf.keras.Model):
                                  subnet_arch=self.subnet_arch,
                                  activation_func=self.activation_func,
                                  bn_flag=self.bn_flag)
-        self.interact_blocks = InteractionBlock(inter_num=self.inter_num,
-                                meta_info=self.meta_info, 
-                                inter_subnet_arch=self.inter_subnet_arch, 
+        self.interact_blocks = InteractionBlock(interact_num=self.interact_num,
+                                meta_info=self.meta_info,
+                                interact_arch=self.interact_arch,
                                 activation_func=self.activation_func,
                                 bn_flag=self.bn_flag)
         self.output_layer = OutputLayer(input_num=self.input_num,
-                                inter_num=self.inter_num, 
+                                interact_num=self.interact_num,
                                 l1_subnet=self.l1_subnet,
                                 l1_inter=self.l1_inter)
 
@@ -113,14 +114,14 @@ class GAMINet(tf.keras.Model):
         if self.fit_interaction:
             self.interact_outputs = self.interact_blocks(inputs, training=training)
         else:
-            self.interact_outputs = tf.zeros([self.subnet_outputs.shape[0], self.inter_num])
+            self.interact_outputs = tf.zeros([self.subnet_outputs.shape[0], self.interact_num])
 
         concat_list = []
         if self.numerical_input_num > 0:
             concat_list.append(self.subnet_outputs)
         if self.categ_variable_num > 0:
             concat_list.append(self.categ_outputs)
-        if self.inter_num > 0:
+        if self.interact_num > 0:
             concat_list.append(self.interact_outputs)
 
         if self.task_type == "Regression":
@@ -260,10 +261,10 @@ class GAMINet(tf.keras.Model):
         residual = train_pred - train_y
         self.interaction_list = get_interaction_list(train_x,
                                       residual.ravel(),
-                                      interactions=self.inter_num,
+                                      interactions=self.interact_num,
                                       meta_info=self.meta_info,
                                       task_type=self.task_type)
-        self.interact_blocks.set_inter_list(self.interaction_list)
+        self.interact_blocks.set_interaction_list(self.interaction_list)
         self.fit_interaction = True 
         for epoch in range(self.interact_training_epochs):
             shuffle_index = np.arange(tr_x.shape[0])
@@ -297,7 +298,7 @@ class GAMINet(tf.keras.Model):
         last_improvement = 0
         best_validation = np.inf
         subnet_scal_factor = np.zeros((self.input_num, 1))
-        interaction_scal_factor = np.zeros((self.inter_num, 1))
+        interaction_scal_factor = np.zeros((self.interact_num, 1))
         active_univariate_index, active_interaction_index, beta, gamma, componment_scales = self.get_active_subnets()
         subnet_scal_factor[active_univariate_index] = 1
         interaction_scal_factor[active_interaction_index] = 1
@@ -351,7 +352,7 @@ class GAMINet(tf.keras.Model):
             categ_output = self.categ_blocks.apply(x).numpy()
         else:
             categ_output = np.array([])
-        if self.inter_num > 0:
+        if self.interact_num > 0:
             interact_output = self.interact_blocks.apply(x).numpy()
         else:
             interact_output = np.array([])
@@ -362,7 +363,7 @@ class GAMINet(tf.keras.Model):
         effect_names = np.hstack(["Intercept", np.array(self.variables_names)[self.noncateg_index_list],
                    np.array(self.variables_names)[self.categ_index_list],
                    [self.variables_names[self.interaction_list[i][0]] + " x " 
-                    + self.variables_names[self.interaction_list[i][1]] for i in range(self.inter_num)]])
+                    + self.variables_names[self.interaction_list[i][1]] for i in range(self.interact_num)]])
         
         plt.barh(np.arange(len(active_indice)), scores[active_indice][::-1])
         plt.yticks(np.arange(len(active_indice)), effect_names[active_indice][::-1])
@@ -374,212 +375,151 @@ class GAMINet(tf.keras.Model):
             f.savefig("%s.eps" % save_path, bbox_inches='tight', dpi=100)
     
 
-    def global_explain(self, folder="./results", name="demo", cols_per_row=3, main_density=3, save_png=False, save_eps=False):
+    def global_explain(self, folder="./results", name="demo", cols_per_row=3, save_png=False, save_eps=False):
 
         if not os.path.exists(folder):
             os.makedirs(folder)
         save_path = folder + name
 
         idx = 0
-        tick_step = 20
         input_grid_num = 101
-        numerical_tick_loc = np.arange(10, input_grid_num - 10, tick_step).reshape([-1, 1])
         active_univariate_index, active_interaction_index, beta, gamma, componment_scales = self.get_active_subnets()
         max_ids = len(active_univariate_index) + len(active_interaction_index)
-        f = plt.figure(figsize=(6 * cols_per_row, round(max_ids * 6 / cols_per_row)))
+        
+        fig = plt.figure(figsize=(6 * cols_per_row - 2, 
+                      4.6 * int(np.ceil(max_ids / cols_per_row))))
+        outer = gridspec.GridSpec(int(np.ceil(max_ids/cols_per_row)), cols_per_row, wspace=0.25, hspace=0.25)
         for indice in active_univariate_index:
 
             if indice < self.numerical_input_num:
                 
-                ax1 = plt.subplot2grid((main_density * int(np.ceil(max_ids/cols_per_row)), cols_per_row),
-                                (main_density * int(idx/cols_per_row), idx%cols_per_row), 
-                                rowspan=main_density - 1)
-
                 subnet = self.subnet_blocks.subnets[indice]
                 feature_name = list(self.variables_names)[self.noncateg_index_list[indice]]
-
-                sx = self.meta_info[feature_name]["scaler"]
-                data_min, data_max = sx.feature_range[0], sx.feature_range[1]
-                input_grid_step = (data_max - data_min) / 100
-                subnets_inputs = np.arange(data_min, data_max + 0.01, input_grid_step).reshape([-1, 1])
-
+                sx = self.meta_info[feature_name]['scaler']
+                subnets_inputs = np.linspace(-1, 1, 101).reshape([-1, 1])
                 subnets_outputs = np.sign(beta[indice]) * subnet.apply(tf.cast(tf.constant(subnets_inputs), tf.float32)).numpy()
-                x_tick_loc = numerical_tick_loc.ravel()
-                x_tick_values = sx.inverse_transform(subnets_inputs).ravel()[x_tick_loc].ravel()
 
-                if (np.max(x_tick_values) - np.min(x_tick_values)) < 0.01:
-                    x_tick_values = np.array([np.format_float_scientific(x_tick_values[i], 
-                                     precision=1) for i in range(x_tick_values.shape[0])])
-                elif (np.max(x_tick_values) - np.min(x_tick_values)) < 10:
-                    x_tick_values = np.round(x_tick_values, 2)
-                elif (np.max(x_tick_values) - np.min(x_tick_values)) < 1000:
-                    x_tick_values = np.round(x_tick_values).astype(int)
-                else:
-                    x_tick_values = np.array([np.format_float_scientific(x_tick_values[i],
-                                     precision=1) for i in range(x_tick_values.shape[0])])
-
+                inner = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=outer[idx], wspace=0.1, hspace=0.1, height_ratios=[4, 1])
+                ax1 = plt.Subplot(fig, inner[0]) 
                 ax1.plot(subnets_inputs, subnets_outputs)
-                plt.xticks(subnets_inputs[x_tick_loc].ravel(), x_tick_values.ravel(), fontsize=10)
                 ax1.set_ylabel("Score", fontsize=12)
+                ax1.get_yaxis().set_label_coords(-0.15, 0.5)
+                ax1.set_title(feature_name, fontsize=12)
+                fig.add_subplot(ax1)
 
-                ax2 = plt.subplot2grid((main_density * int(np.ceil(max_ids/cols_per_row)), cols_per_row),
-                                (main_density * int(idx/cols_per_row) + main_density - 1, idx%cols_per_row))
-
-                ax2.hist(sx.inverse_transform(self.tr_x[:,[self.noncateg_index_list[indice]]]), density=True, bins=30)
-                ax2.set_ylabel("Density", fontsize=12)
+                ax2 = plt.Subplot(fig, inner[1]) 
+                ax2.hist(sx.inverse_transform(self.tr_x[:,[self.noncateg_index_list[indice]]]), bins=30)
+                ax1.get_shared_x_axes().join(ax1, ax2)
+                ax1.set_xticklabels([])
+                ax2.set_ylabel("Histogram", fontsize=12)
+                ax2.get_yaxis().set_label_coords(-0.15, 0.5)
+                if np.max([len(str(int(ax1.get_yticks()[i]) if (ax1.get_yticks()[i] - int(ax1.get_yticks()[i])) < 0.001 
+                   else ax1.get_yticks()[i].round(5))) for i in range(len(ax1.get_yticks()))]) > 5:
+                    ax1.yaxis.set_tick_params(rotation=20)
+                if np.max([len(str(int(ax2.get_xticks()[i]) if (ax2.get_xticks()[i] - int(ax2.get_xticks()[i])) < 0.001 
+                   else ax2.get_xticks()[i].round(5))) for i in range(len(ax2.get_xticks()))]) > 5:
+                    ax2.xaxis.set_tick_params(rotation=20)
+                if np.max([len(str(int(ax2.get_yticks()[i]))) for i in range(len(ax2.get_yticks()))]) > 5:
+                    ax2.yaxis.set_tick_params(rotation=20)
+                fig.add_subplot(ax2)
                 
             else:
 
-                ax1 = plt.subplot2grid((main_density * int(np.ceil(max_ids/cols_per_row)), cols_per_row),
-                                (main_density * int(idx/cols_per_row), idx%cols_per_row), 
-                                rowspan=main_density - 1)
-                
                 feature_name = self.categ_variable_list[indice - self.numerical_input_num]
                 dummy_gamma = self.categ_blocks.categnets[indice - self.numerical_input_num].categ_bias.numpy()
                 norm = self.categ_blocks.categnets[indice - self.numerical_input_num].moving_norm.numpy()
+
+                inner = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=outer[idx], wspace=0.1, hspace=0.1, height_ratios=[4, 1])
+                ax1 = plt.Subplot(fig, inner[0])
                 ax1.bar(np.arange(len(self.meta_info[feature_name]['values'])), np.sign(beta[indice]) * dummy_gamma[:, 0] / norm)
-                plt.xticks(np.arange(len(self.meta_info[feature_name]['values'])), 
-                          self.meta_info[self.categ_variable_list[indice - self.numerical_input_num]]['values'])
-                ax1.set_ylabel("Score", fontsize=12)
-                
-                ax2 = plt.subplot2grid((main_density * int(np.ceil(max_ids/cols_per_row)), cols_per_row),
-                                (main_density * int(idx/cols_per_row) + main_density - 1, idx%cols_per_row))
-                
                 unique, counts = np.unique(self.tr_x[:, 
                                   self.categ_index_list[indice - self.numerical_input_num]], return_counts=True)
+                ax1.set_ylabel("Score", fontsize=12)
+                ax1.get_yaxis().set_label_coords(-0.15, 0.5)
+                ax1.set_title(feature_name, fontsize=12)
+                fig.add_subplot(ax1)
+
+                ax2 = plt.Subplot(fig, inner[1]) 
                 ax2.bar(np.arange(len(self.meta_info[feature_name]['values'])), counts)
-                plt.xticks(np.arange(len(self.meta_info[feature_name]['values'])), 
-                        self.meta_info[self.categ_variable_list[indice - self.numerical_input_num]]['values'])
-                ax2.set_ylabel("Density", fontsize=12)
-                
-            ax1.set_title(feature_name + " (" + str(np.round(100 * componment_scales[indice], 1)) + "%)", fontsize=12)
+                ax1.get_shared_x_axes().join(ax1, ax2)
+                ax1.set_xticklabels([])
+                ax2.set_xticks(np.arange(len(self.meta_info[feature_name]['values'])))
+                ax2.set_xticklabels(self.meta_info[self.categ_variable_list[indice - self.numerical_input_num]]['values'])
+                ax2.set_ylabel("Histogram", fontsize=12)
+                ax2.get_yaxis().set_label_coords(-0.15, 0.5)
+                if np.max([len(str(int(ax1.get_yticks()[i]) if (ax1.get_yticks()[i] - int(ax1.get_yticks()[i])) < 0.001 
+                   else ax1.get_yticks()[i].round(5))) for i in range(len(ax1.get_yticks()))]) > 5:
+                    ax1.yaxis.set_tick_params(rotation=20)
+                if np.max([len(str(int(ax2.get_xticks()[i]) if (ax2.get_xticks()[i] - int(ax2.get_xticks()[i])) < 0.001 
+                   else ax2.get_xticks()[i].round(5))) for i in range(len(ax2.get_xticks()))]) > 5:
+                    ax2.xaxis.set_tick_params(rotation=20)
+                if np.max([len(str(int(ax2.get_yticks()[i]))) for i in range(len(ax2.get_yticks()))]) > 5:
+                    ax2.yaxis.set_tick_params(rotation=20)
+                fig.add_subplot(ax2)
+
             idx = idx + 1
+            ax1.set_title(feature_name + " (" + str(np.round(100 * componment_scales[indice], 1)) + "%)", fontsize=12)
 
         for indice in active_interaction_index:
-
-            ax1 = plt.subplot2grid((main_density * int(np.ceil(max_ids/cols_per_row)), cols_per_row),
-                            (main_density * int(idx/cols_per_row), idx%cols_per_row), 
-                            rowspan=main_density)
-
+            
             response = []
-            inter_net = self.interact_blocks.sub_interacts[indice]
+            inter_net = self.interact_blocks.interacts[indice]
             feature_name1 = self.variables_names[self.interaction_list[indice][0]]
             feature_name2 = self.variables_names[self.interaction_list[indice][1]]
-            if ((feature_name1 in self.categ_variable_list) & (feature_name2 not in self.categ_variable_list)):
 
-                sx2 = self.meta_info[feature_name2]["scaler"]
-                data_min, data_max = sx2.feature_range[0], sx2.feature_range[1]
-                input_grid_step = (data_max - data_min) / 100
-                numerical_tick_value = np.arange(data_min, data_max + 0.01, input_grid_step).reshape([-1, 1])
-
-                depth1 = len(self.meta_info[feature_name1]['values'])
-                for i in range(depth1):
-                    temp = np.zeros([input_grid_num, depth1])
-                    temp[:, i] = 1   
-                    grid_input = tf.cast(np.hstack([temp, numerical_tick_value[::-1]]), tf.float32)
-                    grid_output = np.sign(gamma[indice]) * inter_net.apply(grid_input).numpy().reshape([-1, 1])
-                    response.append(grid_output)
-
-                response = np.hstack(response)
-                x1_tick_loc = np.arange(depth1)
-                x2_tick_loc = numerical_tick_loc.ravel()
-                x1_real_values = self.meta_info[feature_name1]['values']
-                x2_real_values = sx2.inverse_transform(numerical_tick_value).ravel()[x2_tick_loc][::-1]
-                
-            elif ((feature_name1 not in self.categ_variable_list) & (feature_name2 in self.categ_variable_list)):
-
-                sx1 = self.meta_info[feature_name1]["scaler"] 
-                data_min, data_max = sx1.feature_range[0], sx1.feature_range[1]
-                input_grid_step = (data_max - data_min) / 100
-                numerical_tick_value = np.arange(data_min, data_max + 0.01, input_grid_step).reshape([-1, 1])
-
-                depth2 = len(self.meta_info[feature_name2]['values'])
-                for i in range(depth2):
-                    temp = np.zeros([input_grid_num, depth2])
-                    temp[:, i] = 1   
-                    grid_input = tf.cast(np.hstack([numerical_tick_value, temp]), tf.float32)
-                    grid_output = np.sign(gamma[indice]) * inter_net.apply(grid_input).numpy().reshape([-1, 1])
-                    response.append(grid_output)
-
-                response = np.hstack(response).T
-                x1_tick_loc = numerical_tick_loc.ravel()
-                x2_tick_loc = np.arange(depth2)
-                x1_real_values = sx1.inverse_transform(numerical_tick_value).ravel()[x1_tick_loc]
-                x2_real_values = self.meta_info[feature_name2]['values'][::-1]
-
-            elif ((feature_name1 in self.categ_variable_list) & (feature_name2 in self.categ_variable_list)):
-
-                depth1 = len(self.meta_info[feature_name1]['values'])
-                depth2 = len(self.meta_info[feature_name2]['values'])
-                for i in range(depth2):
-                    temp2 = np.zeros([1, depth2])
-                    temp2[:, i] = 1
-                    response_temp = []
-                    for j in range(depth1):
-                        temp1 = np.zeros([1, depth1])
-                        temp1[:, j] = 1
-                        grid_input = tf.cast(np.hstack([temp1, temp2]), tf.float32)
-                        grid_output = np.sign(gamma[indice])[0] * inter_net.apply(grid_input).numpy()[0][0]
-                        response_temp.append(grid_output)
-                    response.append(response_temp)
-
-                response = np.array(response)
-                x1_tick_loc = np.arange(depth1)
-                x2_tick_loc = np.arange(depth2)
-                x1_real_values = self.meta_info[feature_name1]['values']
-                x2_real_values = self.meta_info[feature_name2]['values'][::-1]
-
+            axis_extent = []
+            interact_input_list = []
+            if feature_name1 in self.categ_variable_list:
+                interact_label1 = self.meta_info[feature_name1]['values']
+                interact_input1 = np.array(np.arange(inter_net.length1), dtype=np.float32)
+                interact_input_list.append(interact_input1)
+                axis_extent.extend([-0.5, inter_net.length1 - 0.5])
             else:
-                sx1 = self.meta_info[feature_name1]["scaler"]
-                sx2 = self.meta_info[feature_name2]["scaler"]
-                
-                data_min, data_max = sx1.feature_range[0], sx1.feature_range[1]
-                input_grid_step = (data_max - data_min) / 100
-                numerical_tick_value1 = np.arange(data_min, data_max + 0.01, input_grid_step).reshape([-1, 1])
-                data_min, data_max = sx2.feature_range[0], sx2.feature_range[1]
-                input_grid_step = (data_max - data_min) / 100
-                numerical_tick_value2 = np.arange(data_min, data_max + 0.01, input_grid_step).reshape([-1, 1])
+                sx1 = self.meta_info[feature_name1]['scaler']    
+                interact_input_list.append(np.array(np.linspace(-1, 1, 101), dtype=np.float32))
+                interact_label1 = sx1.inverse_transform(np.array([-1, 1], dtype=np.float32).reshape([-1, 1])).ravel()
+                axis_extent.extend([interact_label1.min(), interact_label1.max()])
+            if feature_name2 in self.categ_variable_list:
+                interact_label2 = self.meta_info[feature_name2]['values']
+                interact_input2 = np.array(np.arange(inter_net.length2), dtype=np.float32)
+                interact_input_list.append(interact_input2)
+                axis_extent.extend([-0.5, inter_net.length2 - 0.5])
+            else:
+                sx2 = self.meta_info[feature_name2]['scaler']  
+                interact_input_list.append(np.array(np.linspace(-1, 1, 101), dtype=np.float32))
+                interact_label2 = sx2.inverse_transform(np.array([-1, 1], dtype=np.float32).reshape([-1, 1])).ravel()
+                axis_extent.extend([interact_label2.min(), interact_label2.max()])
 
-                x1, x2 = np.meshgrid(numerical_tick_value1, numerical_tick_value2[::-1])
-                response = np.sign(gamma[indice]) * inter_net.apply(tf.cast(np.vstack([x1.ravel(), 
-                                        x2.ravel()]).T, tf.float32)).numpy().reshape([input_grid_num, input_grid_num]) 
+            x1, x2 = np.meshgrid(interact_input_list[0], interact_input_list[1][::-1])
+            input_grid = np.hstack([np.reshape(x1, [-1, 1]), np.reshape(x2, [-1, 1])])
+            response = np.sign(gamma[indice]) * inter_net.apply(input_grid, training=False).numpy().reshape([inter_net.length2, inter_net.length1])
 
-                x1_tick_loc = numerical_tick_loc.ravel() 
-                x2_tick_loc = numerical_tick_loc.ravel()
-                x1_real_values = sx1.inverse_transform(numerical_tick_value1).ravel()[x1_tick_loc]
-                x2_real_values = sx2.inverse_transform(numerical_tick_value2).ravel()[x2_tick_loc][::-1]
+            ax = plt.Subplot(fig, outer[idx]) 
+            cf = ax.imshow(response, interpolation='nearest', aspect='auto', extent=axis_extent)
 
-            if feature_name1 not in self.categ_variable_list:
-                if (np.max(x1_real_values) - np.min(x1_real_values)) < 0.01:
-                    x1_real_values = np.array([np.format_float_scientific(x1_real_values[i], precision=1) for i in range(x1_real_values.shape[0])])
-                elif (np.max(x1_real_values) - np.min(x1_real_values)) < 10:
-                    x1_real_values = np.round(x1_real_values, 2)
-                elif (np.max(x1_real_values) - np.min(x1_real_values)) < 1000:
-                    x1_real_values = np.round(x1_real_values).astype(int)
-                else:
-                    x1_real_values = np.array([np.format_float_scientific(x1_real_values[i], precision=1) for i in range(x1_real_values.shape[0])])
+            if feature_name1 in self.categ_variable_list:
+                ax.set_xticks(interact_input1)
+                ax.set_xticklabels(interact_label1)
+            elif np.max([len(str(int(interact_label1[i]) if (interact_label1[i] - int(interact_label1[i])) < 0.001 
+                             else interact_label1[i].round(5))) for i in range(len(interact_label1))]) > 5:
+                ax.xaxis.set_tick_params(rotation=20)
+            if feature_name2 in self.categ_variable_list:
+                ax.set_yticks(interact_input2)
+                ax.set_yticklabels(interact_label2)
+            elif np.max([len(str(int(interact_label2[i]) if (interact_label2[i] - int(interact_label2[i])) < 0.001 
+                             else interact_label2[i].round(5))) for i in range(len(interact_label2))]) > 5:
+                ax.yaxis.set_tick_params(rotation=20)
 
-            if feature_name2 not in self.categ_variable_list:
-
-                if (np.max(x2_real_values) - np.min(x2_real_values)) < 0.01:
-                    x2_real_values = np.array([np.format_float_scientific(x2_real_values[i], precision=1) for i in range(x2_real_values.shape[0])])
-                elif (np.max(x2_real_values) - np.min(x2_real_values)) < 10:
-                    x2_real_values = np.round(x2_real_values, 2)
-                elif (np.max(x2_real_values) - np.min(x2_real_values)) < 1000:
-                    x2_real_values = np.round(x2_real_values).astype(int)
-                else:
-                    x2_real_values = np.array([np.format_float_scientific(x2_real_values[i], precision=1) for i in range(x2_real_values.shape[0])])
-
-            cf = ax1.imshow(response, interpolation='nearest', aspect='auto')
-            plt.xticks(x1_tick_loc, x1_real_values, fontsize=10)
-            plt.yticks(x2_tick_loc, x2_real_values, fontsize=10)
-            ax1.set_title(feature_name1 + " X " + feature_name2 + " (" + 
+            response_precision = max(int(- np.log10(np.max(response) - np.min(response))) + 2, 0)
+            fig.colorbar(cf, ax=ax, format='%0.' + str(response_precision) + 'f')
+            ax.set_title(feature_name1 + " X " + feature_name2 + " (" + 
                           str(np.round(100 * componment_scales[beta.shape[0] + indice], 1)) + "%)", fontsize=12)
-            f.colorbar(cf, ax=ax1, format='%0.1f', orientation='horizontal')
+            fig.add_subplot(ax)
             idx = idx + 1
-        f.tight_layout()
+
+        fig.tight_layout()
         if max_ids > 0:
             if save_eps:
-                f.savefig("%s.png" % save_path, bbox_inches='tight', dpi=100)
+                fig.savefig("%s.png" % save_path, bbox_inches='tight', dpi=100)
             if save_png:
-                f.savefig("%s.eps" % save_path, bbox_inches='tight', dpi=100)
+                fig.savefig("%s.eps" % save_path, bbox_inches='tight', dpi=100)
