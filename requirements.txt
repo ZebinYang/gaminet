@@ -1,0 +1,14 @@
+### Dependencies        
+### To install, run:    
+### $ pip install -r requirements.txt   
+
+## data processing ##
+numpy>=1.15.2
+pandas
+
+## visualization ##
+matplotlib>=2.2.2
+
+tensorflow>=2.0.0
+
+interpret

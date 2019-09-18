@@ -22,8 +22,8 @@ class GAMINet(tf.keras.Model):
                  activation_func=tf.tanh,
                  bn_flag=True,
                  lr_bp=0.001,
-                 l1_subnet=0.001,
-                 l1_inter=0.001,
+                 l1_sparse=0.001,
+                 l2_smooth=0.000001,
                  batch_size=1000,
                  init_training_epochs=10000,
                  interact_training_epochs=1000, 
@@ -47,8 +47,8 @@ class GAMINet(tf.keras.Model):
         self.interact_num = min(interact_num, int(round(input_num * (input_num - 1) / 2)))
 
         self.lr_bp = lr_bp
-        self.l1_inter = l1_inter
-        self.l1_subnet = l1_subnet
+        self.l1_sparse = l1_sparse
+        self.l2_smooth = l2_smooth
         self.batch_size = batch_size
         self.tuning_epochs = tuning_epochs
         self.init_training_epochs = init_training_epochs
@@ -92,16 +92,17 @@ class GAMINet(tf.keras.Model):
                                  numerical_index_list=list(self.noncateg_index_list),
                                  subnet_arch=self.subnet_arch,
                                  activation_func=self.activation_func,
-                                 bn_flag=self.bn_flag)
+                                 bn_flag=self.bn_flag,
+                                 l2_smooth=self.l2_smooth)
         self.interact_blocks = InteractionBlock(interact_num=self.interact_num,
                                 meta_info=self.meta_info,
                                 interact_arch=self.interact_arch,
                                 activation_func=self.activation_func,
-                                bn_flag=self.bn_flag)
+                                bn_flag=self.bn_flag,
+                                l2_smooth=self.l2_smooth)
         self.output_layer = OutputLayer(input_num=self.input_num,
                                 interact_num=self.interact_num,
-                                l1_subnet=self.l1_subnet,
-                                l1_inter=self.l1_inter)
+                                l1_sparse=self.l1_sparse)
 
         self.fit_interaction = False
         self.optimizer = tf.keras.optimizers.Adam(learning_rate=self.lr_bp)
@@ -145,7 +146,7 @@ class GAMINet(tf.keras.Model):
 
     def predict(self, x):
         return self.predict_graph(x).numpy()
-    
+
     @tf.function
     def evaluate_graph_init(self, x, y, training=False):
         return self.loss_fn(y, self.apply(tf.cast(x, tf.float32), training=training))
@@ -187,7 +188,11 @@ class GAMINet(tf.keras.Model):
 
         with tf.GradientTape() as tape:
             pred = self.apply(inputs, training=True)
-            total_loss = self.loss_fn(labels, pred)
+            pred_loss = self.loss_fn(labels, pred)
+            total_loss = pred_loss
+            if self.l2_smooth > 0:
+                smoothness_loss = self.subnet_blocks.smooth_loss
+                total_loss += smoothness_loss
 
         grads = tape.gradient(total_loss, self.trainable_weights)
         self.optimizer.apply_gradients(zip(grads, self.trainable_weights))
@@ -203,7 +208,7 @@ class GAMINet(tf.keras.Model):
         if self.bn_flag:
             gamma = self.output_layer.interaction_weights.numpy() * self.output_layer.interaction_switcher.numpy()
         else:
-            interaction_norm = [self.interact_blocks.subnets[i].moving_variance.numpy()[0] ** 0.5 for i in range(self.input_num)]
+            interaction_norm = [self.interact_blocks.interacts[i].moving_norm.numpy()[0] for i in range(self.interact_num)]
             gamma = (self.output_layer.interaction_weights.numpy() 
                   * np.array([interaction_norm]).reshape([-1, 1])
                   * self.output_layer.interaction_switcher.numpy())
@@ -245,7 +250,7 @@ class GAMINet(tf.keras.Model):
                 batch_yy = tr_y[offset:(offset + self.batch_size)]
                 self.train_step_init(tf.cast(batch_xx, tf.float32), batch_yy)
 
-            self.err_train.append(self.evaluate(tr_x, tr_y, training=True))
+            self.err_train.append(self.evaluate(tr_x, tr_y, training=False))
             self.err_val.append(self.evaluate(val_x, val_y, training=False))
             if self.verbose & (epoch % 1 == 0):
                 print("Training epoch: %d, train loss: %0.5f, val loss: %0.5f" %
@@ -260,45 +265,46 @@ class GAMINet(tf.keras.Model):
                 break
 
         # 2. interaction detection
-        if self.verbose:
-            print("Interaction training.")
+        if self.interact_num>0:
+            if self.verbose:
+                print("Interaction training.")
 
-        last_improvement = 0
-        best_validation = np.inf
-        train_pred = self.apply(tf.cast(train_x, tf.float32), training=False).numpy()
-        residual = train_pred - train_y
-        self.interaction_list = get_interaction_list(train_x,
-                                      residual.ravel(),
-                                      interactions=self.interact_num,
-                                      meta_info=self.meta_info,
-                                      task_type=self.task_type)
-        self.interact_blocks.set_interaction_list(self.interaction_list)
-        self.fit_interaction = True 
-        for epoch in range(self.interact_training_epochs):
-            shuffle_index = np.arange(tr_x.shape[0])
-            np.random.shuffle(shuffle_index)
-            tr_x = tr_x[shuffle_index]
-            tr_y = tr_y[shuffle_index]
+            last_improvement = 0
+            best_validation = np.inf
+            train_pred = self.apply(tf.cast(train_x, tf.float32), training=False).numpy()
+            residual = train_pred - train_y
+            self.interaction_list = get_interaction_list(train_x,
+                                          residual.ravel(),
+                                          interactions=self.interact_num,
+                                          meta_info=self.meta_info,
+                                          task_type=self.task_type)
+            self.interact_blocks.set_interaction_list(self.interaction_list)
+            self.fit_interaction = True 
+            for epoch in range(self.interact_training_epochs):
+                shuffle_index = np.arange(tr_x.shape[0])
+                np.random.shuffle(shuffle_index)
+                tr_x = tr_x[shuffle_index]
+                tr_y = tr_y[shuffle_index]
 
-            for iterations in range(train_size // self.batch_size):
-                offset = (iterations * self.batch_size) % train_size
-                batch_xx = tr_x[offset:(offset + self.batch_size), :]
-                batch_yy = tr_y[offset:(offset + self.batch_size)]
-                self.train_step_interact(tf.cast(batch_xx, tf.float32), batch_yy)
+                for iterations in range(train_size // self.batch_size):
+                    offset = (iterations * self.batch_size) % train_size
+                    batch_xx = tr_x[offset:(offset + self.batch_size), :]
+                    batch_yy = tr_y[offset:(offset + self.batch_size)]
+                    self.train_step_interact(tf.cast(batch_xx, tf.float32), batch_yy)
 
-            self.err_train.append(self.evaluate(tr_x, tr_y, training=True))
-            self.err_val.append(self.evaluate(val_x, val_y, training=False))
-            if self.verbose & (epoch % 1 == 0):
-                print("Training epoch: %d, train loss: %0.5f, val loss: %0.5f" %
-                      (epoch + 1, self.err_train[-1], self.err_val[-1]))
+                self.err_train.append(self.evaluate(tr_x, tr_y, training=False))
+                self.err_val.append(self.evaluate(val_x, val_y, training=False))
+                if self.verbose & (epoch % 1 == 0):
+                    print("Training epoch: %d, train loss: %0.5f, val loss: %0.5f" %
+                          (epoch + 1, self.err_train[-1], self.err_val[-1]))
 
-            if self.err_val[-1] < best_validation:
-                best_validation = self.err_val[-1]
-                last_improvement = epoch
-            if epoch - last_improvement > self.early_stop_thres:
-                if self.verbose:
-                    print("Early stop at epoch %d, With Testing Error: %0.5f" % (epoch + 1, self.err_val[-1]))
-                break
+                if self.err_val[-1] < best_validation:
+                    best_validation = self.err_val[-1]
+                    last_improvement = epoch
+                if epoch - last_improvement > self.early_stop_thres:
+                    if self.verbose:
+                        print("Early stop at epoch %d, With Testing Error: %0.5f" % (epoch + 1, self.err_val[-1]))
+                    break
 
         # 3. pruning & fine tune
         if self.verbose:
@@ -325,7 +331,7 @@ class GAMINet(tf.keras.Model):
                 batch_yy = tr_y[offset:(offset + self.batch_size)]
                 self.train_step_finetune(tf.cast(batch_xx, tf.float32), batch_yy)
 
-            self.err_train.append(self.evaluate(tr_x, tr_y, training=True))
+            self.err_train.append(self.evaluate(tr_x, tr_y, training=False))
             self.err_val.append(self.evaluate(val_x, val_y, training=False))
             if self.verbose & (epoch % 1 == 0):
                 print("Tuning epoch: %d, train loss: %0.5f, val loss: %0.5f" %
@@ -391,12 +397,11 @@ class GAMINet(tf.keras.Model):
         save_path = folder + name
 
         idx = 0
-        input_grid_num = 101
         active_univariate_index, active_interaction_index, beta, gamma, componment_scales = self.get_active_subnets()
         max_ids = len(active_univariate_index) + len(active_interaction_index)
         
-        fig = plt.figure(figsize=(6 * cols_per_row - 2, 
-                      4.6 * int(np.ceil(max_ids / cols_per_row))))
+        fig = plt.figure(figsize=(6 * cols_per_row, 
+                         4.6 * int(np.ceil(max_ids / cols_per_row))))
         outer = gridspec.GridSpec(int(np.ceil(max_ids/cols_per_row)), cols_per_row, wspace=0.25, hspace=0.25)
         for indice in active_univariate_index:
 
@@ -405,7 +410,7 @@ class GAMINet(tf.keras.Model):
                 subnet = self.subnet_blocks.subnets[indice]
                 feature_name = list(self.variables_names)[self.noncateg_index_list[indice]]
                 sx = self.meta_info[feature_name]['scaler']
-                subnets_inputs = np.linspace(-1, 1, 101).reshape([-1, 1])
+                subnets_inputs = np.linspace(0, 1, subnet.length).reshape([-1, 1])
                 subnets_outputs = np.sign(beta[indice]) * subnet.apply(tf.cast(tf.constant(subnets_inputs), tf.float32)).numpy()
 
                 inner = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=outer[idx], wspace=0.1, hspace=0.1, height_ratios=[4, 1])
@@ -422,14 +427,12 @@ class GAMINet(tf.keras.Model):
                 ax1.set_xticklabels([])
                 ax2.set_ylabel("Histogram", fontsize=12)
                 ax2.get_yaxis().set_label_coords(-0.15, 0.5)
-                if np.max([len(str(int(ax1.get_yticks()[i]) if (ax1.get_yticks()[i] - int(ax1.get_yticks()[i])) < 0.001 
-                   else ax1.get_yticks()[i].round(5))) for i in range(len(ax1.get_yticks()))]) > 5:
-                    ax1.yaxis.set_tick_params(rotation=20)
-                if np.max([len(str(int(ax2.get_xticks()[i]) if (ax2.get_xticks()[i] - int(ax2.get_xticks()[i])) < 0.001 
-                   else ax2.get_xticks()[i].round(5))) for i in range(len(ax2.get_xticks()))]) > 5:
-                    ax2.xaxis.set_tick_params(rotation=20)
-                if np.max([len(str(int(ax2.get_yticks()[i]))) for i in range(len(ax2.get_yticks()))]) > 5:
-                    ax2.yaxis.set_tick_params(rotation=20)
+                if np.sum([len(ax1.get_yticklabels()[i].get_text()) for i in range(len(ax1.get_yticklabels()))]) > 30:
+                    ax1.yaxis.set_tick_params(rotation=15)
+                if np.sum([len(ax2.get_xticklabels()[i].get_text()) for i in range(len(ax2.get_xticklabels()))]) > 30:
+                    ax2.xaxis.set_tick_params(rotation=15)
+                if np.sum([len(ax2.get_yticklabels()[i].get_text()) for i in range(len(ax2.get_yticklabels()))]) > 30:
+                    ax2.yaxis.set_tick_params(rotation=15)
                 fig.add_subplot(ax2)
                 
             else:
@@ -441,29 +444,33 @@ class GAMINet(tf.keras.Model):
                 inner = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=outer[idx], wspace=0.1, hspace=0.1, height_ratios=[4, 1])
                 ax1 = plt.Subplot(fig, inner[0])
                 ax1.bar(np.arange(len(self.meta_info[feature_name]['values'])), np.sign(beta[indice]) * dummy_gamma[:, 0] / norm)
-                unique, counts = np.unique(self.tr_x[:, 
-                                  self.categ_index_list[indice - self.numerical_input_num]], return_counts=True)
                 ax1.set_ylabel("Score", fontsize=12)
                 ax1.get_yaxis().set_label_coords(-0.15, 0.5)
                 ax1.set_title(feature_name, fontsize=12)
                 fig.add_subplot(ax1)
 
                 ax2 = plt.Subplot(fig, inner[1]) 
-                ax2.bar(np.arange(len(self.meta_info[feature_name]['values'])), counts)
+                unique, counts = np.unique(self.tr_x[:, self.categ_index_list[indice - self.numerical_input_num]], return_counts=True)
+                ybar_ticks = np.zeros((len(self.meta_info[feature_name]['values'])))
+                ybar_ticks[unique.astype(int)] = counts
+                ax2.bar(np.arange(len(self.meta_info[feature_name]['values'])), ybar_ticks)
                 ax1.get_shared_x_axes().join(ax1, ax2)
                 ax1.set_xticklabels([])
-                ax2.set_xticks(np.arange(len(self.meta_info[feature_name]['values'])))
-                ax2.set_xticklabels(self.meta_info[self.categ_variable_list[indice - self.numerical_input_num]]['values'])
+                
+                xtick_loc = (np.arange(len(self.meta_info[feature_name]['values'])) if len(self.meta_info[feature_name]['values']) <= 12 else 
+                         np.arange(0, len(self.meta_info[feature_name]['values']) - 1, 
+                               int(len(self.meta_info[feature_name]['values']) / 6)).astype(int))
+                xtick_label = [self.meta_info[feature_name]["values"][i] for i in xtick_loc]
+                ax2.set_xticks(xtick_loc)
+                ax2.set_xticklabels(xtick_label)
                 ax2.set_ylabel("Histogram", fontsize=12)
                 ax2.get_yaxis().set_label_coords(-0.15, 0.5)
-                if np.max([len(str(int(ax1.get_yticks()[i]) if (ax1.get_yticks()[i] - int(ax1.get_yticks()[i])) < 0.001 
-                   else ax1.get_yticks()[i].round(5))) for i in range(len(ax1.get_yticks()))]) > 5:
-                    ax1.yaxis.set_tick_params(rotation=20)
-                if np.max([len(str(int(ax2.get_xticks()[i]) if (ax2.get_xticks()[i] - int(ax2.get_xticks()[i])) < 0.001 
-                   else ax2.get_xticks()[i].round(5))) for i in range(len(ax2.get_xticks()))]) > 5:
-                    ax2.xaxis.set_tick_params(rotation=20)
-                if np.max([len(str(int(ax2.get_yticks()[i]))) for i in range(len(ax2.get_yticks()))]) > 5:
-                    ax2.yaxis.set_tick_params(rotation=20)
+                if np.sum([len(ax1.get_yticklabels()[i].get_text()) for i in range(len(ax1.get_yticklabels()))]) > 30:
+                    ax1.yaxis.set_tick_params(rotation=15)
+                if np.sum([len(ax2.get_xticklabels()[i].get_text()) for i in range(len(ax2.get_xticklabels()))]) > 30:
+                    ax2.xaxis.set_tick_params(rotation=15)
+                if np.sum([len(ax2.get_yticklabels()[i].get_text()) for i in range(len(ax2.get_yticklabels()))]) > 30:
+                    ax2.yaxis.set_tick_params(rotation=15)
                 fig.add_subplot(ax2)
 
             idx = idx + 1
@@ -484,9 +491,9 @@ class GAMINet(tf.keras.Model):
                 interact_input_list.append(interact_input1)
                 axis_extent.extend([-0.5, inter_net.length1 - 0.5])
             else:
-                sx1 = self.meta_info[feature_name1]['scaler']    
-                interact_input_list.append(np.array(np.linspace(-1, 1, 101), dtype=np.float32))
-                interact_label1 = sx1.inverse_transform(np.array([-1, 1], dtype=np.float32).reshape([-1, 1])).ravel()
+                sx1 = self.meta_info[feature_name1]['scaler']
+                interact_input_list.append(np.array(np.linspace(0, 1, inter_net.length1), dtype=np.float32))
+                interact_label1 = sx1.inverse_transform(np.array([0, 1], dtype=np.float32).reshape([-1, 1])).ravel()
                 axis_extent.extend([interact_label1.min(), interact_label1.max()])
             if feature_name2 in self.categ_variable_list:
                 interact_label2 = self.meta_info[feature_name2]['values']
@@ -494,9 +501,9 @@ class GAMINet(tf.keras.Model):
                 interact_input_list.append(interact_input2)
                 axis_extent.extend([-0.5, inter_net.length2 - 0.5])
             else:
-                sx2 = self.meta_info[feature_name2]['scaler']  
-                interact_input_list.append(np.array(np.linspace(-1, 1, 101), dtype=np.float32))
-                interact_label2 = sx2.inverse_transform(np.array([-1, 1], dtype=np.float32).reshape([-1, 1])).ravel()
+                sx2 = self.meta_info[feature_name2]['scaler']
+                interact_input_list.append(np.array(np.linspace(0, 1, inter_net.length2), dtype=np.float32))
+                interact_label2 = sx2.inverse_transform(np.array([0, 1], dtype=np.float32).reshape([-1, 1])).ravel()
                 axis_extent.extend([interact_label2.min(), interact_label2.max()])
 
             x1, x2 = np.meshgrid(interact_input_list[0], interact_input_list[1][::-1])
@@ -507,21 +514,25 @@ class GAMINet(tf.keras.Model):
             cf = ax.imshow(response, interpolation='nearest', aspect='auto', extent=axis_extent)
 
             if feature_name1 in self.categ_variable_list:
-                ax.set_xticks(interact_input1)
-                ax.set_xticklabels(interact_label1)
-            elif np.max([len(str(int(interact_label1[i]) if (interact_label1[i] - int(interact_label1[i])) < 0.001 
-                             else interact_label1[i].round(5))) for i in range(len(interact_label1))]) > 5:
-                ax.xaxis.set_tick_params(rotation=20)
+                xtick_loc = (np.arange(inter_net.length1) if inter_net.length1 <= 12 else
+                            np.arange(0, inter_net.length1 - 1, int(inter_net.length1 / 6)).astype(int))
+                xtick_label = [interact_label1[i] for i in xtick_loc]
+                ax.set_xticks(xtick_loc)
+                ax.set_xticklabels(xtick_label)
+            elif np.sum([len(str(interact_label1[i])) for i in range(len(interact_label1))]) > 30:
+                ax.xaxis.set_tick_params(rotation=15)
             if feature_name2 in self.categ_variable_list:
-                ax.set_yticks(interact_input2)
-                ax.set_yticklabels(interact_label2)
-            elif np.max([len(str(int(interact_label2[i]) if (interact_label2[i] - int(interact_label2[i])) < 0.001 
-                             else interact_label2[i].round(5))) for i in range(len(interact_label2))]) > 5:
-                ax.yaxis.set_tick_params(rotation=20)
+                ytick_loc = (np.arange(inter_net.length2) if inter_net.length2 <= 12 else
+                            np.arange(0, inter_net.length2 - 1, int(inter_net.length2 / 6)).astype(int))
+                ytick_label = [interact_label2[i] for i in ytick_loc]
+                ax.set_yticks(ytick_loc)
+                ax.set_yticklabels(ytick_label)
+            elif np.sum([len(str(interact_label2[i])) for i in range(len(interact_label2))]) > 30:
+                ax.yaxis.set_tick_params(rotation=15)
 
             response_precision = max(int(- np.log10(np.max(response) - np.min(response))) + 2, 0)
             fig.colorbar(cf, ax=ax, format='%0.' + str(response_precision) + 'f')
-            ax.set_title(feature_name1 + " X " + feature_name2 + " (" + 
+            ax.set_title(feature_name1 + " vs. " + feature_name2 + " (" + 
                           str(np.round(100 * componment_scales[beta.shape[0] + indice], 1)) + "%)", fontsize=12)
             fig.add_subplot(ax)
             idx = idx + 1

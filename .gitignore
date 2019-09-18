@@ -1,8 +1,2 @@
 *.ipynb
-issues.txt
-detection_methods/*
-results/*
-data/*
-fanova/*
-gaminet/__pycache__/*
-__pycache__/*
+scripts/*
