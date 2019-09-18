@@ -44,7 +44,8 @@ class GAMIxNN(tf.keras.Model):
         self.subnet_arch = subnet_arch
         self.activation_func = activation_func
         self.interact_arch = interact_arch
-        self.interact_num = min(interact_num, int(round(input_num * (input_num - 1) / 2)))
+        self.max_interact_num = int(round(input_num * (input_num - 1) / 2))
+        self.interact_num = min(interact_num, self.max_interact_num)
 
         self.lr_bp = lr_bp
         self.l1_sparse = l1_sparse
@@ -273,11 +274,15 @@ class GAMIxNN(tf.keras.Model):
             best_validation = np.inf
             train_pred = self.apply(tf.cast(train_x, tf.float32), training=False).numpy()
             residual = train_pred - train_y
-            self.interaction_list = get_interaction_list(train_x,
+            interaction_list_all = get_interaction_list(train_x,
                                           residual.ravel(),
-                                          interactions=self.interact_num,
+                                          interactions=int(round(input_num * (input_num - 1) / 2)),
                                           meta_info=self.meta_info,
                                           task_type=self.task_type)
+            active_univariate_index, active_interaction_index, beta, gamma, componment_scales = self.get_active_subnets()
+            self.interaction_list = [interaction_list_all[i] for i in range(self.max_interact_num) 
+                                     if (interaction_list_all[i][0] in active_univariate_index)
+                                     and (interaction_list_all[i][1] in active_univariate_index)][:self.interact_num]
             self.interact_blocks.set_interaction_list(self.interaction_list)
             self.fit_interaction = True 
             for epoch in range(self.interact_training_epochs):
@@ -390,7 +395,7 @@ class GAMIxNN(tf.keras.Model):
             f.savefig("%s.eps" % save_path, bbox_inches='tight', dpi=100)
     
 
-    def global_explain(self, folder="./results", name="demo", cols_per_row=3, save_png=False, save_eps=False):
+    def global_explain(self, folder="./results", name="demo", cols_per_row=4, save_png=False, save_eps=False):
 
         if not os.path.exists(folder):
             os.makedirs(folder)
