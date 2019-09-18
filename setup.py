@@ -7,7 +7,7 @@ setup(name='gamixnn',
       author='Zebin Yang',
       author_email='yangzb2010@hku.hk',
       license='GPL',
-      packages=['xnn'],
+      packages=['gamixnn'],
       install_requires=[
           'matplotlib>=2.2.2','tensorflow>=2.0.0b0', 'numpy>=1.15.2', 'interpret'],
       zip_safe=False)
