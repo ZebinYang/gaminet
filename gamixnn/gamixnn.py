@@ -276,7 +276,7 @@ class GAMIxNN(tf.keras.Model):
             residual = train_pred - train_y
             interaction_list_all = get_interaction_list(train_x,
                                           residual.ravel(),
-                                          interactions=int(round(input_num * (input_num - 1) / 2)),
+                                          interactions=int(round(self.input_num * (self.input_num - 1) / 2)),
                                           meta_info=self.meta_info,
                                           task_type=self.task_type)
             active_univariate_index, active_interaction_index, beta, gamma, componment_scales = self.get_active_subnets()
