@@ -282,7 +282,7 @@ class GAMIxNN(tf.keras.Model):
             active_univariate_index, active_interaction_index, beta, gamma, componment_scales = self.get_active_subnets()
             self.interaction_list = [interaction_list_all[i] for i in range(self.max_interact_num) 
                                      if (interaction_list_all[i][0] in active_univariate_index)
-                                     and (interaction_list_all[i][1] in active_univariate_index)][:self.interact_num]
+                                     or (interaction_list_all[i][1] in active_univariate_index)][:self.interact_num]
             self.interact_blocks.set_interaction_list(self.interaction_list)
             self.fit_interaction = True 
             for epoch in range(self.interact_training_epochs):
