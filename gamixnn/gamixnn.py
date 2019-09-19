@@ -198,6 +198,21 @@ class GAMIxNN(tf.keras.Model):
         grads = tape.gradient(total_loss, self.trainable_weights)
         self.optimizer.apply_gradients(zip(grads, self.trainable_weights))
 
+    def get_active_main_effects(self):
+        if self.bn_flag:
+            beta = self.output_layer.subnet_weights.numpy()
+        else:
+            subnet_norm = [self.subnet_blocks.subnets[i].moving_norm.numpy()[0] for i in range(self.numerical_input_num)]
+            categ_norm = [self.categ_blocks.categnets[i].moving_norm.numpy()[0]for i in range(self.categ_variable_num)]
+            beta = self.output_layer.subnet_weights.numpy() * np.array([subnet_norm]).reshape([-1, 1])
+        beta = beta * self.output_layer.subnet_switcher.numpy()
+
+        componment_coefs = beta
+        componment_scales = (np.abs(componment_coefs) / np.sum(np.abs(componment_coefs))).reshape([-1])
+        sorted_index = np.argsort(componment_scales)
+        active_univariate_index = sorted_index[componment_scales[sorted_index].cumsum()>self.beta_threshold][::-1]
+        return active_univariate_index, beta, componment_scales
+
     def get_active_subnets(self):
         if self.bn_flag:
             beta = self.output_layer.subnet_weights.numpy()
@@ -279,7 +294,7 @@ class GAMIxNN(tf.keras.Model):
                                           interactions=int(round(self.input_num * (self.input_num - 1) / 2)),
                                           meta_info=self.meta_info,
                                           task_type=self.task_type)
-            active_univariate_index, active_interaction_index, beta, gamma, componment_scales = self.get_active_subnets()
+            active_univariate_index, beta, componment_scales = self.get_active_main_effects()
             self.interaction_list = [interaction_list_all[i] for i in range(self.max_interact_num) 
                                      if (interaction_list_all[i][0] in active_univariate_index)
                                      or (interaction_list_all[i][1] in active_univariate_index)][:self.interact_num]
