@@ -402,6 +402,7 @@ class GAMIxNN(tf.keras.Model):
         save_path = folder + name
 
         idx = 0
+        grid_length = 101
         active_univariate_index, active_interaction_index, beta, gamma, componment_scales = self.get_active_subnets()
         max_ids = len(active_univariate_index) + len(active_interaction_index)
         
@@ -415,7 +416,7 @@ class GAMIxNN(tf.keras.Model):
                 subnet = self.subnet_blocks.subnets[indice]
                 feature_name = list(self.variables_names)[self.noncateg_index_list[indice]]
                 sx = self.meta_info[feature_name]['scaler']
-                subnets_inputs = np.linspace(0, 1, subnet.length).reshape([-1, 1])
+                subnets_inputs = np.linspace(0, 1, grid_length).reshape([-1, 1])
                 subnets_outputs = np.sign(beta[indice]) * subnet.apply(tf.cast(tf.constant(subnets_inputs), tf.float32)).numpy()
 
                 inner = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=outer[idx], wspace=0.1, hspace=0.1, height_ratios=[4, 1])
@@ -497,7 +498,7 @@ class GAMIxNN(tf.keras.Model):
                 axis_extent.extend([-0.5, inter_net.length1 - 0.5])
             else:
                 sx1 = self.meta_info[feature_name1]['scaler']
-                interact_input_list.append(np.array(np.linspace(0, 1, inter_net.length1), dtype=np.float32))
+                interact_input_list.append(np.array(np.linspace(0, 1, grid_length), dtype=np.float32))
                 interact_label1 = sx1.inverse_transform(np.array([0, 1], dtype=np.float32).reshape([-1, 1])).ravel()
                 axis_extent.extend([interact_label1.min(), interact_label1.max()])
             if feature_name2 in self.categ_variable_list:
@@ -507,7 +508,7 @@ class GAMIxNN(tf.keras.Model):
                 axis_extent.extend([-0.5, inter_net.length2 - 0.5])
             else:
                 sx2 = self.meta_info[feature_name2]['scaler']
-                interact_input_list.append(np.array(np.linspace(0, 1, inter_net.length2), dtype=np.float32))
+                interact_input_list.append(np.array(np.linspace(0, 1, grid_length), dtype=np.float32))
                 interact_label2 = sx2.inverse_transform(np.array([0, 1], dtype=np.float32).reshape([-1, 1])).ravel()
                 axis_extent.extend([interact_label2.min(), interact_label2.max()])
 
