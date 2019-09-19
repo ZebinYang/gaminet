@@ -514,7 +514,7 @@ class GAMIxNN(tf.keras.Model):
 
             x1, x2 = np.meshgrid(interact_input_list[0], interact_input_list[1][::-1])
             input_grid = np.hstack([np.reshape(x1, [-1, 1]), np.reshape(x2, [-1, 1])])
-            response = np.sign(gamma[indice]) * inter_net.apply(input_grid, training=False).numpy().reshape([inter_net.length2, inter_net.length1])
+            response = np.sign(gamma[indice]) * inter_net.apply(input_grid, training=False).numpy().reshape([x1.shape[1], x1.shape[0]])
 
             ax = plt.Subplot(fig, outer[idx]) 
             cf = ax.imshow(response, interpolation='nearest', aspect='auto', extent=axis_extent)
