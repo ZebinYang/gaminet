@@ -198,7 +198,7 @@ class GAMIxNN(tf.keras.Model):
         grads = tape.gradient(total_loss, self.trainable_weights)
         self.optimizer.apply_gradients(zip(grads, self.trainable_weights))
 
-    def get_active_main_effects(self):
+    def get_active_main_effects(self, beta_threshold=0):
         if self.bn_flag:
             beta = self.output_layer.subnet_weights.numpy()
         else:
@@ -210,10 +210,10 @@ class GAMIxNN(tf.keras.Model):
         componment_coefs = beta
         componment_scales = (np.abs(componment_coefs) / np.sum(np.abs(componment_coefs))).reshape([-1])
         sorted_index = np.argsort(componment_scales)
-        active_univariate_index = sorted_index[componment_scales[sorted_index].cumsum()>self.beta_threshold][::-1]
+        active_univariate_index = sorted_index[componment_scales[sorted_index].cumsum()>beta_threshold][::-1]
         return active_univariate_index, beta, componment_scales
 
-    def get_active_subnets(self):
+    def get_active_subnets(self, beta_threshold=0):
         if self.bn_flag:
             beta = self.output_layer.subnet_weights.numpy()
         else:
@@ -232,7 +232,7 @@ class GAMIxNN(tf.keras.Model):
         componment_coefs = np.vstack([beta, gamma])
         componment_scales = (np.abs(componment_coefs) / np.sum(np.abs(componment_coefs))).reshape([-1])
         sorted_index = np.argsort(componment_scales)
-        active_index = sorted_index[componment_scales[sorted_index].cumsum()>self.beta_threshold][::-1]
+        active_index = sorted_index[componment_scales[sorted_index].cumsum()>beta_threshold][::-1]
         active_univariate_index = active_index[active_index<beta.shape[0]]
         active_interaction_index = active_index[active_index>=beta.shape[0]] - beta.shape[0]
         return active_univariate_index, active_interaction_index, beta, gamma, componment_scales
@@ -294,7 +294,7 @@ class GAMIxNN(tf.keras.Model):
                                           interactions=int(round(self.input_num * (self.input_num - 1) / 2)),
                                           meta_info=self.meta_info,
                                           task_type=self.task_type)
-            active_univariate_index, beta, componment_scales = self.get_active_main_effects()
+            active_univariate_index, beta, componment_scales = self.get_active_main_effects(self.beta_threshold)
             self.interaction_list = [interaction_list_all[i] for i in range(self.max_interact_num) 
                                      if (interaction_list_all[i][0] in active_univariate_index)
                                      or (interaction_list_all[i][1] in active_univariate_index)][:self.interact_num]
@@ -326,43 +326,43 @@ class GAMIxNN(tf.keras.Model):
                         print("Early stop at epoch %d, With Testing Error: %0.5f" % (epoch + 1, self.err_val[-1]))
                     break
 
-        # 3. pruning & fine tune
-        if self.verbose:
-            print("Subnetwork pruning & Fine tuning.")
-        last_improvement = 0
-        best_validation = np.inf
-        subnet_scal_factor = np.zeros((self.input_num, 1))
-        interaction_scal_factor = np.zeros((self.interact_num, 1))
-        active_univariate_index, active_interaction_index, beta, gamma, componment_scales = self.get_active_subnets()
-        subnet_scal_factor[active_univariate_index] = 1
-        interaction_scal_factor[active_interaction_index] = 1
-        self.output_layer.subnet_switcher.assign(tf.constant(subnet_scal_factor, dtype=tf.float32))
-        self.output_layer.interaction_switcher.assign(tf.constant(interaction_scal_factor, dtype=tf.float32))
+#         # 3. pruning & fine tune
+#         if self.verbose:
+#             print("Subnetwork pruning & Fine tuning.")
+#         last_improvement = 0
+#         best_validation = np.inf
+#         subnet_scal_factor = np.zeros((self.input_num, 1))
+#         interaction_scal_factor = np.zeros((self.interact_num, 1))
+#         active_univariate_index, active_interaction_index, beta, gamma, componment_scales = self.get_active_subnets()
+#         subnet_scal_factor[active_univariate_index] = 1
+#         interaction_scal_factor[active_interaction_index] = 1
+#         self.output_layer.subnet_switcher.assign(tf.constant(subnet_scal_factor, dtype=tf.float32))
+#         self.output_layer.interaction_switcher.assign(tf.constant(interaction_scal_factor, dtype=tf.float32))
         
-        for epoch in range(self.tuning_epochs):
-            shuffle_index = np.arange(tr_x.shape[0])
-            np.random.shuffle(shuffle_index)
-            tr_x = tr_x[shuffle_index]
-            tr_y = tr_y[shuffle_index]
+#         for epoch in range(self.tuning_epochs):
+#             shuffle_index = np.arange(tr_x.shape[0])
+#             np.random.shuffle(shuffle_index)
+#             tr_x = tr_x[shuffle_index]
+#             tr_y = tr_y[shuffle_index]
 
-            for iterations in range(train_size // self.batch_size):
-                offset = (iterations * self.batch_size) % train_size
-                batch_xx = tr_x[offset:(offset + self.batch_size), :]
-                batch_yy = tr_y[offset:(offset + self.batch_size)]
-                self.train_step_finetune(tf.cast(batch_xx, tf.float32), batch_yy)
+#             for iterations in range(train_size // self.batch_size):
+#                 offset = (iterations * self.batch_size) % train_size
+#                 batch_xx = tr_x[offset:(offset + self.batch_size), :]
+#                 batch_yy = tr_y[offset:(offset + self.batch_size)]
+#                 self.train_step_finetune(tf.cast(batch_xx, tf.float32), batch_yy)
 
-            self.err_train.append(self.evaluate(tr_x, tr_y, training=False))
-            self.err_val.append(self.evaluate(val_x, val_y, training=False))
-            if self.verbose & (epoch % 1 == 0):
-                print("Tuning epoch: %d, train loss: %0.5f, val loss: %0.5f" %
-                      (epoch + 1, self.err_train[-1], self.err_val[-1]))
-            if self.err_val[-1] < best_validation:
-                best_validation = self.err_val[-1]
-                last_improvement = epoch
-            if epoch - last_improvement > self.early_stop_thres:
-                if self.verbose:
-                    print("Early stop at epoch %d, With Testing Error: %0.5f" % (epoch + 1, self.err_val[-1]))
-                break
+#             self.err_train.append(self.evaluate(tr_x, tr_y, training=False))
+#             self.err_val.append(self.evaluate(val_x, val_y, training=False))
+#             if self.verbose & (epoch % 1 == 0):
+#                 print("Tuning epoch: %d, train loss: %0.5f, val loss: %0.5f" %
+#                       (epoch + 1, self.err_train[-1], self.err_val[-1]))
+#             if self.err_val[-1] < best_validation:
+#                 best_validation = self.err_val[-1]
+#                 last_improvement = epoch
+#             if epoch - last_improvement > self.early_stop_thres:
+#                 if self.verbose:
+#                     print("Early stop at epoch %d, With Testing Error: %0.5f" % (epoch + 1, self.err_val[-1]))
+#                 break
 
         self.tr_x = tr_x
         self.tr_y = tr_y
