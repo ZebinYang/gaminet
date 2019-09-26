@@ -2,6 +2,7 @@ import os
 import numpy as np
 import pandas as pd 
 import tensorflow as tf
+from scipy import stats
 from tensorflow.keras import layers
 from matplotlib import pyplot as plt
 import matplotlib.gridspec as gridspec
@@ -13,22 +14,20 @@ from .utils import get_interaction_list
 
 class GAMIxNN(tf.keras.Model):
 
-    def __init__(self, input_num,
-                 meta_info=None, 
+    def __init__(self, meta_info, 
                  subnet_arch=[10, 6],
                  interact_num=10,
                  interact_arch=[100, 60],
                  task_type="Regression",
                  activation_func=tf.tanh,
-                 bn_flag=True,
+                 grid_size=21,
                  lr_bp=0.001,
-                 l1_sparse=0.001,
-                 l2_smooth=0.000001,
                  batch_size=1000,
                  init_training_epochs=10000,
                  interact_training_epochs=1000, 
                  tuning_epochs=500,
                  beta_threshold=0.01,
+                 gamma_threshold=0.01,
                  verbose=False,
                  val_ratio=0.2,
                  early_stop_thres=100,
@@ -36,25 +35,24 @@ class GAMIxNN(tf.keras.Model):
 
         super(GAMIxNN, self).__init__()
         # Parameter initiation
-        self.input_num = input_num
         self.meta_info = meta_info
+        self.input_num = len(meta_info) - 1
         
-        self.bn_flag = bn_flag
         self.task_type = task_type
         self.subnet_arch = subnet_arch
+        self.grid_size = grid_size
         self.activation_func = activation_func
         self.interact_arch = interact_arch
-        self.max_interact_num = int(round(input_num * (input_num - 1) / 2))
+        self.max_interact_num = int(round(self.input_num * (self.input_num - 1) / 2))
         self.interact_num = min(interact_num, self.max_interact_num)
 
         self.lr_bp = lr_bp
-        self.l1_sparse = l1_sparse
-        self.l2_smooth = l2_smooth
         self.batch_size = batch_size
         self.tuning_epochs = tuning_epochs
         self.init_training_epochs = init_training_epochs
         self.interact_training_epochs = interact_training_epochs
         self.beta_threshold = beta_threshold
+        self.gamma_threshold = gamma_threshold
 
         self.verbose = verbose
         self.val_ratio = val_ratio
@@ -68,8 +66,8 @@ class GAMIxNN(tf.keras.Model):
         self.numerical_input_num = 0
         self.categ_variable_list = []
         self.categ_index_list = []
-        self.noncateg_index_list = []
-        self.noncateg_variable_list = []
+        self.numerical_index_list = []
+        self.numerical_variable_list = []
         self.variables_names = []
         for i, (key, item) in enumerate(self.meta_info.items()):
             if item['type'] == "target":
@@ -81,29 +79,23 @@ class GAMIxNN(tf.keras.Model):
                 self.variables_names.append(key)
             else:
                 self.numerical_input_num +=1
-                self.noncateg_index_list.append(i)
-                self.noncateg_variable_list.append(key)
+                self.numerical_index_list.append(i)
+                self.numerical_variable_list.append(key)
                 self.variables_names.append(key)
         # build
-        self.categ_blocks = CategNetBlock(meta_info=self.meta_info, 
-                                 categ_variable_list=self.categ_variable_list, 
+        self.maineffect_blocks = MainEffectBlock(meta_info=self.meta_info,
+                                 numerical_index_list=list(self.numerical_index_list),
                                  categ_index_list=self.categ_index_list,
-                                 bn_flag=self.bn_flag)
-        self.subnet_blocks = SubnetworkBlock(subnet_num=self.numerical_input_num,
-                                 numerical_index_list=list(self.noncateg_index_list),
                                  subnet_arch=self.subnet_arch,
                                  activation_func=self.activation_func,
-                                 bn_flag=self.bn_flag,
-                                 l2_smooth=self.l2_smooth)
+                                 grid_size=self.grid_size)
         self.interact_blocks = InteractionBlock(interact_num=self.interact_num,
                                 meta_info=self.meta_info,
                                 interact_arch=self.interact_arch,
                                 activation_func=self.activation_func,
-                                bn_flag=self.bn_flag,
-                                l2_smooth=self.l2_smooth)
+                                grid_size=self.grid_size)
         self.output_layer = OutputLayer(input_num=self.input_num,
-                                interact_num=self.interact_num,
-                                l1_sparse=self.l1_sparse)
+                                interact_num=self.interact_num)
 
         self.fit_interaction = False
         self.optimizer = tf.keras.optimizers.Adam(learning_rate=self.lr_bp)
@@ -116,19 +108,13 @@ class GAMIxNN(tf.keras.Model):
 
     def call(self, inputs, training=False):
 
-        self.categ_outputs = self.categ_blocks(inputs, training=training)
-        self.subnet_outputs = self.subnet_blocks(inputs, training=training)
-
+        self.maineffect_outputs = self.maineffect_blocks(inputs, training=training)
         if self.fit_interaction:
             self.interact_outputs = self.interact_blocks(inputs, training=training)
         else:
-            self.interact_outputs = tf.zeros([self.subnet_outputs.shape[0], self.interact_num])
+            self.interact_outputs = tf.zeros([self.maineffect_outputs.shape[0], self.interact_num])
 
-        concat_list = []
-        if self.numerical_input_num > 0:
-            concat_list.append(self.subnet_outputs)
-        if self.categ_variable_num > 0:
-            concat_list.append(self.categ_outputs)
+        concat_list = [self.maineffect_outputs]
         if self.interact_num > 0:
             concat_list.append(self.interact_outputs)
 
@@ -163,76 +149,80 @@ class GAMIxNN(tf.keras.Model):
             return self.evaluate_graph_init(x, y, training=training).numpy()
 
     @tf.function
-    def train_step_init(self, inputs, labels):
+    def train_step_main(self, inputs, labels):
 
         with tf.GradientTape() as tape:
             pred = self.apply(inputs, training=True)
             total_loss = self.loss_fn(labels, pred)
 
-        grads = tape.gradient(total_loss, self.trainable_weights)
-        self.optimizer.apply_gradients(zip(grads, self.trainable_weights))
+        train_weights = self.maineffect_blocks.weights
+        train_weights.append(self.output_layer.subnet_weights)
+        train_weights.append(self.output_layer.output_bias)
+        train_weights = list(set(train_weights).intersection(set(self.trainable_weights)))
+        grads = tape.gradient(total_loss, train_weights)
+        self.optimizer.apply_gradients(zip(grads, train_weights))
 
     @tf.function
     def train_step_interact(self, inputs, labels):
 
         with tf.GradientTape() as tape:
             pred = self.apply(inputs, training=True)
-            pred_loss = self.loss_fn(labels, pred)
-            regularization_loss = tf.math.add_n(self.output_layer.losses)
-            total_loss = pred_loss + regularization_loss
+            total_loss = self.loss_fn(labels, pred)
 
-        grads = tape.gradient(total_loss, self.trainable_weights)
-        self.optimizer.apply_gradients(zip(grads, self.trainable_weights))
+        train_weights = self.interact_blocks.weights
+        train_weights.append(self.output_layer.interaction_weights)
+        train_weights.append(self.output_layer.output_bias)
+        train_weights = list(set(train_weights).intersection(set(self.trainable_weights)))
+        grads = tape.gradient(total_loss, train_weights)
+        self.optimizer.apply_gradients(zip(grads, train_weights))
 
-    @tf.function
-    def train_step_finetune(self, inputs, labels):
+    def get_active_main_effects(self, threshold=0):
 
-        with tf.GradientTape() as tape:
-            pred = self.apply(inputs, training=True)
-            pred_loss = self.loss_fn(labels, pred)
-            total_loss = pred_loss
-            if self.l2_smooth > 0:
-                smoothness_loss = self.subnet_blocks.smooth_loss
-                total_loss += smoothness_loss
-
-        grads = tape.gradient(total_loss, self.trainable_weights)
-        self.optimizer.apply_gradients(zip(grads, self.trainable_weights))
-
-    def get_active_main_effects(self, beta_threshold=0):
-        if self.bn_flag:
-            beta = self.output_layer.subnet_weights.numpy()
-        else:
-            subnet_norm = [self.subnet_blocks.subnets[i].moving_norm.numpy()[0] for i in range(self.numerical_input_num)]
-            categ_norm = [self.categ_blocks.categnets[i].moving_norm.numpy()[0]for i in range(self.categ_variable_num)]
-            beta = self.output_layer.subnet_weights.numpy() * np.array([subnet_norm]).reshape([-1, 1])
-        beta = beta * self.output_layer.subnet_switcher.numpy()
+        subnet_norm = [self.maineffect_blocks.subnets[i].moving_norm.numpy()[0] for i in range(self.input_num)]
+        beta = (self.output_layer.subnet_weights.numpy() * np.array([subnet_norm]).reshape([-1, 1])
+             * self.output_layer.subnet_switcher.numpy())
 
         componment_coefs = beta
         componment_scales = (np.abs(componment_coefs) / np.sum(np.abs(componment_coefs))).reshape([-1])
         sorted_index = np.argsort(componment_scales)
-        active_univariate_index = sorted_index[componment_scales[sorted_index].cumsum()>beta_threshold][::-1]
+        active_univariate_index = sorted_index[componment_scales[sorted_index].cumsum()>threshold][::-1]
         return active_univariate_index, beta, componment_scales
+    
+    def get_active_interactions(self, threshold=0):
 
-    def get_active_subnets(self, beta_threshold=0):
-        if self.bn_flag:
-            beta = self.output_layer.subnet_weights.numpy()
-        else:
-            subnet_norm = [self.subnet_blocks.subnets[i].moving_norm.numpy()[0] for i in range(self.numerical_input_num)]
-            categ_norm = [self.categ_blocks.categnets[i].moving_norm.numpy()[0]for i in range(self.categ_variable_num)]
-            beta = self.output_layer.subnet_weights.numpy() * np.array([subnet_norm]).reshape([-1, 1])
-        beta = beta * self.output_layer.subnet_switcher.numpy()
-        if self.bn_flag:
-            gamma = self.output_layer.interaction_weights.numpy() * self.output_layer.interaction_switcher.numpy()
-        else:
-            interaction_norm = [self.interact_blocks.interacts[i].moving_norm.numpy()[0] for i in range(self.interact_num)]
-            gamma = (self.output_layer.interaction_weights.numpy() 
-                  * np.array([interaction_norm]).reshape([-1, 1])
-                  * self.output_layer.interaction_switcher.numpy())
+        subnet_norm = [self.maineffect_blocks.subnets[i].moving_norm.numpy()[0] for i in range(self.input_num)]
+        beta = (self.output_layer.subnet_weights.numpy() * np.array([subnet_norm]).reshape([-1, 1]) 
+             * self.output_layer.subnet_switcher.numpy())
+
+        interaction_norm = [self.interact_blocks.interacts[i].moving_norm.numpy()[0] for i in range(self.interact_num)]
+        gamma = (self.output_layer.interaction_weights.numpy() 
+              * np.array([interaction_norm]).reshape([-1, 1])
+              * self.output_layer.interaction_switcher.numpy())
+
+        componment_coefs = np.vstack([beta, gamma])
+        componment_scales = (np.abs(componment_coefs) / np.sum(np.abs(componment_coefs))).reshape([-1])
+        componment_scales_main = componment_scales[:self.input_num]
+        componment_scales_interact = componment_scales[self.input_num:]
+
+        sorted_index = np.argsort(componment_scales_interact)
+        active_interaction_index = sorted_index[(componment_scales_interact[sorted_index].cumsum())>threshold][::-1]
+        return active_interaction_index, gamma, componment_scales
+
+    def get_active_effects(self, threshold=0):
+
+        subnet_norm = [self.maineffect_blocks.subnets[i].moving_norm.numpy()[0] for i in range(self.input_num)]
+        beta = (self.output_layer.subnet_weights.numpy() * np.array([subnet_norm]).reshape([-1, 1]) 
+             * self.output_layer.subnet_switcher.numpy())
+
+        interaction_norm = [self.interact_blocks.interacts[i].moving_norm.numpy()[0] for i in range(self.interact_num)]
+        gamma = (self.output_layer.interaction_weights.numpy() 
+              * np.array([interaction_norm]).reshape([-1, 1])
+              * self.output_layer.interaction_switcher.numpy())
 
         componment_coefs = np.vstack([beta, gamma])
         componment_scales = (np.abs(componment_coefs) / np.sum(np.abs(componment_coefs))).reshape([-1])
         sorted_index = np.argsort(componment_scales)
-        active_index = sorted_index[componment_scales[sorted_index].cumsum()>beta_threshold][::-1]
+        active_index = sorted_index[componment_scales[sorted_index].cumsum()>threshold][::-1]
         active_univariate_index = active_index[active_index<beta.shape[0]]
         active_interaction_index = active_index[active_index>=beta.shape[0]] - beta.shape[0]
         return active_univariate_index, active_interaction_index, beta, gamma, componment_scales
@@ -248,12 +238,28 @@ class GAMIxNN(tf.keras.Model):
             tr_x, val_x, tr_y, val_y = train_test_split(train_x, train_y, test_size=self.val_ratio, 
                                       stratify=train_y, random_state=self.random_state)
 
-        # 1. Training
+        for i in range(self.input_num):
+
+            values = train_x[:,[i]]
+            if i in self.numerical_index_list:
+                input_grid = np.linspace(0, 1, self.grid_size)
+                kde = stats.gaussian_kde(values.T)
+                pdf_grid = kde(input_grid)
+                pdf_grid = np.array(pdf_grid / np.sum(pdf_grid), dtype=np.float32) 
+            elif i in self.categ_index_list:
+                key = self.variables_names[i]
+                input_grid = np.arange(len(self.meta_info[key]['values']))
+                pdf_grid, _ = np.histogram(values, bins=np.arange(len(self.meta_info[key]['values']) + 1), density=True)
+
+            self.maineffect_blocks.subnets[i].set_pdf(np.array(input_grid, dtype=np.float32).reshape([-1, 1]),
+                                        np.array(pdf_grid, dtype=np.float32).reshape([1, -1]))
+        #### 1. Main Effects Training
+        if self.verbose:
+            print("Main Effects Training.")
+
         last_improvement = 0
         best_validation = np.inf
         train_size = tr_x.shape[0]
-        if self.verbose:
-            print("Initial training.")
         for epoch in range(self.init_training_epochs):
             shuffle_index = np.arange(tr_x.shape[0])
             np.random.shuffle(shuffle_index)
@@ -264,12 +270,12 @@ class GAMIxNN(tf.keras.Model):
                 offset = (iterations * self.batch_size) % train_size
                 batch_xx = tr_x[offset:(offset + self.batch_size), :]
                 batch_yy = tr_y[offset:(offset + self.batch_size)]
-                self.train_step_init(tf.cast(batch_xx, tf.float32), batch_yy)
+                self.train_step_main(tf.cast(batch_xx, tf.float32), batch_yy)
 
             self.err_train.append(self.evaluate(tr_x, tr_y, training=False))
             self.err_val.append(self.evaluate(val_x, val_y, training=False))
             if self.verbose & (epoch % 1 == 0):
-                print("Training epoch: %d, train loss: %0.5f, val loss: %0.5f" %
+                print("Main effects training epoch: %d, train loss: %0.5f, val loss: %0.5f" %
                       (epoch + 1, self.err_train[-1], self.err_val[-1]))
 
             if self.err_val[-1] < best_validation:
@@ -280,10 +286,32 @@ class GAMIxNN(tf.keras.Model):
                     print("Early stop at epoch %d, With Testing Error: %0.5f" % (epoch + 1, self.err_val[-1]))
                 break
 
-        # 2. interaction detection
+        subnet_scal_factor = np.zeros((self.input_num, 1))
+        active_univariate_index, beta, componment_scales = self.get_active_main_effects(self.beta_threshold)
+        subnet_scal_factor[active_univariate_index] = 1
+        self.output_layer.subnet_switcher.assign(tf.constant(subnet_scal_factor, dtype=tf.float32))
+        for epoch in range(self.tuning_epochs):
+            shuffle_index = np.arange(tr_x.shape[0])
+            np.random.shuffle(shuffle_index)
+            tr_x = tr_x[shuffle_index]
+            tr_y = tr_y[shuffle_index]
+
+            for iterations in range(train_size // self.batch_size):
+                offset = (iterations * self.batch_size) % train_size
+                batch_xx = tr_x[offset:(offset + self.batch_size), :]
+                batch_yy = tr_y[offset:(offset + self.batch_size)]
+                self.train_step_main(tf.cast(batch_xx, tf.float32), batch_yy)
+
+            self.err_train.append(self.evaluate(tr_x, tr_y, training=False))
+            self.err_val.append(self.evaluate(val_x, val_y, training=False))
+            if self.verbose & (epoch % 1 == 0):
+                print("Main effects tunning epoch: %d, train loss: %0.5f, val loss: %0.5f" %
+                      (epoch + 1, self.err_train[-1], self.err_val[-1]))
+
+        # 2. interaction Training
         if self.interact_num>0:
             if self.verbose:
-                print("Interaction training.")
+                print("Interaction Training.")
 
             last_improvement = 0
             best_validation = np.inf
@@ -294,11 +322,67 @@ class GAMIxNN(tf.keras.Model):
                                           interactions=int(round(self.input_num * (self.input_num - 1) / 2)),
                                           meta_info=self.meta_info,
                                           task_type=self.task_type)
-            active_univariate_index, beta, componment_scales = self.get_active_main_effects(self.beta_threshold)
+
             self.interaction_list = [interaction_list_all[i] for i in range(self.max_interact_num) 
                                      if (interaction_list_all[i][0] in active_univariate_index)
                                      or (interaction_list_all[i][1] in active_univariate_index)][:self.interact_num]
             self.interact_blocks.set_interaction_list(self.interaction_list)
+
+            for interact_id, (idx1, idx2) in enumerate(self.interaction_list):
+
+                interact_input_list = []
+                values = train_x[:,[idx1, idx2]]
+                feature_name1 = self.variables_names[idx1]
+                feature_name2 = self.variables_names[idx2]
+                if (feature_name1 in self.categ_variable_list) & (feature_name2 in self.categ_variable_list):
+                    pdf_grid = np.zeros((len(self.meta_info[feature_name1]['values']),
+                                  len(self.meta_info[feature_name2]['values'])))
+                    for i in np.arange(len(self.meta_info[feature_name1]['values'])):
+                        for j in np.arange(len(self.meta_info[feature_name2]['values'])):
+                            pdf_grid[i, j] = np.sum((values[:, 0] == i)&(values[:, 1] == j))
+
+                    pdf_grid = pdf_grid / np.sum(pdf_grid)
+                    x1, x2 = np.meshgrid(np.arange(len(self.meta_info[feature_name1]['values'])), 
+                                  np.arange(len(self.meta_info[feature_name2]['values'])))
+                    input_grid = np.hstack([np.reshape(x1, [-1, 1]), np.reshape(x2, [-1, 1])])
+
+                if (feature_name1 in self.categ_variable_list) & (feature_name2 not in self.categ_variable_list):
+
+                    pdf_grid = np.zeros((len(self.meta_info[feature_name1]['values']), 
+                                  self.grid_size))
+                    x1, x2 = np.meshgrid(np.arange(len(self.meta_info[feature_name1]['values'])), 
+                                  np.linspace(0, 1, self.grid_size))
+                    input_grid = np.hstack([np.reshape(x1, [-1, 1]), np.reshape(x2, [-1, 1])])
+                    for i in np.arange(len(self.meta_info[feature_name1]['values'])):
+                        kde = stats.gaussian_kde(values[values[:, 0] == i][:, 1].T)
+                        pdf_grid_temp = kde(np.linspace(0, 1, self.grid_size))
+                        pdf_grid[i, :] = (np.sum(values[:, 0] == i) / values.shape[0]) * pdf_grid_temp / np.sum(pdf_grid_temp)
+
+                if (feature_name1 not in self.categ_variable_list) & (feature_name2 in self.categ_variable_list):
+
+                    pdf_grid = np.zeros((self.grid_size,
+                                  len(self.meta_info[feature_name2]['values'])))
+                    x1, x2 = np.meshgrid(np.linspace(0, 1, self.grid_size), 
+                                  np.arange(len(self.meta_info[feature_name2]['values'])))
+                    input_grid = np.hstack([np.reshape(x1, [-1, 1]), np.reshape(x2, [-1, 1])])
+                    for j in np.arange(len(self.meta_info[feature_name2]['values'])):
+                        kde = stats.gaussian_kde(values[values[:, 1] == j][:, 0].T)
+                        pdf_grid_temp = kde(np.linspace(0, 1, self.grid_size))
+                        pdf_grid[:, j] = (np.sum(values[:, 1] == j) / values.shape[0]) * pdf_grid_temp / np.sum(pdf_grid_temp)
+
+                if (feature_name1 not in self.categ_variable_list) & (feature_name2 not in self.categ_variable_list):
+
+                    x1, x2 = np.meshgrid(np.linspace(0, 1, self.grid_size), 
+                                  np.linspace(0, 1, self.grid_size))
+                    input_grid = np.hstack([np.reshape(x1, [-1, 1]), np.reshape(x2, [-1, 1])])
+                    kde = stats.gaussian_kde(values.T)
+                    pdf_grid = kde(np.vstack([x1.ravel(), x2.ravel()]))
+                    pdf_grid = np.reshape(pdf_grid / np.sum(pdf_grid), [self.grid_size, self.grid_size])
+                    # pdf_grid = np.ones([self.grid_size, self.grid_size]) / (self.grid_size * self.grid_size)
+
+                self.interact_blocks.interacts[interact_id].set_pdf(np.array(input_grid, dtype=np.float32),
+                                                   np.array(pdf_grid, dtype=np.float32).T)
+
             self.fit_interaction = True 
             for epoch in range(self.interact_training_epochs):
                 shuffle_index = np.arange(tr_x.shape[0])
@@ -315,7 +399,7 @@ class GAMIxNN(tf.keras.Model):
                 self.err_train.append(self.evaluate(tr_x, tr_y, training=False))
                 self.err_val.append(self.evaluate(val_x, val_y, training=False))
                 if self.verbose & (epoch % 1 == 0):
-                    print("Training epoch: %d, train loss: %0.5f, val loss: %0.5f" %
+                    print("Interaction training epoch: %d, train loss: %0.5f, val loss: %0.5f" %
                           (epoch + 1, self.err_train[-1], self.err_val[-1]))
 
                 if self.err_val[-1] < best_validation:
@@ -326,43 +410,28 @@ class GAMIxNN(tf.keras.Model):
                         print("Early stop at epoch %d, With Testing Error: %0.5f" % (epoch + 1, self.err_val[-1]))
                     break
 
-#         # 3. pruning & fine tune
-#         if self.verbose:
-#             print("Subnetwork pruning & Fine tuning.")
-#         last_improvement = 0
-#         best_validation = np.inf
-#         subnet_scal_factor = np.zeros((self.input_num, 1))
-#         interaction_scal_factor = np.zeros((self.interact_num, 1))
-#         active_univariate_index, active_interaction_index, beta, gamma, componment_scales = self.get_active_subnets()
-#         subnet_scal_factor[active_univariate_index] = 1
-#         interaction_scal_factor[active_interaction_index] = 1
-#         self.output_layer.subnet_switcher.assign(tf.constant(subnet_scal_factor, dtype=tf.float32))
-#         self.output_layer.interaction_switcher.assign(tf.constant(interaction_scal_factor, dtype=tf.float32))
-        
-#         for epoch in range(self.tuning_epochs):
-#             shuffle_index = np.arange(tr_x.shape[0])
-#             np.random.shuffle(shuffle_index)
-#             tr_x = tr_x[shuffle_index]
-#             tr_y = tr_y[shuffle_index]
+            interaction_scal_factor = np.zeros((self.interact_num, 1))
+            active_interaction_index, gamma, componment_scales = self.get_active_interactions(self.gamma_threshold)
+            interaction_scal_factor[active_interaction_index] = 1
+            self.output_layer.interaction_switcher.assign(tf.constant(interaction_scal_factor, dtype=tf.float32))
 
-#             for iterations in range(train_size // self.batch_size):
-#                 offset = (iterations * self.batch_size) % train_size
-#                 batch_xx = tr_x[offset:(offset + self.batch_size), :]
-#                 batch_yy = tr_y[offset:(offset + self.batch_size)]
-#                 self.train_step_finetune(tf.cast(batch_xx, tf.float32), batch_yy)
+            for epoch in range(self.tuning_epochs):
+                shuffle_index = np.arange(tr_x.shape[0])
+                np.random.shuffle(shuffle_index)
+                tr_x = tr_x[shuffle_index]
+                tr_y = tr_y[shuffle_index]
 
-#             self.err_train.append(self.evaluate(tr_x, tr_y, training=False))
-#             self.err_val.append(self.evaluate(val_x, val_y, training=False))
-#             if self.verbose & (epoch % 1 == 0):
-#                 print("Tuning epoch: %d, train loss: %0.5f, val loss: %0.5f" %
-#                       (epoch + 1, self.err_train[-1], self.err_val[-1]))
-#             if self.err_val[-1] < best_validation:
-#                 best_validation = self.err_val[-1]
-#                 last_improvement = epoch
-#             if epoch - last_improvement > self.early_stop_thres:
-#                 if self.verbose:
-#                     print("Early stop at epoch %d, With Testing Error: %0.5f" % (epoch + 1, self.err_val[-1]))
-#                 break
+                for iterations in range(train_size // self.batch_size):
+                    offset = (iterations * self.batch_size) % train_size
+                    batch_xx = tr_x[offset:(offset + self.batch_size), :]
+                    batch_yy = tr_y[offset:(offset + self.batch_size)]
+                    self.train_step_interact(tf.cast(batch_xx, tf.float32), batch_yy)
+
+                self.err_train.append(self.evaluate(tr_x, tr_y, training=False))
+                self.err_val.append(self.evaluate(val_x, val_y, training=False))
+                if self.verbose & (epoch % 1 == 0):
+                    print("Interaction tunning epoch: %d, train loss: %0.5f, val loss: %0.5f" %
+                          (epoch + 1, self.err_train[-1], self.err_val[-1]))
 
         self.tr_x = tr_x
         self.tr_y = tr_y
@@ -379,23 +448,16 @@ class GAMIxNN(tf.keras.Model):
         predicted = self.predict(x)
         intercept = self.output_layer.output_bias.numpy()
 
-        if self.numerical_input_num > 0:
-            subnet_output = self.subnet_blocks.apply(x).numpy()
-        else:
-            subnet_output = np.array([])
-        if self.categ_variable_num > 0:
-            categ_output = self.categ_blocks.apply(x).numpy()
-        else:
-            categ_output = np.array([])
+        subnet_output = self.maineffect_blocks.apply(x).numpy()
         if self.interact_num > 0:
             interact_output = self.interact_blocks.apply(x).numpy()
         else:
             interact_output = np.array([])
-        active_univariate_index, active_interaction_index, beta, gamma, componment_scales = self.get_active_subnets()
-        scores = np.hstack([intercept[0], (np.hstack([subnet_output.ravel(), categ_output.ravel(), 
-                                       interact_output.ravel()]) * np.hstack([beta.ravel(), gamma.ravel()]).ravel()).ravel()])
+        active_univariate_index, active_interaction_index, beta, gamma, componment_scales = self.get_active_effects()
+        scores = np.hstack([intercept[0], (np.hstack([subnet_output.ravel(), interact_output.ravel()]) 
+                                           * np.hstack([beta.ravel(), gamma.ravel()]).ravel()).ravel()])
         active_indice = 1 + np.hstack([-1, active_univariate_index, self.numerical_input_num + self.categ_variable_num + active_interaction_index])
-        effect_names = np.hstack(["Intercept", np.array(self.variables_names)[self.noncateg_index_list],
+        effect_names = np.hstack(["Intercept", np.array(self.variables_names)[self.numerical_index_list],
                    np.array(self.variables_names)[self.categ_index_list],
                    [self.variables_names[self.interaction_list[i][0]] + " x " 
                     + self.variables_names[self.interaction_list[i][1]] for i in range(self.interact_num)]])
@@ -418,7 +480,7 @@ class GAMIxNN(tf.keras.Model):
 
         idx = 0
         grid_length = 101
-        active_univariate_index, active_interaction_index, beta, gamma, componment_scales = self.get_active_subnets(self.beta_threshold)
+        active_univariate_index, active_interaction_index, beta, gamma, componment_scales = self.get_active_effects(0)
         max_ids = len(active_univariate_index) + len(active_interaction_index)
         
         fig = plt.figure(figsize=(6 * cols_per_row, 
@@ -426,10 +488,10 @@ class GAMIxNN(tf.keras.Model):
         outer = gridspec.GridSpec(int(np.ceil(max_ids/cols_per_row)), cols_per_row, wspace=0.25, hspace=0.25)
         for indice in active_univariate_index:
 
-            if indice < self.numerical_input_num:
-                
-                subnet = self.subnet_blocks.subnets[indice]
-                feature_name = list(self.variables_names)[self.noncateg_index_list[indice]]
+            feature_name = list(self.variables_names)[indice]
+            subnet = self.maineffect_blocks.subnets[indice]
+            if indice in self.numerical_index_list:
+                            
                 sx = self.meta_info[feature_name]['scaler']
                 subnets_inputs = np.linspace(0, 1, grid_length).reshape([-1, 1])
                 subnets_outputs = np.sign(beta[indice]) * subnet.apply(tf.cast(tf.constant(subnets_inputs), tf.float32)).numpy()
@@ -443,24 +505,23 @@ class GAMIxNN(tf.keras.Model):
                 fig.add_subplot(ax1)
 
                 ax2 = plt.Subplot(fig, inner[1]) 
-                ax2.hist(sx.inverse_transform(self.tr_x[:,[self.noncateg_index_list[indice]]]), bins=30)
+                ax2.hist(sx.inverse_transform(self.tr_x[:,[indice]]), bins=30)
                 ax1.get_shared_x_axes().join(ax1, ax2)
                 ax1.set_xticklabels([])
                 ax2.set_ylabel("Histogram", fontsize=12)
                 ax2.get_yaxis().set_label_coords(-0.15, 0.5)
-                if np.sum([len(ax1.get_yticklabels()[i].get_text()) for i in range(len(ax1.get_yticklabels()))]) > 30:
+                if np.sum([len(ax1.get_yticklabels()[i].get_text()) for i in range(len(ax1.get_yticklabels()))]) > 20:
                     ax1.yaxis.set_tick_params(rotation=15)
-                if np.sum([len(ax2.get_xticklabels()[i].get_text()) for i in range(len(ax2.get_xticklabels()))]) > 30:
+                if np.sum([len(ax2.get_xticklabels()[i].get_text()) for i in range(len(ax2.get_xticklabels()))]) > 20:
                     ax2.xaxis.set_tick_params(rotation=15)
-                if np.sum([len(ax2.get_yticklabels()[i].get_text()) for i in range(len(ax2.get_yticklabels()))]) > 30:
+                if np.sum([len(ax2.get_yticklabels()[i].get_text()) for i in range(len(ax2.get_yticklabels()))]) > 20:
                     ax2.yaxis.set_tick_params(rotation=15)
                 fig.add_subplot(ax2)
-                
-            else:
 
-                feature_name = self.categ_variable_list[indice - self.numerical_input_num]
-                dummy_gamma = self.categ_blocks.categnets[indice - self.numerical_input_num].categ_bias.numpy()
-                norm = self.categ_blocks.categnets[indice - self.numerical_input_num].moving_norm.numpy()
+            elif indice in self.categ_index_list:
+
+                dummy_gamma = subnet.categ_bias.numpy()
+                norm = subnet.moving_norm.numpy()
 
                 inner = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=outer[idx], wspace=0.1, hspace=0.1, height_ratios=[4, 1])
                 ax1 = plt.Subplot(fig, inner[0])
@@ -470,8 +531,8 @@ class GAMIxNN(tf.keras.Model):
                 ax1.set_title(feature_name, fontsize=12)
                 fig.add_subplot(ax1)
 
-                ax2 = plt.Subplot(fig, inner[1]) 
-                unique, counts = np.unique(self.tr_x[:, self.categ_index_list[indice - self.numerical_input_num]], return_counts=True)
+                ax2 = plt.Subplot(fig, inner[1])
+                unique, counts = np.unique(self.tr_x[:, indice], return_counts=True)
                 ybar_ticks = np.zeros((len(self.meta_info[feature_name]['values'])))
                 ybar_ticks[unique.astype(int)] = counts
                 ax2.bar(np.arange(len(self.meta_info[feature_name]['values'])), ybar_ticks)
@@ -486,11 +547,11 @@ class GAMIxNN(tf.keras.Model):
                 ax2.set_xticklabels(xtick_label)
                 ax2.set_ylabel("Histogram", fontsize=12)
                 ax2.get_yaxis().set_label_coords(-0.15, 0.5)
-                if np.sum([len(ax1.get_yticklabels()[i].get_text()) for i in range(len(ax1.get_yticklabels()))]) > 30:
+                if np.sum([len(ax1.get_yticklabels()[i].get_text()) for i in range(len(ax1.get_yticklabels()))]) > 20:
                     ax1.yaxis.set_tick_params(rotation=15)
-                if np.sum([len(ax2.get_xticklabels()[i].get_text()) for i in range(len(ax2.get_xticklabels()))]) > 30:
+                if np.sum([len(ax2.get_xticklabels()[i].get_text()) for i in range(len(ax2.get_xticklabels()))]) > 20:
                     ax2.xaxis.set_tick_params(rotation=15)
-                if np.sum([len(ax2.get_yticklabels()[i].get_text()) for i in range(len(ax2.get_yticklabels()))]) > 30:
+                if np.sum([len(ax2.get_yticklabels()[i].get_text()) for i in range(len(ax2.get_yticklabels()))]) > 20:
                     ax2.yaxis.set_tick_params(rotation=15)
                 fig.add_subplot(ax2)
 
@@ -540,7 +601,7 @@ class GAMIxNN(tf.keras.Model):
                 xtick_label = [interact_label1[i] for i in xtick_loc]
                 ax.set_xticks(xtick_loc)
                 ax.set_xticklabels(xtick_label)
-            elif np.sum([len(str(interact_label1[i])) for i in range(len(interact_label1))]) > 30:
+            elif np.sum([len(str(interact_label1[i])) for i in range(len(interact_label1))]) > 20:
                 ax.xaxis.set_tick_params(rotation=15)
             if feature_name2 in self.categ_variable_list:
                 ytick_loc = (np.arange(inter_net.length2) if inter_net.length2 <= 12 else
@@ -548,7 +609,7 @@ class GAMIxNN(tf.keras.Model):
                 ytick_label = [interact_label2[i] for i in ytick_loc]
                 ax.set_yticks(ytick_loc)
                 ax.set_yticklabels(ytick_label)
-            elif np.sum([len(str(interact_label2[i])) for i in range(len(interact_label2))]) > 30:
+            elif np.sum([len(str(interact_label2[i])) for i in range(len(interact_label2))]) > 20:
                 ax.yaxis.set_tick_params(rotation=15)
 
             response_precision = max(int(- np.log10(np.max(response) - np.min(response))) + 2, 0)
