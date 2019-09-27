@@ -26,8 +26,8 @@ class GAMIxNN(tf.keras.Model):
                  init_training_epochs=10000,
                  interact_training_epochs=1000, 
                  tuning_epochs=500,
-                 beta_threshold=0.01,
-                 gamma_threshold=0.01,
+                 main_threshold=0.01,
+                 total_threshold=0.01,
                  verbose=False,
                  val_ratio=0.2,
                  early_stop_thres=100,
@@ -51,8 +51,8 @@ class GAMIxNN(tf.keras.Model):
         self.tuning_epochs = tuning_epochs
         self.init_training_epochs = init_training_epochs
         self.interact_training_epochs = interact_training_epochs
-        self.beta_threshold = beta_threshold
-        self.gamma_threshold = gamma_threshold
+        self.main_threshold = main_threshold
+        self.total_threshold = total_threshold
 
         self.verbose = verbose
         self.val_ratio = val_ratio
@@ -176,7 +176,7 @@ class GAMIxNN(tf.keras.Model):
         grads = tape.gradient(total_loss, train_weights)
         self.optimizer.apply_gradients(zip(grads, train_weights))
 
-    def get_active_main_effects(self, threshold=0):
+    def get_active_main_effects(self):
 
         subnet_norm = [self.maineffect_blocks.subnets[i].moving_norm.numpy()[0] for i in range(self.input_num)]
         beta = (self.output_layer.subnet_weights.numpy() * np.array([subnet_norm]).reshape([-1, 1])
@@ -185,10 +185,10 @@ class GAMIxNN(tf.keras.Model):
         componment_coefs = beta
         componment_scales = (np.abs(componment_coefs) / np.sum(np.abs(componment_coefs))).reshape([-1])
         sorted_index = np.argsort(componment_scales)
-        active_univariate_index = sorted_index[componment_scales[sorted_index].cumsum()>threshold][::-1]
+        active_univariate_index = sorted_index[componment_scales[sorted_index].cumsum()>self.main_threshold][::-1]
         return active_univariate_index, beta, componment_scales
     
-    def get_active_interactions(self, threshold=0):
+    def get_active_interactions(self):
 
         subnet_norm = [self.maineffect_blocks.subnets[i].moving_norm.numpy()[0] for i in range(self.input_num)]
         beta = (self.output_layer.subnet_weights.numpy() * np.array([subnet_norm]).reshape([-1, 1]) 
@@ -205,10 +205,10 @@ class GAMIxNN(tf.keras.Model):
         componment_scales_interact = componment_scales[self.input_num:]
 
         sorted_index = np.argsort(componment_scales_interact)
-        active_interaction_index = sorted_index[(componment_scales_interact[sorted_index].cumsum())>threshold][::-1]
+        active_interaction_index = sorted_index[(componment_scales_interact[sorted_index].cumsum())>self.total_threshold][::-1]
         return active_interaction_index, gamma, componment_scales
 
-    def get_active_effects(self, threshold=0):
+    def get_active_effects(self):
 
         subnet_norm = [self.maineffect_blocks.subnets[i].moving_norm.numpy()[0] for i in range(self.input_num)]
         beta = (self.output_layer.subnet_weights.numpy() * np.array([subnet_norm]).reshape([-1, 1]) 
@@ -222,7 +222,7 @@ class GAMIxNN(tf.keras.Model):
         componment_coefs = np.vstack([beta, gamma])
         componment_scales = (np.abs(componment_coefs) / np.sum(np.abs(componment_coefs))).reshape([-1])
         sorted_index = np.argsort(componment_scales)
-        active_index = sorted_index[componment_scales[sorted_index].cumsum()>threshold][::-1]
+        active_index = sorted_index[componment_scales[sorted_index].cumsum()>0][::-1]
         active_univariate_index = active_index[active_index<beta.shape[0]]
         active_interaction_index = active_index[active_index>=beta.shape[0]] - beta.shape[0]
         return active_univariate_index, active_interaction_index, beta, gamma, componment_scales
@@ -287,7 +287,7 @@ class GAMIxNN(tf.keras.Model):
                 break
 
         subnet_scal_factor = np.zeros((self.input_num, 1))
-        active_univariate_index, beta, componment_scales = self.get_active_main_effects(self.beta_threshold)
+        active_univariate_index, beta, componment_scales = self.get_active_main_effects()
         subnet_scal_factor[active_univariate_index] = 1
         self.output_layer.subnet_switcher.assign(tf.constant(subnet_scal_factor, dtype=tf.float32))
         for epoch in range(self.tuning_epochs):
@@ -411,7 +411,7 @@ class GAMIxNN(tf.keras.Model):
                     break
 
             interaction_scal_factor = np.zeros((self.interact_num, 1))
-            active_interaction_index, gamma, componment_scales = self.get_active_interactions(self.gamma_threshold)
+            active_interaction_index, gamma, componment_scales = self.get_active_interactions()
             interaction_scal_factor[active_interaction_index] = 1
             self.output_layer.interaction_switcher.assign(tf.constant(interaction_scal_factor, dtype=tf.float32))
 
