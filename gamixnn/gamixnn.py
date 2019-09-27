@@ -480,7 +480,7 @@ class GAMIxNN(tf.keras.Model):
 
         idx = 0
         grid_length = 101
-        active_univariate_index, active_interaction_index, beta, gamma, componment_scales = self.get_active_effects(0)
+        active_univariate_index, active_interaction_index, beta, gamma, componment_scales = self.get_active_effects()
         max_ids = len(active_univariate_index) + len(active_interaction_index)
         
         fig = plt.figure(figsize=(6 * cols_per_row, 
