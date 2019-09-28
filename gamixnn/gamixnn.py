@@ -345,7 +345,7 @@ class GAMIxNN(tf.keras.Model):
                     x1, x2 = np.meshgrid(np.arange(len(self.meta_info[feature_name1]['values'])), 
                                   np.arange(len(self.meta_info[feature_name2]['values'])))
                     input_grid = np.hstack([np.reshape(x1, [-1, 1]), np.reshape(x2, [-1, 1])])
-                    pdf_grid = np.ones([len(self.meta_info[feature_name1]['values']), len(self.meta_info[feature_name1]['values'])]) / (len(self.meta_info[feature_name1]['values']) * len(self.meta_info[feature_name2]['values']))
+                    pdf_grid = np.ones([len(self.meta_info[feature_name1]['values']), len(self.meta_info[feature_name2]['values'])]) / (len(self.meta_info[feature_name1]['values']) * len(self.meta_info[feature_name2]['values']))
 
                 if (feature_name1 in self.categ_variable_list) & (feature_name2 not in self.categ_variable_list):
 
