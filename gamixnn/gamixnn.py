@@ -345,6 +345,7 @@ class GAMIxNN(tf.keras.Model):
                     x1, x2 = np.meshgrid(np.arange(len(self.meta_info[feature_name1]['values'])), 
                                   np.arange(len(self.meta_info[feature_name2]['values'])))
                     input_grid = np.hstack([np.reshape(x1, [-1, 1]), np.reshape(x2, [-1, 1])])
+                    pdf_grid = np.ones([len(self.meta_info[feature_name1]['values']), len(self.meta_info[feature_name1]['values'])]) / (len(self.meta_info[feature_name1]['values']) * len(self.meta_info[feature_name2]['values']))
 
                 if (feature_name1 in self.categ_variable_list) & (feature_name2 not in self.categ_variable_list):
 
@@ -357,6 +358,7 @@ class GAMIxNN(tf.keras.Model):
                         kde = stats.gaussian_kde(values[values[:, 0] == i][:, 1].T)
                         pdf_grid_temp = kde(np.linspace(0, 1, self.grid_size))
                         pdf_grid[i, :] = (np.sum(values[:, 0] == i) / values.shape[0]) * pdf_grid_temp / np.sum(pdf_grid_temp)
+                    pdf_grid = np.ones([len(self.meta_info[feature_name1]['values']), self.grid_size]) / (self.grid_size * len(self.meta_info[feature_name1]['values']))
 
                 if (feature_name1 not in self.categ_variable_list) & (feature_name2 in self.categ_variable_list):
 
@@ -369,7 +371,8 @@ class GAMIxNN(tf.keras.Model):
                         kde = stats.gaussian_kde(values[values[:, 1] == j][:, 0].T)
                         pdf_grid_temp = kde(np.linspace(0, 1, self.grid_size))
                         pdf_grid[:, j] = (np.sum(values[:, 1] == j) / values.shape[0]) * pdf_grid_temp / np.sum(pdf_grid_temp)
-
+                    pdf_grid = np.ones([self.grid_size, len(self.meta_info[feature_name2]['values'])]) / (self.grid_size * len(self.meta_info[feature_name2]['values']))
+                    
                 if (feature_name1 not in self.categ_variable_list) & (feature_name2 not in self.categ_variable_list):
 
                     x1, x2 = np.meshgrid(np.linspace(0, 1, self.grid_size), 
@@ -378,7 +381,7 @@ class GAMIxNN(tf.keras.Model):
                     kde = stats.gaussian_kde(values.T)
                     pdf_grid = kde(np.vstack([x1.ravel(), x2.ravel()]))
                     pdf_grid = np.reshape(pdf_grid / np.sum(pdf_grid), [self.grid_size, self.grid_size])
-                    # pdf_grid = np.ones([self.grid_size, self.grid_size]) / (self.grid_size * self.grid_size)
+                    pdf_grid = np.ones([self.grid_size, self.grid_size]) / (self.grid_size * self.grid_size)
 
                 self.interact_blocks.interacts[interact_id].set_pdf(np.array(input_grid, dtype=np.float32),
                                                    np.array(pdf_grid, dtype=np.float32).T)
