@@ -163,7 +163,7 @@ class GAMIxNN(tf.keras.Model):
             if train_weights[i].name in [self.trainable_weights[j].name for j in range(len(self.trainable_weights))]:
                 train_weights_list.append(train_weights[i])
         grads = tape.gradient(total_loss, train_weights_list)
-        self.optimizer.apply_gradients(zip(grads, train_weights))
+        self.optimizer.apply_gradients(zip(grads, train_weights_list))
 
     @tf.function
     def train_step_interact(self, inputs, labels):
@@ -180,7 +180,7 @@ class GAMIxNN(tf.keras.Model):
             if train_weights[i].name in [self.trainable_weights[j].name for j in range(len(self.trainable_weights))]:
                 train_weights_list.append(train_weights[i])
         grads = tape.gradient(total_loss, train_weights_list)
-        self.optimizer.apply_gradients(zip(grads, train_weights))
+        self.optimizer.apply_gradients(zip(grads, train_weights_list))
 
     def get_active_main_effects(self):
 

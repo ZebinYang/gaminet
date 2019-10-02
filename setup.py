@@ -9,5 +9,5 @@ setup(name='gamixnn',
       license='GPL',
       packages=['gamixnn'],
       install_requires=[
-          'matplotlib>=2.2.2','tensorflow>=2.0.0b0', 'numpy>=1.15.2', 'interpret'],
+          'matplotlib>=2.2.2','tensorflow>=2.0.0', 'numpy>=1.15.2', 'interpret'],
       zip_safe=False)
