@@ -160,7 +160,7 @@ class GAMIxNN(tf.keras.Model):
         train_weights.append(self.output_layer.output_bias)
         train_weights_list = []
         for i in range(len(train_weights)):
-            if train_weights[i].name in [model.trainable_weights[j].name for j in range(len(model.trainable_weights))]:
+            if train_weights[i].name in [self.trainable_weights[j].name for j in range(len(self.trainable_weights))]:
                 train_weights_list.append(train_weights[i])
         grads = tape.gradient(total_loss, train_weights_list)
         self.optimizer.apply_gradients(zip(grads, train_weights))
@@ -177,7 +177,7 @@ class GAMIxNN(tf.keras.Model):
         train_weights.append(self.output_layer.output_bias)
         train_weights_list = []
         for i in range(len(train_weights)):
-            if train_weights[i].name in [model.trainable_weights[j].name for j in range(len(model.trainable_weights))]:
+            if train_weights[i].name in [self.trainable_weights[j].name for j in range(len(self.trainable_weights))]:
                 train_weights_list.append(train_weights[i])
         grads = tape.gradient(total_loss, train_weights_list)
         self.optimizer.apply_gradients(zip(grads, train_weights))
