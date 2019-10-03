@@ -17,7 +17,9 @@ def get_interaction_list(tr_x, val_x, tr_y, val_y, pred_tr, pred_val, interactio
     elif task_type == "Classification":
         num_classes_ = 2
         model_type = "classification"
-
+        pred_tr = np.log(pred_tr / (1 - pred_tr))
+        pred_val = np.log(pred_val / (1 - pred_val))
+        
     train_num = tr_x.shape[0]
     x = np.vstack([tr_x, val_x])
     schema_ = autogen_schema(tr_x, feature_names=list(meta_info.keys())[:-1], 
