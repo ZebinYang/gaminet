@@ -9,7 +9,7 @@ from interpret.glassbox.ebm.internal import NativeEBM
 from interpret.glassbox.ebm.ebm import EBMPreprocessor
 
 
-def get_interaction_list(x, y, interactions, meta_info, task_type="Regression"):
+def get_interaction_list(tr_x, val_x, tr_y, val_y, pred_tr, pred_val, interactions, meta_info, task_type="Regression"):
 
     if task_type == "Regression":
         num_classes_ = -1
@@ -18,29 +18,32 @@ def get_interaction_list(x, y, interactions, meta_info, task_type="Regression"):
         num_classes_ = 2
         model_type = "classification"
 
-    schema_ = autogen_schema(x, feature_names=list(meta_info.keys())[:-1], feature_types=[item['type'] for key, item in meta_info.items()])
+    train_num = tr_x.shape[0]
+    val_num = val_x.shape[0]
+    x = np.vstack([tr_x, val_x])
+    schema_ = autogen_schema(tr_x, feature_names=list(meta_info.keys())[:-1], 
+                             feature_types=[item['type'] for key, item in meta_info.items()])
     preprocessor_ = EBMPreprocessor(schema=schema_)
     preprocessor_.fit(x)
     xt = preprocessor_.transform(x)
-
+    
+    tr_x, val_x = xt[:train_num, :], xt[train_num:, :]
     attributes_ = EBMUtils.gen_attributes(preprocessor_.col_types_, preprocessor_.col_n_bins_)
     main_attr_sets = EBMUtils.gen_attribute_sets([[item] for item in range(len(attributes_))])
-
-    x_train, x_val, y_train, y_val = train_test_split(xt, y, test_size=0.2, random_state=0, stratify=None)
 
     with closing(
         NativeEBM(
             attributes_,
             main_attr_sets,
-            x_train,
-            y_train.ravel(),
-            x_val,
-            y_val.ravel(),
+            tr_x,
+            tr_y,
+            val_x,
+            val_y,
             num_inner_bags=0,
             num_classification_states=num_classes_,
             model_type=model_type,
-            training_scores=None,
-            validation_scores=None,
+            training_scores=pred_tr,
+            validation_scores=pred_val,
         )
     ) as native_ebm:
 

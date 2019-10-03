@@ -323,10 +323,14 @@ class GAMIxNN(tf.keras.Model):
 
             last_improvement = 0
             best_validation = np.inf
-            train_pred = self.apply(tf.cast(train_x, tf.float32), training=False).numpy()
-            residual = train_pred - train_y
-            interaction_list_all = get_interaction_list(train_x,
-                                          residual.ravel(),
+            tr_pred = self.apply(tf.cast(tr_x, tf.float32), training=False).numpy()
+            val_pred = self.apply(tf.cast(val_x, tf.float32), training=False).numpy()
+            interaction_list_all = get_interaction_list(tr_x,
+                                          val_x,
+                                          tr_y,
+                                          val_y,
+                                          tr_pred.ravel(),
+                                          val_pred.ravel(),
                                           interactions=int(round(self.input_num * (self.input_num - 1) / 2)),
                                           meta_info=self.meta_info,
                                           task_type=self.task_type)
