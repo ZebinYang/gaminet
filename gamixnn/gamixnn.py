@@ -585,11 +585,11 @@ class GAMIxNN(tf.keras.Model):
                 ax.set_xticks(interact_input1)
                 ax.set_xticklabels(interact_label1)
             if feature_name2 in self.categ_variable_list:
-                ax.set_xticks(interact_input2)
-                ax.set_xticklabels(interact_label2)
-            if np.sum([len(str(interact_label1[i])) for i in range(len(interact_label1))]) > 20:
+                ax.set_yticks(interact_input2)
+                ax.set_yticklabels(interact_label2)
+            if np.sum([len(ax.get_xticklabels()[i].get_text()) for i in range(len(ax.get_xticklabels()))]) > 20:
                 ax.xaxis.set_tick_params(rotation=15)
-            if np.sum([len(str(interact_label2[i])) for i in range(len(interact_label2))]) > 20:
+            if np.sum([len(ax.get_yticklabels()[i].get_text()) for i in range(len(ax.get_yticklabels()))]) > 20:
                 ax.yaxis.set_tick_params(rotation=15)
 
             response_precision = max(int(- np.log10(np.max(response) - np.min(response))) + 2, 0)
