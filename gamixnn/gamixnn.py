@@ -552,7 +552,8 @@ class GAMIxNN(tf.keras.Model):
                 axis_extent.extend([-0.5, inter_net.length1 - 0.5])
             else:
                 sx1 = self.meta_info[feature_name1]['scaler']
-                interact_input_list.append(np.array(np.linspace(0, 1, grid_length), dtype=np.float32))
+                interact_input1 = np.array(np.linspace(0, 1, grid_length), dtype=np.float32)
+                interact_input_list.append(interact_input1)
                 interact_label1 = sx1.inverse_transform(np.array([0, 1], dtype=np.float32).reshape([-1, 1])).ravel()
                 axis_extent.extend([interact_label1.min(), interact_label1.max()])
             if feature_name2 in self.categ_variable_list:
@@ -563,7 +564,7 @@ class GAMIxNN(tf.keras.Model):
                 interact_input2 = np.arange(tick_len2) if tick_len2 <= 12 else np.arange(0, tick_len2 - 1, int(tick_len2 / 6)).astype(int)
                 interact_label2 = [self.meta_info[feature_name2]["values"][i] for i in xtick_loc]
                 if len("".join(list(map(str, xtick_label)))) > 30:
-                    interact_label2 = [self.meta_info[feature_name1]["values"][i][:4] for i in xtick_loc]
+                    interact_label2 = [self.meta_info[feature_name2]["values"][i][:4] for i in xtick_loc]
                 
                 interact_input_list.append(np.array(np.arange(inter_net.length2), dtype=np.float32))
                 axis_extent.extend([-0.5, inter_net.length2 - 0.5])
@@ -580,10 +581,12 @@ class GAMIxNN(tf.keras.Model):
             ax = plt.Subplot(fig, outer[idx]) 
             cf = ax.imshow(response, interpolation='nearest', aspect='auto', extent=axis_extent)
 
-            ax.set_xticks(interact_input1)
-            ax.set_xticklabels(interact_label1)
-            ax.set_xticks(interact_input2)
-            ax.set_xticklabels(interact_label2)
+            if feature_name1 in self.categ_variable_list:
+                ax.set_xticks(interact_input1)
+                ax.set_xticklabels(interact_label1)
+            if feature_name2 in self.categ_variable_list:
+                ax.set_xticks(interact_input2)
+                ax.set_xticklabels(interact_label2)
             if np.sum([len(str(interact_label1[i])) for i in range(len(interact_label1))]) > 20:
                 ax.xaxis.set_tick_params(rotation=15)
             if np.sum([len(str(interact_label2[i])) for i in range(len(interact_label2))]) > 20:
