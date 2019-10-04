@@ -246,6 +246,14 @@ class GAMIxNN(tf.keras.Model):
             tr_x, val_x, tr_y, val_y = train_test_split(train_x, train_y, test_size=self.val_ratio, 
                                       stratify=train_y, random_state=self.random_state)
 
+        #### 1. Main Effects Training
+        if self.verbose:
+            print("Main Effects Training.")
+
+        last_improvement = 0
+        best_validation = np.inf
+        train_size = tr_x.shape[0]
+        
         for i in range(self.input_num):
             if i in self.categ_index_list:
                 length = len(self.meta_info[self.variables_names[i]]['values'])
@@ -256,13 +264,7 @@ class GAMIxNN(tf.keras.Model):
             pdf_grid = np.ones([length]) / length            
             self.maineffect_blocks.subnets[i].set_pdf(np.array(input_grid, dtype=np.float32).reshape([-1, 1]),
                                         np.array(pdf_grid, dtype=np.float32).reshape([1, -1]))
-        #### 1. Main Effects Training
-        if self.verbose:
-            print("Main Effects Training.")
 
-        last_improvement = 0
-        best_validation = np.inf
-        train_size = tr_x.shape[0]
         for epoch in range(self.init_training_epochs):
             shuffle_index = np.arange(tr_x.shape[0])
             np.random.shuffle(shuffle_index)
@@ -337,14 +339,18 @@ class GAMIxNN(tf.keras.Model):
                 feature_name2 = self.variables_names[idx2]
                 if feature_name1 in self.categ_variable_list:
                     length1 = len(self.meta_info[feature_name1]['values']) 
+                    length1_grid = np.arange(length1)
                 else:
                     length1 = self.grid_size
+                    length1_grid = np.linspace(0, 1, self.grid_size)
                 if feature_name2 in self.categ_variable_list:
                     length2 = len(self.meta_info[feature_name2]['values']) 
+                    length2_grid = np.arange(length2)
                 else:
                     length2 = self.grid_size
-                
-                x1, x2 = np.meshgrid(np.arange(length1), np.arange(length2))
+                    length2_grid = np.linspace(0, 1, self.grid_size)
+
+                x1, x2 = np.meshgrid(length1_grid, length2_grid)
                 input_grid = np.hstack([np.reshape(x1, [-1, 1]), np.reshape(x2, [-1, 1])])
                 pdf_grid = np.ones([length1, length2]) / (length1 * length2)
                 self.interact_blocks.interacts[interact_id].set_pdf(np.array(input_grid, dtype=np.float32),
@@ -465,7 +471,7 @@ class GAMIxNN(tf.keras.Model):
 
                 inner = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=outer[idx], wspace=0.1, hspace=0.1, height_ratios=[4, 1])
                 ax1 = plt.Subplot(fig, inner[0]) 
-                ax1.plot(subnets_inputs, subnets_outputs)
+                ax1.plot(sx.inverse_transform(subnets_inputs), subnets_outputs)
                 ax1.set_ylabel("Score", fontsize=12)
                 ax1.get_yaxis().set_label_coords(-0.15, 0.5)
                 ax1.set_title(feature_name, fontsize=12)
@@ -539,14 +545,13 @@ class GAMIxNN(tf.keras.Model):
             interact_input_list = []
             if feature_name1 in self.categ_variable_list:
                 
-                xtick_loc = (np.arange(len(self.meta_info[feature_name1]["values"])) if len(self.meta_info[feature_name1]["values"]) <= 12 else 
-                         np.arange(0, len(self.meta_info[feature_name1]["values"]) - 1,
-                         int(len(self.meta_info[feature_name1]["values"]) / 6)).astype(int))
-                tick_len1 = len(xtick_loc)
-                interact_input1 = np.arange(tick_len1) if tick_len1 <= 12 else np.arange(0, tick_len1 - 1, int(tick_len1 / 6)).astype(int)
-                interact_label1 = [self.meta_info[feature_name1]["values"][i] for i in xtick_loc]
-                if len("".join(list(map(str, xtick_label)))) > 30:
-                    interact_label1 = [self.meta_info[feature_name1]["values"][i][:4] for i in xtick_loc]
+                interact_input1 = (np.arange(len(self.meta_info[feature_name1]["values"])) if 
+                                   len(self.meta_info[feature_name1]["values"]) <= 12 else 
+                             np.arange(0, len(self.meta_info[feature_name1]["values"]) - 1,
+                             int(len(self.meta_info[feature_name1]["values"]) / 6)).astype(int))
+                interact_label1 = [self.meta_info[feature_name1]["values"][i] for i in interact_input1]
+                if len("".join(list(map(str, interact_label1)))) > 30:
+                    interact_label1 = [self.meta_info[feature_name1]["values"][i][:4] for i in interact_input1]
                 
                 interact_input_list.append(np.array(np.arange(inter_net.length1), dtype=np.float32))
                 axis_extent.extend([-0.5, inter_net.length1 - 0.5])
@@ -557,14 +562,13 @@ class GAMIxNN(tf.keras.Model):
                 interact_label1 = sx1.inverse_transform(np.array([0, 1], dtype=np.float32).reshape([-1, 1])).ravel()
                 axis_extent.extend([interact_label1.min(), interact_label1.max()])
             if feature_name2 in self.categ_variable_list:
-                xtick_loc = (np.arange(len(self.meta_info[feature_name2]["values"])) if len(self.meta_info[feature_name2]["values"]) <= 12 else 
-                         np.arange(0, len(self.meta_info[feature_name2]["values"]) - 1,
-                         int(len(self.meta_info[feature_name2]["values"]) / 6)).astype(int))
-                tick_len2 = len(xtick_loc)
-                interact_input2 = np.arange(tick_len2) if tick_len2 <= 12 else np.arange(0, tick_len2 - 1, int(tick_len2 / 6)).astype(int)
-                interact_label2 = [self.meta_info[feature_name2]["values"][i] for i in xtick_loc]
-                if len("".join(list(map(str, xtick_label)))) > 30:
-                    interact_label2 = [self.meta_info[feature_name2]["values"][i][:4] for i in xtick_loc]
+                interact_input2 = (np.arange(len(self.meta_info[feature_name2]["values"])) if 
+                                   len(self.meta_info[feature_name2]["values"]) <= 12 else 
+                             np.arange(0, len(self.meta_info[feature_name2]["values"]) - 1,
+                             int(len(self.meta_info[feature_name1]["values"]) / 6)).astype(int))
+                interact_label2 = [self.meta_info[feature_name1]["values"][i] for i in interact_input2]
+                if len("".join(list(map(str, interact_label2)))) > 30:
+                    interact_label2 = [self.meta_info[feature_name12]["values"][i][:4] for i in interact_input2]
                 
                 interact_input_list.append(np.array(np.arange(inter_net.length2), dtype=np.float32))
                 axis_extent.extend([-0.5, inter_net.length2 - 0.5])
