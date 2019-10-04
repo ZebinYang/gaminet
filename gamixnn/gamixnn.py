@@ -542,9 +542,8 @@ class GAMIxNN(tf.keras.Model):
                 xtick_loc = (np.arange(len(self.meta_info[feature_name1]["values"])) if len(self.meta_info[feature_name1]["values"]) <= 12 else 
                          np.arange(0, len(self.meta_info[feature_name1]["values"]) - 1,
                          int(len(self.meta_info[feature_name1]["values"]) / 6)).astype(int))
-                tick_len1 = len(interact_label1)
+                tick_len1 = len(xtick_loc)
                 interact_input1 = np.arange(tick_len1) if tick_len1 <= 12 else np.arange(0, tick_len1 - 1, int(tick_len1 / 6)).astype(int)
-
                 interact_label1 = [self.meta_info[feature_name1]["values"][i] for i in xtick_loc]
                 if len("".join(list(map(str, xtick_label)))) > 30:
                     interact_label1 = [self.meta_info[feature_name1]["values"][i][:4] for i in xtick_loc]
