@@ -248,17 +248,14 @@ class GAMIxNN(tf.keras.Model):
 
         for i in range(self.input_num):
 
-            values = train_x[:,[i]]
             if i in self.numerical_index_list:
                 input_grid = np.linspace(0, 1, self.grid_size)
-                kde = stats.gaussian_kde(values.T)
-                pdf_grid = kde(input_grid)
-                pdf_grid = np.array(pdf_grid / np.sum(pdf_grid), dtype=np.float32) 
+                pdf_grid = np.ones([self.grid_size]) / self.grid_size
             elif i in self.categ_index_list:
-                key = self.variables_names[i]
-                input_grid = np.arange(len(self.meta_info[key]['values']))
-                pdf_grid, _ = np.histogram(values, bins=np.arange(len(self.meta_info[key]['values']) + 1), density=True)
-
+                categ_length = len(self.meta_info[self.variables_names[i]]['values'])
+                input_grid = np.arange(categ_length)
+                pdf_grid = np.ones([categ_length]) / categ_length
+            
             self.maineffect_blocks.subnets[i].set_pdf(np.array(input_grid, dtype=np.float32).reshape([-1, 1]),
                                         np.array(pdf_grid, dtype=np.float32).reshape([1, -1]))
         #### 1. Main Effects Training
@@ -338,57 +335,18 @@ class GAMIxNN(tf.keras.Model):
 
             for interact_id, (idx1, idx2) in enumerate(self.interaction_list):
 
-                interact_input_list = []
-                values = train_x[:,[idx1, idx2]]
                 feature_name1 = self.variables_names[idx1]
                 feature_name2 = self.variables_names[idx2]
                 if (feature_name1 in self.categ_variable_list) & (feature_name2 in self.categ_variable_list):
-                    pdf_grid = np.zeros((len(self.meta_info[feature_name1]['values']),
-                                  len(self.meta_info[feature_name2]['values'])))
-                    for i in np.arange(len(self.meta_info[feature_name1]['values'])):
-                        for j in np.arange(len(self.meta_info[feature_name2]['values'])):
-                            pdf_grid[i, j] = np.sum((values[:, 0] == i)&(values[:, 1] == j))
-
-                    pdf_grid = pdf_grid / np.sum(pdf_grid)
-                    x1, x2 = np.meshgrid(np.arange(len(self.meta_info[feature_name1]['values'])), 
-                                  np.arange(len(self.meta_info[feature_name2]['values'])))
-                    input_grid = np.hstack([np.reshape(x1, [-1, 1]), np.reshape(x2, [-1, 1])])
                     pdf_grid = np.ones([len(self.meta_info[feature_name1]['values']), len(self.meta_info[feature_name2]['values'])]) / (len(self.meta_info[feature_name1]['values']) * len(self.meta_info[feature_name2]['values']))
 
                 if (feature_name1 in self.categ_variable_list) & (feature_name2 not in self.categ_variable_list):
-
-                    pdf_grid = np.zeros((len(self.meta_info[feature_name1]['values']), 
-                                  self.grid_size))
-                    x1, x2 = np.meshgrid(np.arange(len(self.meta_info[feature_name1]['values'])), 
-                                  np.linspace(0, 1, self.grid_size))
-                    input_grid = np.hstack([np.reshape(x1, [-1, 1]), np.reshape(x2, [-1, 1])])
-                    for i in np.arange(len(self.meta_info[feature_name1]['values'])):
-                        kde = stats.gaussian_kde(values[values[:, 0] == i][:, 1].T)
-                        pdf_grid_temp = kde(np.linspace(0, 1, self.grid_size))
-                        pdf_grid[i, :] = (np.sum(values[:, 0] == i) / values.shape[0]) * pdf_grid_temp / np.sum(pdf_grid_temp)
                     pdf_grid = np.ones([len(self.meta_info[feature_name1]['values']), self.grid_size]) / (self.grid_size * len(self.meta_info[feature_name1]['values']))
 
                 if (feature_name1 not in self.categ_variable_list) & (feature_name2 in self.categ_variable_list):
-
-                    pdf_grid = np.zeros((self.grid_size,
-                                  len(self.meta_info[feature_name2]['values'])))
-                    x1, x2 = np.meshgrid(np.linspace(0, 1, self.grid_size), 
-                                  np.arange(len(self.meta_info[feature_name2]['values'])))
-                    input_grid = np.hstack([np.reshape(x1, [-1, 1]), np.reshape(x2, [-1, 1])])
-                    for j in np.arange(len(self.meta_info[feature_name2]['values'])):
-                        kde = stats.gaussian_kde(values[values[:, 1] == j][:, 0].T)
-                        pdf_grid_temp = kde(np.linspace(0, 1, self.grid_size))
-                        pdf_grid[:, j] = (np.sum(values[:, 1] == j) / values.shape[0]) * pdf_grid_temp / np.sum(pdf_grid_temp)
                     pdf_grid = np.ones([self.grid_size, len(self.meta_info[feature_name2]['values'])]) / (self.grid_size * len(self.meta_info[feature_name2]['values']))
                     
                 if (feature_name1 not in self.categ_variable_list) & (feature_name2 not in self.categ_variable_list):
-
-                    x1, x2 = np.meshgrid(np.linspace(0, 1, self.grid_size), 
-                                  np.linspace(0, 1, self.grid_size))
-                    input_grid = np.hstack([np.reshape(x1, [-1, 1]), np.reshape(x2, [-1, 1])])
-                    kde = stats.gaussian_kde(values.T)
-                    pdf_grid = kde(np.vstack([x1.ravel(), x2.ravel()]))
-                    pdf_grid = np.reshape(pdf_grid / np.sum(pdf_grid), [self.grid_size, self.grid_size])
                     pdf_grid = np.ones([self.grid_size, self.grid_size]) / (self.grid_size * self.grid_size)
 
                 self.interact_blocks.interacts[interact_id].set_pdf(np.array(input_grid, dtype=np.float32),
@@ -550,10 +508,13 @@ class GAMIxNN(tf.keras.Model):
                 ax1.get_shared_x_axes().join(ax1, ax2)
                 ax1.set_xticklabels([])
                 
-                xtick_loc = (np.arange(len(self.meta_info[feature_name]['values'])) if len(self.meta_info[feature_name]['values']) <= 12 else 
-                         np.arange(0, len(self.meta_info[feature_name]['values']) - 1, 
-                               int(len(self.meta_info[feature_name]['values']) / 6)).astype(int))
+                xtick_loc = (np.arange(len(self.meta_info[feature_name]["values"])) if len(self.meta_info[feature_name]["values"]) <= 12 else 
+                         np.arange(0, len(self.meta_info[feature_name]["values"]) - 1,
+                         int(len(self.meta_info[feature_name]["values"]) / 6)).astype(int))
                 xtick_label = [self.meta_info[feature_name]["values"][i] for i in xtick_loc]
+                if len("".join(xtick_label)) > 30:
+                    xtick_label = [self.meta_info[feature_name]["values"][i][:4] for i in xtick_loc]
+
                 ax2.set_xticks(xtick_loc)
                 ax2.set_xticklabels(xtick_label)
                 ax2.set_ylabel("Histogram", fontsize=12)
@@ -579,9 +540,17 @@ class GAMIxNN(tf.keras.Model):
             axis_extent = []
             interact_input_list = []
             if feature_name1 in self.categ_variable_list:
-                interact_label1 = self.meta_info[feature_name1]['values']
-                interact_input1 = np.array(np.arange(inter_net.length1), dtype=np.float32)
-                interact_input_list.append(interact_input1)
+                
+                xtick_loc = (np.arange(len(self.meta_info[feature_name1]["values"])) if len(self.meta_info[feature_name1]["values"]) <= 12 else 
+                         np.arange(0, len(self.meta_info[feature_name1]["values"]) - 1,
+                         int(len(self.meta_info[feature_name1]["values"]) / 6)).astype(int))
+                interact_label1 = [self.meta_info[feature_name1]["values"][i] for i in xtick_loc]
+                if len("".join(interact_label1)) > 30:
+                    interact_label1 = [self.meta_info[feature_name1]["values"][i][:4] for i in xtick_loc]
+                
+                tick_len1 = len(interact_label1)
+                interact_input1 = np.arange(tick_len1) if tick_len1 <= 12 else np.arange(0, tick_len1 - 1, int(tick_len1 / 6)).astype(int)
+                interact_input_list.append(np.array(np.arange(inter_net.length1), dtype=np.float32))
                 axis_extent.extend([-0.5, inter_net.length1 - 0.5])
             else:
                 sx1 = self.meta_info[feature_name1]['scaler']
@@ -589,9 +558,16 @@ class GAMIxNN(tf.keras.Model):
                 interact_label1 = sx1.inverse_transform(np.array([0, 1], dtype=np.float32).reshape([-1, 1])).ravel()
                 axis_extent.extend([interact_label1.min(), interact_label1.max()])
             if feature_name2 in self.categ_variable_list:
-                interact_label2 = self.meta_info[feature_name2]['values']
-                interact_input2 = np.array(np.arange(inter_net.length2), dtype=np.float32)
-                interact_input_list.append(interact_input2)
+                xtick_loc = (np.arange(len(self.meta_info[feature_name2]["values"])) if len(self.meta_info[feature_name2]["values"]) <= 12 else 
+                         np.arange(0, len(self.meta_info[feature_name2]["values"]) - 1,
+                         int(len(self.meta_info[feature_name2]["values"]) / 6)).astype(int))
+                interact_label2 = [self.meta_info[feature_name2]["values"][i] for i in xtick_loc]
+                if len("".join(interact_label2)) > 30:
+                    interact_label2 = [self.meta_info[feature_name1]["values"][i][:4] for i in xtick_loc]
+                
+                tick_len2 = len(interact_label2)
+                interact_input2 = np.arange(tick_len2) if tick_len2 <= 12 else np.arange(0, tick_len2 - 1, int(tick_len2 / 6)).astype(int)
+                interact_input_list.append(np.array(np.arange(inter_net.length2), dtype=np.float32))
                 axis_extent.extend([-0.5, inter_net.length2 - 0.5])
             else:
                 sx2 = self.meta_info[feature_name2]['scaler']
