@@ -510,7 +510,7 @@ class GAMIxNN(tf.keras.Model):
                          np.arange(0, len(self.meta_info[feature_name]["values"]) - 1,
                          int(len(self.meta_info[feature_name]["values"]) / 6)).astype(int))
                 xtick_label = [self.meta_info[feature_name]["values"][i] for i in xtick_loc]
-                if len("".join(xtick_label)) > 30:
+                if len("".join(list(map(str, xtick_label)))) > 30:
                     xtick_label = [self.meta_info[feature_name]["values"][i][:4] for i in xtick_loc]
 
                 ax2.set_xticks(xtick_loc)
@@ -543,7 +543,7 @@ class GAMIxNN(tf.keras.Model):
                          np.arange(0, len(self.meta_info[feature_name1]["values"]) - 1,
                          int(len(self.meta_info[feature_name1]["values"]) / 6)).astype(int))
                 interact_label1 = [self.meta_info[feature_name1]["values"][i] for i in xtick_loc]
-                if len("".join(interact_label1)) > 30:
+                if len("".join(list(map(str, xtick_label)))) > 30:
                     interact_label1 = [self.meta_info[feature_name1]["values"][i][:4] for i in xtick_loc]
                 
                 tick_len1 = len(interact_label1)
@@ -560,7 +560,7 @@ class GAMIxNN(tf.keras.Model):
                          np.arange(0, len(self.meta_info[feature_name2]["values"]) - 1,
                          int(len(self.meta_info[feature_name2]["values"]) / 6)).astype(int))
                 interact_label2 = [self.meta_info[feature_name2]["values"][i] for i in xtick_loc]
-                if len("".join(interact_label2)) > 30:
+                if len("".join(list(map(str, xtick_label)))) > 30:
                     interact_label2 = [self.meta_info[feature_name1]["values"][i][:4] for i in xtick_loc]
                 
                 tick_len2 = len(interact_label2)
