@@ -542,12 +542,13 @@ class GAMIxNN(tf.keras.Model):
                 xtick_loc = (np.arange(len(self.meta_info[feature_name1]["values"])) if len(self.meta_info[feature_name1]["values"]) <= 12 else 
                          np.arange(0, len(self.meta_info[feature_name1]["values"]) - 1,
                          int(len(self.meta_info[feature_name1]["values"]) / 6)).astype(int))
+                tick_len1 = len(interact_label1)
+                interact_input1 = np.arange(tick_len1) if tick_len1 <= 12 else np.arange(0, tick_len1 - 1, int(tick_len1 / 6)).astype(int)
+
                 interact_label1 = [self.meta_info[feature_name1]["values"][i] for i in xtick_loc]
                 if len("".join(list(map(str, xtick_label)))) > 30:
                     interact_label1 = [self.meta_info[feature_name1]["values"][i][:4] for i in xtick_loc]
                 
-                tick_len1 = len(interact_label1)
-                interact_input1 = np.arange(tick_len1) if tick_len1 <= 12 else np.arange(0, tick_len1 - 1, int(tick_len1 / 6)).astype(int)
                 interact_input_list.append(np.array(np.arange(inter_net.length1), dtype=np.float32))
                 axis_extent.extend([-0.5, inter_net.length1 - 0.5])
             else:
@@ -559,12 +560,12 @@ class GAMIxNN(tf.keras.Model):
                 xtick_loc = (np.arange(len(self.meta_info[feature_name2]["values"])) if len(self.meta_info[feature_name2]["values"]) <= 12 else 
                          np.arange(0, len(self.meta_info[feature_name2]["values"]) - 1,
                          int(len(self.meta_info[feature_name2]["values"]) / 6)).astype(int))
+                tick_len2 = len(xtick_loc)
+                interact_input2 = np.arange(tick_len2) if tick_len2 <= 12 else np.arange(0, tick_len2 - 1, int(tick_len2 / 6)).astype(int)
                 interact_label2 = [self.meta_info[feature_name2]["values"][i] for i in xtick_loc]
                 if len("".join(list(map(str, xtick_label)))) > 30:
                     interact_label2 = [self.meta_info[feature_name1]["values"][i][:4] for i in xtick_loc]
                 
-                tick_len2 = len(interact_label2)
-                interact_input2 = np.arange(tick_len2) if tick_len2 <= 12 else np.arange(0, tick_len2 - 1, int(tick_len2 / 6)).astype(int)
                 interact_input_list.append(np.array(np.arange(inter_net.length2), dtype=np.float32))
                 axis_extent.extend([-0.5, inter_net.length2 - 0.5])
             else:
@@ -580,21 +581,13 @@ class GAMIxNN(tf.keras.Model):
             ax = plt.Subplot(fig, outer[idx]) 
             cf = ax.imshow(response, interpolation='nearest', aspect='auto', extent=axis_extent)
 
-            if feature_name1 in self.categ_variable_list:
-                xtick_loc = (np.arange(inter_net.length1) if inter_net.length1 <= 12 else
-                            np.arange(0, inter_net.length1 - 1, int(inter_net.length1 / 6)).astype(int))
-                xtick_label = [interact_label1[i] for i in xtick_loc]
-                ax.set_xticks(xtick_loc)
-                ax.set_xticklabels(xtick_label)
-            elif np.sum([len(str(interact_label1[i])) for i in range(len(interact_label1))]) > 20:
+            ax.set_xticks(interact_input1)
+            ax.set_xticklabels(interact_label1)
+            ax.set_xticks(interact_input2)
+            ax.set_xticklabels(interact_label2)
+            if np.sum([len(str(interact_label1[i])) for i in range(len(interact_label1))]) > 20:
                 ax.xaxis.set_tick_params(rotation=15)
-            if feature_name2 in self.categ_variable_list:
-                ytick_loc = (np.arange(inter_net.length2) if inter_net.length2 <= 12 else
-                            np.arange(0, inter_net.length2 - 1, int(inter_net.length2 / 6)).astype(int))
-                ytick_label = [interact_label2[i] for i in ytick_loc]
-                ax.set_yticks(ytick_loc)
-                ax.set_yticklabels(ytick_label)
-            elif np.sum([len(str(interact_label2[i])) for i in range(len(interact_label2))]) > 20:
+            if np.sum([len(str(interact_label2[i])) for i in range(len(interact_label2))]) > 20:
                 ax.yaxis.set_tick_params(rotation=15)
 
             response_precision = max(int(- np.log10(np.max(response) - np.min(response))) + 2, 0)
