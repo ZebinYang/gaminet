@@ -247,15 +247,13 @@ class GAMIxNN(tf.keras.Model):
                                       stratify=train_y, random_state=self.random_state)
 
         for i in range(self.input_num):
-
-            if i in self.numerical_index_list:
-                input_grid = np.linspace(0, 1, self.grid_size)
-                pdf_grid = np.ones([self.grid_size]) / self.grid_size
-            elif i in self.categ_index_list:
-                categ_length = len(self.meta_info[self.variables_names[i]]['values'])
-                input_grid = np.arange(categ_length)
-                pdf_grid = np.ones([categ_length]) / categ_length
-            
+            if i in self.categ_index_list:
+                length = len(self.meta_info[self.variables_names[i]]['values'])
+                input_grid = np.arange(len(self.meta_info[key]['values']))
+            else:
+                length = self.grid_size
+                input_grid = np.linspace(0, 1, length)
+            pdf_grid = np.ones([length]) / length            
             self.maineffect_blocks.subnets[i].set_pdf(np.array(input_grid, dtype=np.float32).reshape([-1, 1]),
                                         np.array(pdf_grid, dtype=np.float32).reshape([1, -1]))
         #### 1. Main Effects Training
@@ -337,18 +335,18 @@ class GAMIxNN(tf.keras.Model):
 
                 feature_name1 = self.variables_names[idx1]
                 feature_name2 = self.variables_names[idx2]
-                if (feature_name1 in self.categ_variable_list) & (feature_name2 in self.categ_variable_list):
-                    pdf_grid = np.ones([len(self.meta_info[feature_name1]['values']), len(self.meta_info[feature_name2]['values'])]) / (len(self.meta_info[feature_name1]['values']) * len(self.meta_info[feature_name2]['values']))
-
-                if (feature_name1 in self.categ_variable_list) & (feature_name2 not in self.categ_variable_list):
-                    pdf_grid = np.ones([len(self.meta_info[feature_name1]['values']), self.grid_size]) / (self.grid_size * len(self.meta_info[feature_name1]['values']))
-
-                if (feature_name1 not in self.categ_variable_list) & (feature_name2 in self.categ_variable_list):
-                    pdf_grid = np.ones([self.grid_size, len(self.meta_info[feature_name2]['values'])]) / (self.grid_size * len(self.meta_info[feature_name2]['values']))
-                    
-                if (feature_name1 not in self.categ_variable_list) & (feature_name2 not in self.categ_variable_list):
-                    pdf_grid = np.ones([self.grid_size, self.grid_size]) / (self.grid_size * self.grid_size)
-
+                if feature_name1 in self.categ_variable_list:
+                    length1 = len(self.meta_info[feature_name1]['values']) 
+                else:
+                    length1 = self.grid_size
+                if feature_name2 in self.categ_variable_list:
+                    length2 = len(self.meta_info[feature_name2]['values']) 
+                else:
+                    length2 = self.grid_size
+                
+                x1, x2 = np.meshgrid(np.arange(length1), np.arange(length2))
+                input_grid = np.hstack([np.reshape(x1, [-1, 1]), np.reshape(x2, [-1, 1])])
+                pdf_grid = np.ones([length1, length2]) / (length1 * length2)
                 self.interact_blocks.interacts[interact_id].set_pdf(np.array(input_grid, dtype=np.float32),
                                                    np.array(pdf_grid, dtype=np.float32).T)
 
