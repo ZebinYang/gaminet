@@ -249,7 +249,7 @@ class GAMIxNN(tf.keras.Model):
         for i in range(self.input_num):
             if i in self.categ_index_list:
                 length = len(self.meta_info[self.variables_names[i]]['values'])
-                input_grid = np.arange(len(self.meta_info[key]['values']))
+                input_grid = np.arange(len(self.meta_info[self.variables_names[i]]['values']))
             else:
                 length = self.grid_size
                 input_grid = np.linspace(0, 1, length)
