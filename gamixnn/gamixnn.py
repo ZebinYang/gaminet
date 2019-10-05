@@ -467,11 +467,12 @@ class GAMIxNN(tf.keras.Model):
                             
                 sx = self.meta_info[feature_name]['scaler']
                 subnets_inputs = np.linspace(0, 1, grid_length).reshape([-1, 1])
+                subnets_inputs_original = sx.inverse_transform(subnets_inputs)
                 subnets_outputs = np.sign(beta[indice]) * subnet.apply(tf.cast(tf.constant(subnets_inputs), tf.float32)).numpy()
 
                 inner = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=outer[idx], wspace=0.1, hspace=0.1, height_ratios=[4, 1])
                 ax1 = plt.Subplot(fig, inner[0]) 
-                ax1.plot(sx.inverse_transform(subnets_inputs), subnets_outputs)
+                ax1.plot(subnets_inputs_original, subnets_outputs)
                 ax1.set_ylabel("Score", fontsize=12)
                 ax1.get_yaxis().set_label_coords(-0.15, 0.5)
                 ax1.set_title(feature_name, fontsize=12)
@@ -483,12 +484,8 @@ class GAMIxNN(tf.keras.Model):
                 ax1.set_xticklabels([])
                 ax2.set_ylabel("Histogram", fontsize=12)
                 ax2.get_yaxis().set_label_coords(-0.15, 0.5)
-                if np.sum([len(ax1.get_yticklabels()[i].get_text()) for i in range(len(ax1.get_yticklabels()))]) > 20:
-                    ax1.yaxis.set_tick_params(rotation=15)
-                if np.sum([len(ax2.get_xticklabels()[i].get_text()) for i in range(len(ax2.get_xticklabels()))]) > 20:
-                    ax2.xaxis.set_tick_params(rotation=15)
-                if np.sum([len(ax2.get_yticklabels()[i].get_text()) for i in range(len(ax2.get_yticklabels()))]) > 20:
-                    ax2.yaxis.set_tick_params(rotation=15)
+                if (max(subnets_inputs_original) - min(subnets_inputs_original)) > 10000:
+                    ax2.xaxis.set_tick_params(rotation=20)
                 fig.add_subplot(ax2)
 
             elif indice in self.categ_index_list:
@@ -523,12 +520,8 @@ class GAMIxNN(tf.keras.Model):
                 ax2.set_xticklabels(xtick_label)
                 ax2.set_ylabel("Histogram", fontsize=12)
                 ax2.get_yaxis().set_label_coords(-0.15, 0.5)
-                if np.sum([len(ax1.get_yticklabels()[i].get_text()) for i in range(len(ax1.get_yticklabels()))]) > 20:
-                    ax1.yaxis.set_tick_params(rotation=15)
                 if np.sum([len(ax2.get_xticklabels()[i].get_text()) for i in range(len(ax2.get_xticklabels()))]) > 20:
-                    ax2.xaxis.set_tick_params(rotation=15)
-                if np.sum([len(ax2.get_yticklabels()[i].get_text()) for i in range(len(ax2.get_yticklabels()))]) > 20:
-                    ax2.yaxis.set_tick_params(rotation=15)
+                    ax2.xaxis.set_tick_params(rotation=20)
                 fig.add_subplot(ax2)
 
             idx = idx + 1
@@ -559,8 +552,8 @@ class GAMIxNN(tf.keras.Model):
                 sx1 = self.meta_info[feature_name1]['scaler']
                 interact_input1 = np.array(np.linspace(0, 1, grid_length), dtype=np.float32)
                 interact_input_list.append(interact_input1)
-                interact_label1 = sx1.inverse_transform(np.array([0, 1], dtype=np.float32).reshape([-1, 1])).ravel()
-                axis_extent.extend([interact_label1.min(), interact_label1.max()])
+                subnets_inputs_original1 = sx1.inverse_transform(np.array([0, 1], dtype=np.float32).reshape([-1, 1])).ravel()
+                axis_extent.extend([subnets_inputs_original1.min(), subnets_inputs_original1.max()])
             if feature_name2 in self.categ_variable_list:
                 interact_input2 = (np.arange(len(self.meta_info[feature_name2]["values"])) if 
                                    len(self.meta_info[feature_name2]["values"]) <= 12 else 
@@ -575,8 +568,8 @@ class GAMIxNN(tf.keras.Model):
             else:
                 sx2 = self.meta_info[feature_name2]['scaler']
                 interact_input_list.append(np.array(np.linspace(0, 1, grid_length), dtype=np.float32))
-                interact_label2 = sx2.inverse_transform(np.array([0, 1], dtype=np.float32).reshape([-1, 1])).ravel()
-                axis_extent.extend([interact_label2.min(), interact_label2.max()])
+                subnets_inputs_original2 = sx2.inverse_transform(np.array([0, 1], dtype=np.float32).reshape([-1, 1])).ravel()
+                axis_extent.extend([subnets_inputs_original2.min(), subnets_inputs_original2.max()])
 
             x1, x2 = np.meshgrid(interact_input_list[0], interact_input_list[1][::-1])
             input_grid = np.hstack([np.reshape(x1, [-1, 1]), np.reshape(x2, [-1, 1])])
@@ -588,13 +581,19 @@ class GAMIxNN(tf.keras.Model):
             if feature_name1 in self.categ_variable_list:
                 ax.set_xticks(interact_input1)
                 ax.set_xticklabels(interact_label1)
+                if np.sum([len(ax.get_xticklabels()[i].get_text()) for i in range(len(ax.get_xticklabels()))]) > 20:
+                    ax.xaxis.set_tick_params(rotation=20)
+            else:
+                if (max(subnets_inputs_original1) - min(subnets_inputs_original1)) > 10000:
+                    ax.xaxis.set_tick_params(rotation=20)
             if feature_name2 in self.categ_variable_list:
                 ax.set_yticks(interact_input2)
                 ax.set_yticklabels(interact_label2)
-            if np.sum([len(ax.get_xticklabels()[i].get_text()) for i in range(len(ax.get_xticklabels()))]) > 20:
-                ax.xaxis.set_tick_params(rotation=15)
-            if np.sum([len(ax.get_yticklabels()[i].get_text()) for i in range(len(ax.get_yticklabels()))]) > 20:
-                ax.yaxis.set_tick_params(rotation=15)
+                if np.sum([len(ax.get_yticklabels()[i].get_text()) for i in range(len(ax.get_yticklabels()))]) > 20:
+                    ax.yaxis.set_tick_params(rotation=20)
+            else:
+                if (max(subnets_inputs_original2) - min(subnets_inputs_original2)) > 10000:
+                    ax.yaxis.set_tick_params(rotation=20)
 
             response_precision = max(int(- np.log10(np.max(response) - np.min(response))) + 2, 0)
             fig.colorbar(cf, ax=ax, format='%0.' + str(response_precision) + 'f')
