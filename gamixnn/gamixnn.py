@@ -45,6 +45,7 @@ class GAMIxNN(tf.keras.Model):
         self.interact_arch = interact_arch
         self.max_interact_num = int(round(self.input_num * (self.input_num - 1) / 2))
         self.interact_num = min(interact_num, self.max_interact_num)
+        self.interact_num_heredity = self.interact_num
 
         self.lr_bp = lr_bp
         self.batch_size = batch_size
@@ -156,7 +157,7 @@ class GAMIxNN(tf.keras.Model):
             total_loss = self.loss_fn(labels, pred)
 
         train_weights = self.maineffect_blocks.weights
-        train_weights.append(self.output_layer.subnet_weights)
+        train_weights.append(self.output_layer.main_effect_weights)
         train_weights.append(self.output_layer.output_bias)
         train_weights_list = []
         trainable_weights_names = [self.trainable_weights[j].name for j in range(len(self.trainable_weights))]
@@ -186,9 +187,9 @@ class GAMIxNN(tf.keras.Model):
 
     def get_active_main_effects(self):
 
-        subnet_norm = [self.maineffect_blocks.subnets[i].moving_norm.numpy()[0] for i in range(self.input_num)]
-        beta = (self.output_layer.subnet_weights.numpy() * np.array([subnet_norm]).reshape([-1, 1])
-             * self.output_layer.subnet_switcher.numpy())
+        main_effect_norm = [self.maineffect_blocks.subnets[i].moving_norm.numpy()[0] for i in range(self.input_num)]
+        beta = (self.output_layer.main_effect_weights.numpy() * np.array([main_effect_norm]).reshape([-1, 1])
+             * self.output_layer.main_effect_switcher.numpy())
 
         componment_coefs = beta
         componment_scales = (np.abs(componment_coefs) / np.sum(np.abs(componment_coefs))).reshape([-1])
@@ -198,14 +199,14 @@ class GAMIxNN(tf.keras.Model):
     
     def get_active_interactions(self):
 
-        subnet_norm = [self.maineffect_blocks.subnets[i].moving_norm.numpy()[0] for i in range(self.input_num)]
-        beta = (self.output_layer.subnet_weights.numpy() * np.array([subnet_norm]).reshape([-1, 1]) 
-             * self.output_layer.subnet_switcher.numpy())
+        main_effect_norm = [self.maineffect_blocks.subnets[i].moving_norm.numpy()[0] for i in range(self.input_num)]
+        beta = (self.output_layer.main_effect_weights.numpy() * np.array([main_effect_norm]).reshape([-1, 1]) 
+             * self.output_layer.main_effect_switcher.numpy())
 
-        interaction_norm = [self.interact_blocks.interacts[i].moving_norm.numpy()[0] for i in range(self.interact_num)]
-        gamma = (self.output_layer.interaction_weights.numpy()[:self.interact_num] 
+        interaction_norm = [self.interact_blocks.interacts[i].moving_norm.numpy()[0] for i in range(self.interact_num_heredity)]
+        gamma = (self.output_layer.interaction_weights.numpy()[:self.interact_num_heredity] 
               * np.array([interaction_norm]).reshape([-1, 1])
-              * self.output_layer.interaction_switcher.numpy()[:self.interact_num])
+              * self.output_layer.interaction_switcher.numpy()[:self.interact_num_heredity])
 
         componment_coefs = np.vstack([beta, gamma])
         componment_scales = (np.abs(componment_coefs) / np.sum(np.abs(componment_coefs))).reshape([-1])
@@ -218,14 +219,14 @@ class GAMIxNN(tf.keras.Model):
 
     def get_active_effects(self):
 
-        subnet_norm = [self.maineffect_blocks.subnets[i].moving_norm.numpy()[0] for i in range(self.input_num)]
-        beta = (self.output_layer.subnet_weights.numpy() * np.array([subnet_norm]).reshape([-1, 1]) 
-             * self.output_layer.subnet_switcher.numpy())
+        main_effect_norm = [self.maineffect_blocks.subnets[i].moving_norm.numpy()[0] for i in range(self.input_num)]
+        beta = (self.output_layer.main_effect_weights.numpy() * np.array([main_effect_norm]).reshape([-1, 1]) 
+             * self.output_layer.main_effect_switcher.numpy())
 
-        interaction_norm = [self.interact_blocks.interacts[i].moving_norm.numpy()[0] for i in range(self.interact_num)]
-        gamma = (self.output_layer.interaction_weights.numpy()[:self.interact_num] 
+        interaction_norm = [self.interact_blocks.interacts[i].moving_norm.numpy()[0] for i in range(self.interact_num_heredity)]
+        gamma = (self.output_layer.interaction_weights.numpy()[:self.interact_num_heredity] 
               * np.array([interaction_norm]).reshape([-1, 1])
-              * self.output_layer.interaction_switcher.numpy()[:self.interact_num])
+              * self.output_layer.interaction_switcher.numpy()[:self.interact_num_heredity])
 
         componment_coefs = np.vstack([beta, gamma])
         componment_scales = (np.abs(componment_coefs) / np.sum(np.abs(componment_coefs))).reshape([-1])
@@ -291,10 +292,10 @@ class GAMIxNN(tf.keras.Model):
                     print("Early stop at epoch %d, With Testing Error: %0.5f" % (epoch + 1, self.err_val[-1]))
                 break
 
-        subnet_scal_factor = np.zeros((self.input_num, 1))
+        main_effect_switcher = np.zeros((self.input_num, 1))
         active_univariate_index, beta, componment_scales = self.get_active_main_effects()
-        subnet_scal_factor[active_univariate_index] = 1
-        self.output_layer.subnet_switcher.assign(tf.constant(subnet_scal_factor, dtype=tf.float32))
+        main_effect_switcher[active_univariate_index] = 1
+        self.output_layer.main_effect_switcher.assign(tf.constant(main_effect_switcher, dtype=tf.float32))
         for epoch in range(self.tuning_epochs):
             shuffle_index = np.arange(tr_x.shape[0])
             np.random.shuffle(shuffle_index)
@@ -331,7 +332,11 @@ class GAMIxNN(tf.keras.Model):
             self.interaction_list = [interaction_list_all[i] for i in range(self.max_interact_num) 
                                      if (interaction_list_all[i][0] in active_univariate_index)
                                      or (interaction_list_all[i][1] in active_univariate_index)][:self.interact_num]
-            self.interact_num = len(self.interaction_list)
+            
+            self.interact_num_heredity = len(self.interaction_list)
+            interaction_switcher = np.zeros((self.interact_num, 1))
+            interaction_switcher[:self.interact_num_heredity] = 1
+            self.output_layer.interaction_switcher.assign(tf.constant(interaction_switcher, dtype=tf.float32))
             self.interact_blocks.set_interaction_list(self.interaction_list)
 
             for interact_id, (idx1, idx2) in enumerate(self.interaction_list):
@@ -384,10 +389,10 @@ class GAMIxNN(tf.keras.Model):
                         print("Early stop at epoch %d, With Testing Error: %0.5f" % (epoch + 1, self.err_val[-1]))
                     break
 
-            interaction_scal_factor = np.zeros((self.interact_num, 1))
+            interaction_switcher = np.zeros((self.interact_num, 1))
             active_interaction_index, gamma, componment_scales = self.get_active_interactions()
-            interaction_scal_factor[active_interaction_index] = 1
-            self.output_layer.interaction_switcher.assign(tf.constant(interaction_scal_factor, dtype=tf.float32))
+            interaction_switcher[active_interaction_index] = 1
+            self.output_layer.interaction_switcher.assign(tf.constant(interaction_switcher, dtype=tf.float32))
 
             for epoch in range(self.tuning_epochs):
                 shuffle_index = np.arange(tr_x.shape[0])

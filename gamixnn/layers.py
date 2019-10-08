@@ -279,7 +279,7 @@ class InteractionBlock(tf.keras.layers.Layer):
     def set_interaction_list(self, interaction_list):
         
         self.interaction_list = interaction_list
-        self.interact_num = len(self.interaction_list)
+        self.interact_num = len(interaction_list)
         for i in range(self.interact_num):
             self.interacts[i].set_interaction(interaction_list[i])
 
@@ -307,11 +307,11 @@ class OutputLayer(tf.keras.layers.Layer):
         self.input_num = input_num
         self.interact_num = interact_num
 
-        self.subnet_weights = self.add_weight(name="subnet_weights",
+        self.main_effect_weights = self.add_weight(name="subnet_weights",
                                               shape=[self.input_num, 1],
                                               initializer=tf.keras.initializers.GlorotNormal(),
                                               trainable=True)
-        self.subnet_switcher = self.add_weight(name="subnet_switcher",
+        self.main_effect_switcher = self.add_weight(name="subnet_switcher",
                                               shape=[self.input_num, 1],
                                               initializer=tf.ones_initializer(),
                                               trainable=False)
@@ -330,14 +330,14 @@ class OutputLayer(tf.keras.layers.Layer):
                                            trainable=True)
 
     def call(self, inputs, training=False):
-        input_subnets = inputs[:,:self.input_num]
+        self.input_main_effect = inputs[:,:self.input_num]
         if self.interact_num > 0:
-            input_interactions = inputs[:,-self.interact_num:]
-            output = (tf.matmul(input_subnets, self.subnet_switcher * self.subnet_weights) 
-                   + tf.matmul(input_interactions, self.interaction_switcher * self.interaction_weights) 
+            self.input_interactions = inputs[:,-self.interact_num:]
+            output = (tf.matmul(self.input_main_effect, self.main_effect_switcher * self.main_effect_weights) 
+                   + tf.matmul(self.input_interactions, self.interaction_switcher * self.interaction_weights) 
                    + self.output_bias)
         else:
-            output = (tf.matmul(input_subnets, self.subnet_switcher * self.subnet_weights) 
+            output = (tf.matmul(self.input_main_effect, self.main_effect_switcher * self.main_effect_weights) 
                    + self.output_bias)
 
         return output
