@@ -195,7 +195,7 @@ class GAMIxNN(tf.keras.Model):
         componment_scales = (np.abs(componment_coefs) / np.sum(np.abs(componment_coefs))).reshape([-1])
         sorted_index = np.argsort(componment_scales)
         active_univariate_index = sorted_index[componment_scales[sorted_index].cumsum()>self.main_threshold][::-1]
-        return active_univariate_index, beta, componment_scales
+        return active_univariate_index
     
     def get_active_interactions(self):
 
@@ -215,7 +215,7 @@ class GAMIxNN(tf.keras.Model):
 
         sorted_index = np.argsort(componment_scales_interact)
         active_interaction_index = sorted_index[(componment_scales_interact[sorted_index].cumsum())>self.total_threshold][::-1]
-        return active_interaction_index, gamma, componment_scales
+        return active_interaction_index
 
     def get_active_effects(self):
 
@@ -293,7 +293,7 @@ class GAMIxNN(tf.keras.Model):
                 break
 
         main_effect_switcher = np.zeros((self.input_num, 1))
-        active_univariate_index, beta, componment_scales = self.get_active_main_effects()
+        active_univariate_index = self.get_active_main_effects()
         main_effect_switcher[active_univariate_index] = 1
         self.output_layer.main_effect_switcher.assign(tf.constant(main_effect_switcher, dtype=tf.float32))
         for epoch in range(self.tuning_epochs):
@@ -390,7 +390,7 @@ class GAMIxNN(tf.keras.Model):
                     break
 
             interaction_switcher = np.zeros((self.interact_num, 1))
-            active_interaction_index, gamma, componment_scales = self.get_active_interactions()
+            active_interaction_index = self.get_active_interactions()
             interaction_switcher[active_interaction_index] = 1
             self.output_layer.interaction_switcher.assign(tf.constant(interaction_switcher, dtype=tf.float32))
 
