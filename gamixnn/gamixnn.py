@@ -203,9 +203,9 @@ class GAMIxNN(tf.keras.Model):
              * self.output_layer.subnet_switcher.numpy())
 
         interaction_norm = [self.interact_blocks.interacts[i].moving_norm.numpy()[0] for i in range(self.interact_num)]
-        gamma = (self.output_layer.interaction_weights.numpy() 
+        gamma = (self.output_layer.interaction_weights.numpy()[:self.interact_num] 
               * np.array([interaction_norm]).reshape([-1, 1])
-              * self.output_layer.interaction_switcher.numpy())
+              * self.output_layer.interaction_switcher.numpy()[:self.interact_num])
 
         componment_coefs = np.vstack([beta, gamma])
         componment_scales = (np.abs(componment_coefs) / np.sum(np.abs(componment_coefs))).reshape([-1])
@@ -223,9 +223,9 @@ class GAMIxNN(tf.keras.Model):
              * self.output_layer.subnet_switcher.numpy())
 
         interaction_norm = [self.interact_blocks.interacts[i].moving_norm.numpy()[0] for i in range(self.interact_num)]
-        gamma = (self.output_layer.interaction_weights.numpy() 
+        gamma = (self.output_layer.interaction_weights.numpy()[:self.interact_num] 
               * np.array([interaction_norm]).reshape([-1, 1])
-              * self.output_layer.interaction_switcher.numpy())
+              * self.output_layer.interaction_switcher.numpy()[:self.interact_num])
 
         componment_coefs = np.vstack([beta, gamma])
         componment_scales = (np.abs(componment_coefs) / np.sum(np.abs(componment_coefs))).reshape([-1])
