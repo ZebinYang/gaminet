@@ -331,6 +331,7 @@ class GAMIxNN(tf.keras.Model):
             self.interaction_list = [interaction_list_all[i] for i in range(self.max_interact_num) 
                                      if (interaction_list_all[i][0] in active_univariate_index)
                                      or (interaction_list_all[i][1] in active_univariate_index)][:self.interact_num]
+            self.interact_num = len(self.interaction_list)
             self.interact_blocks.set_interaction_list(self.interaction_list)
 
             for interact_id, (idx1, idx2) in enumerate(self.interaction_list):
