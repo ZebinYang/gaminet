@@ -279,7 +279,7 @@ class InteractionBlock(tf.keras.layers.Layer):
     def set_interaction_list(self, interaction_list):
         
         self.interaction_list = interaction_list
-        for i in range(len(self.interact_num)):
+        for i in range(len(self.interaction_list)):
             self.interacts[i].set_interaction(interaction_list[i])
 
     def call(self, inputs, training=False):
