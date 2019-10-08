@@ -18,13 +18,13 @@ def get_interaction_list(tr_x, val_x, tr_y, val_y, pred_tr, pred_val, interactio
         num_classes_ = 2
         model_type = "classification"
         for i in range(pred_tr.shape[0]):
-            if np.abs(pred_tr[i] - 1) < 10**(-20):
+            if np.abs(pred_tr[i] - 1) < 10**(-10):
                 pred_tr[i] = np.inf
             else:
                 pred_tr[i] = np.log(pred_tr[i] / (1 - pred_tr[i])) 
                 
         for i in range(pred_val.shape[0]):
-            if np.abs(pred_val[i] - 1) < 10**(-20):
+            if np.abs(pred_val[i] - 1) < 10**(-10):
                 pred_val[i] = np.inf
             else:
                 pred_val[i] = np.log(pred_val[i] / (1 - pred_val[i])) 
