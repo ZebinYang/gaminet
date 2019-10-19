@@ -469,7 +469,7 @@ class GAMIxNN(tf.keras.Model):
 
     def global_visualize(self, folder="./results", name="demo", cols_per_row=4, save_png=False, save_eps=False, save_dict=False):
         
-        self.global_explain(save_dict)
+        self.global_explain()
         if not os.path.exists(folder):
             os.makedirs(folder)
         save_path = folder + name
@@ -579,9 +579,10 @@ class GAMIxNN(tf.keras.Model):
                 fig.savefig("%s.png" % save_path, bbox_inches='tight', dpi=100)
             if save_png:
                 fig.savefig("%s.eps" % save_path, bbox_inches='tight', dpi=100)
-
+            if save_dict:
+                np.save("%s.npy" % save_path, self.data_dict)
     
-    def global_explain(self, grid_length=None, save_dict=False):
+    def global_explain(self, grid_length=None):
 
         ## By default, we use the same grid_length as that of the zero mean constraint
         ## Alternatively, we can also specify it manually, e.g., when we want to have the same grid size as EBM (256).
@@ -672,5 +673,3 @@ class GAMIxNN(tf.keras.Model):
                                                         "interact_label1":interact_input1_lables,
                                                         "interact_label2":interact_input2_lables,
                                                         "importance":componment_scales[self.input_num + indice]}})
-        if save_dict:
-            np.save("%s.npy" % save_path, self.data_dict)
