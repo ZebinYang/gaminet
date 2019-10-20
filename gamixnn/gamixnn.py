@@ -260,13 +260,13 @@ class GAMIxNN(tf.keras.Model):
             feature_name = list(self.variables_names)[indice]
             if indice in self.numerical_index_list:
                 sx = self.meta_info[feature_name]['scaler']
-                hist, bin_edges = np.histogram(sx.inverse_transform(train_x[:,[indice]]), bins=10, density=True)
-                self.data_dict[feature_name].update({'density':{"names":bin_edges,"scores":hist}})
+                density, bins = np.histogram(sx.inverse_transform(train_x[:,[indice]]), bins=10, density=True)
+                self.data_dict[feature_name].update({'density':{"names":bins,"scores":density}})
             elif indice in self.categ_index_list:
                 unique, counts = np.unique(train_x[:, indice], return_counts=True)
                 density = np.zeros((len(self.meta_info[feature_name]['values'])))
                 density[unique.astype(int)] = counts / n_samples
-                self.data_dict[feature_name].update({'density':{"names":unique,"scores":ybar_ticks}})
+                self.data_dict[feature_name].update({'density':{"names":unique,"scores":density}})
 
         #### 1. Main Effects Training
         if self.verbose:
