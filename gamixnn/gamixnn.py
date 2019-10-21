@@ -611,7 +611,7 @@ class GAMIxNN(tf.keras.Model):
                 subnets_outputs = (self.output_layer.main_effect_weights.numpy()[indice]
                             * self.output_layer.main_effect_switcher.numpy()[indice]
                             * subnet.apply(tf.cast(subnets_inputs, tf.float32)).numpy())
-                self.data_dict[feature_name].upadte({"inputs":subnets_inputs_original.ravel(), "outputs":subnets_outputs.ravel(),
+                self.data_dict[feature_name].update({"inputs":subnets_inputs_original.ravel(), "outputs":subnets_outputs.ravel(),
                                       "importance":componment_scales[indice]})
 
         for indice in range(self.interact_num_heredity):
