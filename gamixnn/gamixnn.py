@@ -606,11 +606,11 @@ class GAMIxNN(tf.keras.Model):
                               "importance":componment_scales[indice]})
                 
             elif indice in self.categ_index_list:
-                subnets_inputs = np.arange(len(self.meta_info[feature_name]['values']))
+                subnets_inputs = np.arange(len(self.meta_info[feature_name]['values'])).reshape([-1, 1])
                 subnets_inputs_original = self.meta_info[feature_name]['values']
                 subnets_outputs = (self.output_layer.main_effect_weights.numpy()[indice]
                             * self.output_layer.main_effect_switcher.numpy()[indice]
-                            * subnet.apply(tf.cast(tf.constant(subnets_inputs), tf.float32)).numpy())
+                            * subnet.apply(tf.cast(subnets_inputs, tf.float32)).numpy())
                 self.data_dict[feature_name].upadte({"inputs":subnets_inputs_original.ravel(), "outputs":subnets_outputs.ravel(),
                                       "importance":componment_scales[indice]})
 
