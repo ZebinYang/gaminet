@@ -637,7 +637,7 @@ class GAMIxNN(tf.keras.Model):
                 sx1 = self.meta_info[feature_name1]['scaler']
                 interact_input1 = np.array(np.linspace(0, 1, grid_length), dtype=np.float32).reshape([-1, 1])
                 interact_input1_original = sx1.inverse_transform(interact_input1)
-                interact_input1_lables = []
+                interact_input1_labels = []
                 interact_input_list.append(interact_input1)
                 axis_extent.extend([interact_input1_original.min(), interact_input1_original.max()])
             if feature_name2 in self.categ_variable_list:
@@ -645,7 +645,7 @@ class GAMIxNN(tf.keras.Model):
                 interact_input2_original = self.meta_info[feature_name2]["values"]
                 interact_input2_ticks = (interact_input2.astype(int) if len(interact_input2) <= 12 else 
                              np.arange(0, len(interact_input2) - 1, int(len(interact_input2) / 6)).astype(int))
-                interact_input2_lables = [self.meta_info[feature_name2]["values"][i] for i in interact_input2_ticks]
+                interact_input2_labels = [self.meta_info[feature_name2]["values"][i] for i in interact_input2_ticks]
                 if len("".join(list(map(str, interact_input2_labels)))) > 30:
                     interact_input1_labels = [self.meta_info[feature_name2]["values"][i][:4] for i in interact_input2_ticks]
                 interact_input_list.append(interact_input2)
@@ -654,7 +654,7 @@ class GAMIxNN(tf.keras.Model):
                 sx2 = self.meta_info[feature_name1]['scaler']
                 interact_input2 = np.array(np.linspace(0, 1, grid_length), dtype=np.float32).reshape([-1, 1])
                 interact_input2_original = sx2.inverse_transform(interact_input2)
-                interact_input2_lables = []
+                interact_input2_labels = []
                 interact_input_list.append(interact_input2)
                 axis_extent.extend([interact_input2_original.min(), interact_input2_original.max()])
 
@@ -670,6 +670,6 @@ class GAMIxNN(tf.keras.Model):
                                                         "axis_extent":axis_extent,
                                                         "interact_input1":interact_input1.ravel(),
                                                         "interact_input2":interact_input2.ravel(),
-                                                        "interact_label1":interact_input1_lables,
-                                                        "interact_label2":interact_input2_lables,
+                                                        "interact_label1":interact_input1_labels,
+                                                        "interact_label2":interact_input2_labels,
                                                         "importance":componment_scales[self.input_num + indice]}})
