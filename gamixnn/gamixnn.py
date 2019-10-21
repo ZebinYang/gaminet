@@ -646,7 +646,7 @@ class GAMIxNN(tf.keras.Model):
                 interact_input2_ticks = (interact_input2.astype(int) if len(interact_input2) <= 12 else 
                              np.arange(0, len(interact_input2) - 1, int(len(interact_input2) / 6)).astype(int))
                 interact_input2_lables = [self.meta_info[feature_name2]["values"][i] for i in interact_input2_ticks]
-                if len("".join(list(map(str, interact_input1_labels)))) > 30:
+                if len("".join(list(map(str, interact_input2_labels)))) > 30:
                     interact_input1_labels = [self.meta_info[feature_name2]["values"][i][:4] for i in interact_input2_ticks]
                 interact_input_list.append(interact_input2)
                 axis_extent.extend([-0.5, len(self.meta_info[feature_name2]["values"]) - 0.5])
