@@ -525,8 +525,11 @@ class GAMIxNN(tf.keras.Model):
                 ax1.get_shared_x_axes().join(ax1, ax2)
                 ax1.set_xticklabels([])
                 
-                xtick_loc = (subnets_inputs if len(subnets_inputs) <= 12 else np.arange(0, len(subnets_inputs) - 1,
-                                                                 int(subnets_inputs / 6)).astype(int))
+                if len(self.data_dict[feature_name]["inputs"]) <= 12:
+                    xtick_loc = np.arange(len(self.data_dict[feature_name]["inputs"]))
+                else:
+                    xtick_loc = np.arange(0, len(self.data_dict[feature_name]["inputs"]) - 1,
+                                        int(self.data_dict[feature_name]["inputs"] / 6)).astype(int)
                 xtick_label = [self.data_dict[feature_name]["inputs"][i] for i in xtick_loc]
                 if len("".join(list(map(str, xtick_label)))) > 30:
                     xtick_label = [self.data_dict[feature_name]["inputs"][i][:4] for i in xtick_loc]
