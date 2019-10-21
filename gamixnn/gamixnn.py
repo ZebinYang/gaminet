@@ -626,7 +626,7 @@ class GAMIxNN(tf.keras.Model):
             if feature_name1 in self.categ_variable_list:
                 interact_input1 = np.arange(len(self.meta_info[feature_name1]["values"]), dtype=np.float32)
                 interact_input1_original = self.meta_info[feature_name1]["values"]
-                interact_input1_ticks = (interact_input1 if len(interact_input1) <= 12 else 
+                interact_input1_ticks = (interact_input1.astype(int) if len(interact_input1) <= 12 else 
                              np.arange(0, len(interact_input1) - 1, int(len(interact_input1) / 6)).astype(int))
                 interact_input1_labels = [self.meta_info[feature_name1]["values"][i] for i in interact_input1_ticks]
                 if len("".join(list(map(str, interact_input1_labels)))) > 30:
@@ -643,7 +643,7 @@ class GAMIxNN(tf.keras.Model):
             if feature_name2 in self.categ_variable_list:
                 interact_input2 = np.arange(len(self.meta_info[feature_name2]["values"]), dtype=np.float32)
                 interact_input2_original = self.meta_info[feature_name2]["values"]
-                interact_input2_ticks = (interact_input2 if len(interact_input2) <= 12 else 
+                interact_input2_ticks = (interact_input2.astype(int) if len(interact_input2) <= 12 else 
                              np.arange(0, len(interact_input2) - 1, int(len(interact_input2) / 6)).astype(int))
                 interact_input2_lables = [self.meta_info[feature_name2]["values"][i] for i in interact_input2_ticks]
                 if len("".join(list(map(str, interact_input1_labels)))) > 30:
