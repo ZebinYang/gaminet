@@ -635,8 +635,8 @@ class GAMIxNN(tf.keras.Model):
                 axis_extent.extend([-0.5, len(self.meta_info[feature_name1]["values"]) - 0.5])
             else:
                 sx1 = self.meta_info[feature_name1]['scaler']
-                interact_input1 = np.array(np.linspace(0, 1, grid_length), dtype=np.float32).reshape([-1, 1])
-                interact_input1_original = sx1.inverse_transform(interact_input1).ravel()
+                interact_input1 = np.array(np.linspace(0, 1, grid_length), dtype=np.float32)
+                interact_input1_original = sx1.inverse_transform(interact_input1.reshape([-1, 1])).ravel()
                 interact_input1_labels = []
                 interact_input_list.append(interact_input1)
                 axis_extent.extend([interact_input1_original.min(), interact_input1_original.max()])
@@ -652,8 +652,8 @@ class GAMIxNN(tf.keras.Model):
                 axis_extent.extend([-0.5, len(self.meta_info[feature_name2]["values"]) - 0.5])
             else:
                 sx2 = self.meta_info[feature_name1]['scaler']
-                interact_input2 = np.array(np.linspace(0, 1, grid_length), dtype=np.float32).reshape([-1, 1])
-                interact_input2_original = sx2.inverse_transform(interact_input2).ravel()
+                interact_input2 = np.array(np.linspace(0, 1, grid_length), dtype=np.float32)
+                interact_input2_original = sx2.inverse_transform(interact_input2.reshape([-1, 1])).ravel()
                 interact_input2_labels = []
                 interact_input_list.append(interact_input2)
                 axis_extent.extend([interact_input2_original.min(), interact_input2_original.max()])
