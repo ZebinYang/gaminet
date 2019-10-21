@@ -636,7 +636,7 @@ class GAMIxNN(tf.keras.Model):
             else:
                 sx1 = self.meta_info[feature_name1]['scaler']
                 interact_input1 = np.array(np.linspace(0, 1, grid_length), dtype=np.float32).reshape([-1, 1])
-                interact_input1_original = sx1.inverse_transform(interact_input1)
+                interact_input1_original = sx1.inverse_transform(interact_input1).ravel()
                 interact_input1_labels = []
                 interact_input_list.append(interact_input1)
                 axis_extent.extend([interact_input1_original.min(), interact_input1_original.max()])
@@ -653,7 +653,7 @@ class GAMIxNN(tf.keras.Model):
             else:
                 sx2 = self.meta_info[feature_name1]['scaler']
                 interact_input2 = np.array(np.linspace(0, 1, grid_length), dtype=np.float32).reshape([-1, 1])
-                interact_input2_original = sx2.inverse_transform(interact_input2)
+                interact_input2_original = sx2.inverse_transform(interact_input2).ravel()
                 interact_input2_labels = []
                 interact_input_list.append(interact_input2)
                 axis_extent.extend([interact_input2_original.min(), interact_input2_original.max()])
@@ -664,8 +664,8 @@ class GAMIxNN(tf.keras.Model):
             interact_outputs = (self.output_layer.interaction_weights.numpy()[indice]
                         * self.output_layer.interaction_switcher.numpy()[indice]
                         * inter_net.apply(input_grid, training=False).numpy().reshape(x1.shape))
-            self.data_dict.update({feature_name1 + " vs. " + feature_name2:{"input1":interact_input1_original.ravel(),
-                                                        "input2":interact_input2_original.ravel(),
+            self.data_dict.update({feature_name1 + " vs. " + feature_name2:{"input1":interact_input1_original,
+                                                        "input2":interact_input2_original,
                                                         "outputs":interact_outputs,
                                                         "axis_extent":axis_extent,
                                                         "interact_input1":interact_input1.ravel(),
