@@ -527,9 +527,9 @@ class GAMIxNN(tf.keras.Model):
                 
                 xtick_loc = (subnets_inputs if len(subnets_inputs) <= 12 else np.arange(0, len(subnets_inputs) - 1,
                                                                  int(subnets_inputs / 6)).astype(int))
-                xtick_label = [self.meta_info[feature_name]["values"][i] for i in xtick_loc]
+                xtick_label = [self.data_dict[feature_name]["inputs"][i] for i in xtick_loc]
                 if len("".join(list(map(str, xtick_label)))) > 30:
-                    xtick_label = [self.meta_info[feature_name]["values"][i][:4] for i in xtick_loc]
+                    xtick_label = [self.data_dict[feature_name]["inputs"][i][:4] for i in xtick_loc]
 
                 ax2.set_xticks(xtick_loc)
                 ax2.set_xticklabels(xtick_label)
@@ -611,7 +611,7 @@ class GAMIxNN(tf.keras.Model):
                 subnets_outputs = (self.output_layer.main_effect_weights.numpy()[indice]
                             * self.output_layer.main_effect_switcher.numpy()[indice]
                             * subnet.apply(tf.cast(subnets_inputs, tf.float32)).numpy())
-                self.data_dict[feature_name].update({"inputs":subnets_inputs_original.ravel(), "outputs":subnets_outputs.ravel(),
+                self.data_dict[feature_name].update({"inputs":subnets_inputs_original, "outputs":subnets_outputs.ravel(),
                                       "importance":componment_scales[indice]})
 
         for indice in range(self.interact_num_heredity):
