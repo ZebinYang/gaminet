@@ -512,7 +512,7 @@ class GAMIxNN(tf.keras.Model):
                 inner = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=outer[idx],
                                             wspace=0.1, hspace=0.1, height_ratios=[4, 1])
                 ax1 = plt.Subplot(fig, inner[0])
-                ax1.bar(np.arrange(self.data_dict[feature_name]["inputs"]),
+                ax1.bar(np.arange(self.data_dict[feature_name]["inputs"]),
                              self.data_dict[feature_name]["outputs"])
                 ax1.set_ylabel("Score", fontsize=12)
                 ax1.get_yaxis().set_label_coords(-0.15, 0.5)
@@ -520,7 +520,7 @@ class GAMIxNN(tf.keras.Model):
                 fig.add_subplot(ax1)
 
                 ax2 = plt.Subplot(fig, inner[1])
-                ax2.bar(np.arrange(len(self.data_dict[feature_name]["density"]["names"])),
+                ax2.bar(np.arange(len(self.data_dict[feature_name]["density"]["names"])),
                         self.data_dict[feature_name]["density"]["scores"])
                 ax1.get_shared_x_axes().join(ax1, ax2)
                 ax1.set_xticklabels([])
