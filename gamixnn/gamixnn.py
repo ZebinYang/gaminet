@@ -563,8 +563,8 @@ class GAMIxNN(tf.keras.Model):
             elif (max(self.data_dict[name]["input1"]) - min(self.data_dict[name]["input1"])) > 10000:
                     ax.xaxis.set_tick_params(rotation=20)
             if feature_name2 in self.categ_variable_list:
-                ax.set_xticks(self.data_dict[name]["interact_input2"])
-                ax.set_xticklabels(self.data_dict[name]["interact_label2"])
+                ax.set_yticks(self.data_dict[name]["interact_input2"])
+                ax.set_yticklabels(self.data_dict[name]["interact_label2"])
                 if np.sum([len(ax.get_yticklabels()[i].get_text()) for i in range(len(ax.get_yticklabels()))]) > 20:
                     ax.yaxis.set_tick_params(rotation=20)
             elif (max(self.data_dict[name]["input2"]) - min(self.data_dict[name]["input2"])) > 10000:
