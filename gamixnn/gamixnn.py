@@ -654,7 +654,7 @@ class GAMIxNN(tf.keras.Model):
                 interact_input_list.append(interact_input2)
                 axis_extent.extend([-0.5, len(self.meta_info[feature_name2]["values"]) - 0.5])
             else:
-                sx2 = self.meta_info[feature_name1]['scaler']
+                sx2 = self.meta_info[feature_name2]['scaler']
                 interact_input2 = np.array(np.linspace(0, 1, grid_length), dtype=np.float32)
                 interact_input2_original = sx2.inverse_transform(interact_input2.reshape([-1, 1])).ravel()
                 interact_input2_labels = []
