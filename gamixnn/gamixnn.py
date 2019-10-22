@@ -550,21 +550,42 @@ class GAMIxNN(tf.keras.Model):
             feature_name1 = self.variables_names[self.interaction_list[indice][0]]
             feature_name2 = self.variables_names[self.interaction_list[indice][1]]
             name = feature_name1 + " vs. " + feature_name2
-
+            
+            axis_extent = []
+            if feature_name1 in self.categ_variable_list:
+                interact_input1 = np.arange(len(self.data_dict[name]["input1"]), dtype=np.float32)
+                interact_input1_ticks = (interact_input1.astype(int) if len(interact_input1) <= 12 else 
+                             np.arange(0, len(interact_input1) - 1, int(len(interact_input1) / 6)).astype(int))
+                interact_input1_labels = [self.meta_info[feature_name1]["values"][i] for i in interact_input1_ticks]
+                if len("".join(list(map(str, interact_input1_labels)))) > 30:
+                    interact_input1_labels = [self.meta_info[feature_name1]["values"][i][:4] for i in interact_input1_ticks]
+                axis_extent.extend([-0.5, len(self.data_dict[name]["input1"]) - 0.5])
+            else:
+                axis_extent.extend([self.data_dict[name]["input1"].min(), self.data_dict[name]["input1"].max()])
+            if feature_name2 in self.categ_variable_list:
+                interact_input2 = np.arange(len(self.data_dict[name]["input2"]), dtype=np.float32)
+                interact_input2_ticks = (interact_input2.astype(int) if len(interact_input2) <= 12 else 
+                             np.arange(0, len(interact_input2) - 1, int(len(interact_input2) / 6)).astype(int))
+                interact_input2_labels = [self.meta_info[feature_name2]["values"][i] for i in interact_input2_ticks]
+                if len("".join(list(map(str, interact_input2_labels)))) > 30:
+                    interact_input1_labels = [self.meta_info[feature_name2]["values"][i][:4] for i in interact_input2_ticks]
+                axis_extent.extend([-0.5, len(self.data_dict[name]["input2"]) - 0.5])
+            else:
+                axis_extent.extend([self.data_dict[name]["input2"].min(), self.data_dict[name]["input2"].max()])
+            
             ax = plt.Subplot(fig, outer[idx]) 
             cf = ax.imshow(self.data_dict[name]["outputs"], interpolation='nearest', aspect='auto',
-                      extent=self.data_dict[name]["axis_extent"])
-
+                      extent=axis_extent)
             if feature_name1 in self.categ_variable_list:
-                ax.set_xticks(self.data_dict[name]["interact_input1"])
-                ax.set_xticklabels(self.data_dict[name]["interact_label1"])
+                ax.set_xticks(interact_input1_ticks)
+                ax.set_xticklabels(interact_input1_labels)
                 if np.sum([len(ax.get_xticklabels()[i].get_text()) for i in range(len(ax.get_xticklabels()))]) > 20:
                     ax.xaxis.set_tick_params(rotation=20)
             elif (max(self.data_dict[name]["input1"]) - min(self.data_dict[name]["input1"])) > 10000:
                     ax.xaxis.set_tick_params(rotation=20)
             if feature_name2 in self.categ_variable_list:
-                ax.set_yticks(self.data_dict[name]["interact_input2"])
-                ax.set_yticklabels(self.data_dict[name]["interact_label2"])
+                ax.set_yticks(interact_input2_ticks)
+                ax.set_yticklabels(interact_input2_labels)
                 if np.sum([len(ax.get_yticklabels()[i].get_text()) for i in range(len(ax.get_yticklabels()))]) > 20:
                     ax.yaxis.set_tick_params(rotation=20)
             elif (max(self.data_dict[name]["input2"]) - min(self.data_dict[name]["input2"])) > 10000:
@@ -629,37 +650,21 @@ class GAMIxNN(tf.keras.Model):
             if feature_name1 in self.categ_variable_list:
                 interact_input1 = np.arange(len(self.meta_info[feature_name1]["values"]), dtype=np.float32)
                 interact_input1_original = self.meta_info[feature_name1]["values"]
-                interact_input1_ticks = (interact_input1.astype(int) if len(interact_input1) <= 12 else 
-                             np.arange(0, len(interact_input1) - 1, int(len(interact_input1) / 6)).astype(int))
-                interact_input1_labels = [self.meta_info[feature_name1]["values"][i] for i in interact_input1_ticks]
-                if len("".join(list(map(str, interact_input1_labels)))) > 30:
-                    interact_input1_labels = [self.meta_info[feature_name1]["values"][i][:4] for i in interact_input1_ticks]
                 interact_input_list.append(interact_input1)
-                axis_extent.extend([-0.5, len(self.meta_info[feature_name1]["values"]) - 0.5])
             else:
                 sx1 = self.meta_info[feature_name1]['scaler']
                 interact_input1 = np.array(np.linspace(0, 1, grid_length), dtype=np.float32)
                 interact_input1_original = sx1.inverse_transform(interact_input1.reshape([-1, 1])).ravel()
-                interact_input1_labels = []
                 interact_input_list.append(interact_input1)
-                axis_extent.extend([interact_input1_original.min(), interact_input1_original.max()])
             if feature_name2 in self.categ_variable_list:
                 interact_input2 = np.arange(len(self.meta_info[feature_name2]["values"]), dtype=np.float32)
                 interact_input2_original = self.meta_info[feature_name2]["values"]
-                interact_input2_ticks = (interact_input2.astype(int) if len(interact_input2) <= 12 else 
-                             np.arange(0, len(interact_input2) - 1, int(len(interact_input2) / 6)).astype(int))
-                interact_input2_labels = [self.meta_info[feature_name2]["values"][i] for i in interact_input2_ticks]
-                if len("".join(list(map(str, interact_input2_labels)))) > 30:
-                    interact_input1_labels = [self.meta_info[feature_name2]["values"][i][:4] for i in interact_input2_ticks]
                 interact_input_list.append(interact_input2)
-                axis_extent.extend([-0.5, len(self.meta_info[feature_name2]["values"]) - 0.5])
             else:
                 sx2 = self.meta_info[feature_name2]['scaler']
                 interact_input2 = np.array(np.linspace(0, 1, grid_length), dtype=np.float32)
                 interact_input2_original = sx2.inverse_transform(interact_input2.reshape([-1, 1])).ravel()
-                interact_input2_labels = []
                 interact_input_list.append(interact_input2)
-                axis_extent.extend([interact_input2_original.min(), interact_input2_original.max()])
 
             x1, x2 = np.meshgrid(interact_input_list[0], interact_input_list[1][::-1])
             input_grid = np.hstack([np.reshape(x1, [-1, 1]), np.reshape(x2, [-1, 1])])
@@ -670,9 +675,4 @@ class GAMIxNN(tf.keras.Model):
             self.data_dict.update({feature_name1 + " vs. " + feature_name2:{"input1":interact_input1_original,
                                                         "input2":interact_input2_original,
                                                         "outputs":interact_outputs,
-                                                        "axis_extent":axis_extent,
-                                                        "interact_input1":interact_input1.ravel(),
-                                                        "interact_input2":interact_input2.ravel(),
-                                                        "interact_label1":interact_input1_labels,
-                                                        "interact_label2":interact_input2_labels,
                                                         "importance":componment_scales[self.input_num + indice]}})
