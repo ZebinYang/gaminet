@@ -17,21 +17,12 @@ def get_interaction_list(tr_x, val_x, tr_y, val_y, pred_tr, pred_val, interactio
     elif task_type == "Classification":
         num_classes_ = 2
         model_type = "classification"
-        for i in range(pred_tr.shape[0]):
-            if np.abs(pred_tr[i] - 1) < 10**(-10):
-                pred_tr[i] = np.inf
-            else:
-                pred_tr[i] = np.log(pred_tr[i] / (1 - pred_tr[i])) 
-                
-        for i in range(pred_val.shape[0]):
-            if np.abs(pred_val[i] - 1) < 10**(-10):
-                pred_val[i] = np.inf
-            else:
-                pred_val[i] = np.log(pred_val[i] / (1 - pred_val[i])) 
+        pred_tr = np.log(pred_tr / (1 - pred_tr)) 
+        pred_val = np.log(pred_val / (1 - pred_val)) 
         
     train_num = tr_x.shape[0]
     x = np.vstack([tr_x, val_x])
-    schema_ = autogen_schema(tr_x, feature_names=list(meta_info.keys())[:-1], 
+    schema_ = autogen_schema(x, feature_names=list(meta_info.keys())[:-1], 
                              feature_types=[item['type'] for key, item in meta_info.items()])
     preprocessor_ = EBMPreprocessor(schema=schema_)
     preprocessor_.fit(x)

@@ -469,7 +469,7 @@ class GAMIxNN(tf.keras.Model):
 
     def global_visualize(self, folder="./results", name="demo", cols_per_row=4, save_png=False, save_eps=False, save_dict=False):
         
-        self.global_explain()
+        self.global_explain(256)
         if not os.path.exists(folder):
             os.makedirs(folder)
         save_path = folder + name
@@ -497,8 +497,8 @@ class GAMIxNN(tf.keras.Model):
 
                 ax2 = plt.Subplot(fig, inner[1]) 
                 xint = ((np.array(self.data_dict[feature_name]['density']['names'][1:]) 
-                                + np.array(self.data_dict[feature_name]['density']['names'][:-1]))/2).reshape([-1, 1]).reshape([-1])
-                ax2.bar(xint, self.data_dict[feature_name]['density']['scores'], width=xint[1]-xint[0])
+                                + np.array(self.data_dict[feature_name]['density']['names'][:-1])) / 2).reshape([-1, 1]).reshape([-1])
+                ax2.bar(xint, self.data_dict[feature_name]['density']['scores'], width=xint[1] - xint[0])
                 ax1.get_shared_x_axes().join(ax1, ax2)
                 ax1.set_xticklabels([])
                 ax2.set_ylabel('Density', fontsize=12)
@@ -594,7 +594,7 @@ class GAMIxNN(tf.keras.Model):
             response_precision = max(int(- np.log10(np.max(self.data_dict[name]["outputs"]) 
                                             - np.min(self.data_dict[name]["outputs"]))) + 2, 0)
             fig.colorbar(cf, ax=ax, format='%0.' + str(response_precision) + 'f')
-            ax.set_title(name + " (" + str(np.round(100 * self.data_dict[feature_name]["importance"], 1)) + "%)", fontsize=12)
+            ax.set_title(name + " (" + str(np.round(100 * self.data_dict[name]["importance"], 1)) + "%)", fontsize=12)
             fig.add_subplot(ax)
             idx = idx + 1
 
@@ -612,8 +612,6 @@ class GAMIxNN(tf.keras.Model):
         ## Alternatively, we can also specify it manually, e.g., when we want to have the same grid size as EBM (256).
         if grid_length is None:
             grid_length = self.grid_size
-        else:
-            grid_length = 256
         
         _, _, _, _, componment_scales = self.get_active_effects()
         for indice in range(self.input_num):
