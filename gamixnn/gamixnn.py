@@ -491,6 +491,7 @@ class GAMIxNN(tf.keras.Model):
                 ax1 = plt.Subplot(fig, inner[0]) 
                 ax1.plot(self.data_dict[feature_name]["inputs"], self.data_dict[feature_name]["outputs"])
                 ax1.set_xticklabels([])
+                ax1.yaxis.set_tick_params(rotation='auto')
                 ax1.set_title(feature_name, fontsize=12)
                 fig.add_subplot(ax1)
 
@@ -500,8 +501,7 @@ class GAMIxNN(tf.keras.Model):
                 ax2.bar(xint, self.data_dict[feature_name]['density']['scores'], width=xint[1] - xint[0])
                 ax1.get_shared_x_axes().join(ax1, ax2)
                 ax2.set_yticklabels([])
-                if np.sum([len(ax2.get_xticklabels()[i].get_text()) for i in range(len(ax2.get_xticklabels()))]) > 20:
-                    ax2.xaxis.set_tick_params(rotation=20)
+                ax2.xaxis.set_tick_params(rotation='auto')
                 fig.add_subplot(ax2)
 
             elif indice in self.categ_index_list:
@@ -512,6 +512,7 @@ class GAMIxNN(tf.keras.Model):
                 ax1.bar(np.arange(len(self.data_dict[feature_name]["inputs"])),
                             self.data_dict[feature_name]["outputs"])
                 ax1.set_xticklabels([])
+                ax1.yaxis.set_tick_params(rotation='auto')
                 ax1.set_title(feature_name, fontsize=12)
                 fig.add_subplot(ax1)
 
@@ -532,8 +533,7 @@ class GAMIxNN(tf.keras.Model):
                 ax2.set_xticks(xtick_loc)
                 ax2.set_xticklabels(xtick_label)
                 ax2.set_yticklabels([])
-                if np.sum([len(ax2.get_xticklabels()[i].get_text()) for i in range(len(ax2.get_xticklabels()))]) > 2:
-                    ax2.xaxis.set_tick_params(rotation=20)
+                ax2.xaxis.set_tick_params(rotation='auto')
                 fig.add_subplot(ax2)
 
             idx = idx + 1
