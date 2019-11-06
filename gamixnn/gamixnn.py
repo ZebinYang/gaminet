@@ -487,11 +487,12 @@ class GAMIxNN(tf.keras.Model):
             subnet = self.maineffect_blocks.subnets[indice]
             if indice in self.numerical_index_list:
 
-                inner = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=outer[idx], wspace=0.1, hspace=0.1, height_ratios=[4, 1])
+                inner = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=outer[idx], wspace=0.1, hspace=0.1, height_ratios=[6, 1])
                 ax1 = plt.Subplot(fig, inner[0]) 
                 ax1.plot(self.data_dict[feature_name]["inputs"], self.data_dict[feature_name]["outputs"])
                 ax1.set_xticklabels([])
-                ax1.yaxis.set_tick_params(rotation='auto')
+                if len(str(ax1.get_yticks())) > 80:
+                    ax1.yaxis.set_tick_params(rotation=20)
                 ax1.set_title(feature_name, fontsize=12)
                 fig.add_subplot(ax1)
 
@@ -501,18 +502,20 @@ class GAMIxNN(tf.keras.Model):
                 ax2.bar(xint, self.data_dict[feature_name]['density']['scores'], width=xint[1] - xint[0])
                 ax1.get_shared_x_axes().join(ax1, ax2)
                 ax2.set_yticklabels([])
-                ax2.xaxis.set_tick_params(rotation='auto')
+                if len(str(ax2.get_xticks())) > 80:
+                    ax2.xaxis.set_tick_params(rotation=20)
                 fig.add_subplot(ax2)
 
             elif indice in self.categ_index_list:
 
                 inner = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=outer[idx],
-                                            wspace=0.1, hspace=0.1, height_ratios=[4, 1])
+                                            wspace=0.1, hspace=0.1, height_ratios=[6, 1])
                 ax1 = plt.Subplot(fig, inner[0])
                 ax1.bar(np.arange(len(self.data_dict[feature_name]["inputs"])),
                             self.data_dict[feature_name]["outputs"])
                 ax1.set_xticklabels([])
-                ax1.yaxis.set_tick_params(rotation='auto')
+                if len(str(ax1.get_yticks())) > 80:
+                    ax1.yaxis.set_tick_params(rotation=20)
                 ax1.set_title(feature_name, fontsize=12)
                 fig.add_subplot(ax1)
 
@@ -533,7 +536,8 @@ class GAMIxNN(tf.keras.Model):
                 ax2.set_xticks(xtick_loc)
                 ax2.set_xticklabels(xtick_label)
                 ax2.set_yticklabels([])
-                ax2.xaxis.set_tick_params(rotation='auto')
+                if len(str(ax2.get_xticks())) > 80:
+                    ax2.xaxis.set_tick_params(rotation=20)
                 fig.add_subplot(ax2)
 
             idx = idx + 1
@@ -568,7 +572,7 @@ class GAMIxNN(tf.keras.Model):
                 axis_extent.extend([self.data_dict[name]["input2"].min(), self.data_dict[name]["input2"].max()])
 
             inner = gridspec.GridSpecFromSubplotSpec(2, 2, subplot_spec=outer[idx],
-                                                     wspace=0.1, hspace=0.1, height_ratios=[4, 1], width_ratios=[4, 1])
+                                                     wspace=0.1, hspace=0.1, height_ratios=[6, 1], width_ratios=[4, 1])
             inner_left = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=inner[0])
             ax_main = plt.Subplot(fig, inner[0])
             interact_plot = ax_main.imshow(self.data_dict[name]["outputs"], interpolation='nearest',
@@ -582,12 +586,14 @@ class GAMIxNN(tf.keras.Model):
                 xint = np.arange(len(self.data_dict[feature_name1]["density"]["names"]))
                 ax_bottom.bar(xint, self.data_dict[feature_name1]['density']['scores'])
                 ax_bottom.set_yticklabels([])
+                ax_bottom.set_xlim([axis_extent[0], axis_extent[1]])
                 ax_bottom.get_shared_x_axes().join(ax_bottom, ax_main)
             else:
                 xint = ((np.array(self.data_dict[feature_name1]['density']['names'][1:]) 
                                 + np.array(self.data_dict[feature_name1]['density']['names'][:-1])) / 2).reshape([-1, 1]).reshape([-1])
                 ax_bottom.bar(xint, self.data_dict[feature_name1]['density']['scores'], width=xint[1] - xint[0])
                 ax_bottom.set_yticklabels([])
+                ax_bottom.set_xlim([axis_extent[0], axis_extent[1]])
                 ax_bottom.get_shared_x_axes().join(ax_bottom, ax_main)
             fig.add_subplot(ax_bottom)
 
@@ -597,6 +603,7 @@ class GAMIxNN(tf.keras.Model):
                 ax_right.barh(xint, self.data_dict[feature_name2]['density']['scores'])
                 ax_right.set_xticklabels([])
                 ax_right.set_yticklabels([])
+                ax_right.set_ylim([axis_extent[2], axis_extent[3]])
                 ax_right.get_shared_y_axes().join(ax_right, ax_main)
             else:
                 xint = ((np.array(self.data_dict[feature_name2]['density']['names'][1:]) 
@@ -604,6 +611,7 @@ class GAMIxNN(tf.keras.Model):
                 ax_right.barh(xint, self.data_dict[feature_name2]['density']['scores'], height=xint[1] - xint[0])
                 ax_right.set_xticklabels([])
                 ax_right.set_yticklabels([])
+                ax_right.set_ylim([axis_extent[2], axis_extent[3]])
                 ax_right.get_shared_y_axes().join(ax_right, ax_main)
             fig.add_subplot(ax_right)
 
