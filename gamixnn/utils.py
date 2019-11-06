@@ -23,7 +23,7 @@ def get_interaction_list(tr_x, val_x, tr_y, val_y, pred_tr, pred_val, interactio
     train_num = tr_x.shape[0]
     x = np.vstack([tr_x, val_x])
     schema_ = autogen_schema(x, feature_names=list(meta_info.keys())[:-1], 
-                             feature_types=[item['type'] for key, item in meta_info.items()])
+                             feature_types=[item['type'] for key, item in meta_info.items()][:-1])
     preprocessor_ = EBMPreprocessor(schema=schema_)
     preprocessor_.fit(x)
     xt = preprocessor_.transform(x)

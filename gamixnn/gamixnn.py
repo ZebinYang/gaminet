@@ -310,7 +310,7 @@ class GAMIxNN(tf.keras.Model):
                 last_improvement = epoch
             if epoch - last_improvement > self.early_stop_thres:
                 if self.verbose:
-                    print("Early stop at epoch %d, With Testing Error: %0.5f" % (epoch + 1, self.err_val[-1]))
+                    print("Early stop at epoch %d, with validation loss: %0.5f" % (epoch + 1, self.err_val[-1]))
                 break
 
         main_effect_switcher = np.zeros((self.input_num, 1))
@@ -407,7 +407,7 @@ class GAMIxNN(tf.keras.Model):
                     last_improvement = epoch
                 if epoch - last_improvement > self.early_stop_thres:
                     if self.verbose:
-                        print("Early stop at epoch %d, With Testing Error: %0.5f" % (epoch + 1, self.err_val[-1]))
+                        print("Early stop at epoch %d, with validation loss: %0.5f" % (epoch + 1, self.err_val[-1]))
                     break
 
             interaction_switcher = np.zeros((self.interact_num, 1))
