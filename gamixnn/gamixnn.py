@@ -490,8 +490,7 @@ class GAMIxNN(tf.keras.Model):
                 inner = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=outer[idx], wspace=0.1, hspace=0.1, height_ratios=[4, 1])
                 ax1 = plt.Subplot(fig, inner[0]) 
                 ax1.plot(self.data_dict[feature_name]["inputs"], self.data_dict[feature_name]["outputs"])
-                ax1.set_ylabel("Score", fontsize=12)
-                ax1.get_yaxis().set_label_coords(-0.15, 0.5)
+                ax1.set_xticklabels([])
                 ax1.set_title(feature_name, fontsize=12)
                 fig.add_subplot(ax1)
 
@@ -500,9 +499,7 @@ class GAMIxNN(tf.keras.Model):
                                 + np.array(self.data_dict[feature_name]['density']['names'][:-1])) / 2).reshape([-1, 1]).reshape([-1])
                 ax2.bar(xint, self.data_dict[feature_name]['density']['scores'], width=xint[1] - xint[0])
                 ax1.get_shared_x_axes().join(ax1, ax2)
-                ax1.set_xticklabels([])
-                ax2.set_ylabel('Density', fontsize=12)
-                ax2.get_yaxis().set_label_coords(-0.15, 0.5)
+                ax2.set_yticklabels([])
                 if np.sum([len(ax2.get_xticklabels()[i].get_text()) for i in range(len(ax2.get_xticklabels()))]) > 20:
                     ax2.xaxis.set_tick_params(rotation=20)
                 fig.add_subplot(ax2)
@@ -514,8 +511,7 @@ class GAMIxNN(tf.keras.Model):
                 ax1 = plt.Subplot(fig, inner[0])
                 ax1.bar(np.arange(len(self.data_dict[feature_name]["inputs"])),
                             self.data_dict[feature_name]["outputs"])
-                ax1.set_ylabel("Score", fontsize=12)
-                ax1.get_yaxis().set_label_coords(-0.15, 0.5)
+                ax1.set_xticklabels([])
                 ax1.set_title(feature_name, fontsize=12)
                 fig.add_subplot(ax1)
 
@@ -523,8 +519,7 @@ class GAMIxNN(tf.keras.Model):
                 ax2.bar(np.arange(len(self.data_dict[feature_name]["density"]["names"])),
                         self.data_dict[feature_name]["density"]["scores"])
                 ax1.get_shared_x_axes().join(ax1, ax2)
-                ax1.set_xticklabels([])
-                
+
                 if len(self.data_dict[feature_name]["inputs"]) <= 12:
                     xtick_loc = np.arange(len(self.data_dict[feature_name]["inputs"]))
                 else:
@@ -536,9 +531,8 @@ class GAMIxNN(tf.keras.Model):
 
                 ax2.set_xticks(xtick_loc)
                 ax2.set_xticklabels(xtick_label)
-                ax2.set_ylabel("Density", fontsize=12)
-                ax2.get_yaxis().set_label_coords(-0.15, 0.5)
-                if np.sum([len(ax2.get_xticklabels()[i].get_text()) for i in range(len(ax2.get_xticklabels()))]) > 20:
+                ax2.set_yticklabels([])
+                if np.sum([len(ax2.get_xticklabels()[i].get_text()) for i in range(len(ax2.get_xticklabels()))]) > 2:
                     ax2.xaxis.set_tick_params(rotation=20)
                 fig.add_subplot(ax2)
 
@@ -546,11 +540,11 @@ class GAMIxNN(tf.keras.Model):
             ax1.set_title(feature_name + " (" + str(np.round(100 * self.data_dict[feature_name]["importance"], 1)) + "%)", fontsize=12)
 
         for indice in active_interaction_index:
-            
+
             feature_name1 = self.variables_names[self.interaction_list[indice][0]]
             feature_name2 = self.variables_names[self.interaction_list[indice][1]]
             name = feature_name1 + " vs. " + feature_name2
-            
+
             axis_extent = []
             if feature_name1 in self.categ_variable_list:
                 interact_input1 = np.arange(len(self.data_dict[name]["input1"]), dtype=np.float32)
@@ -572,30 +566,51 @@ class GAMIxNN(tf.keras.Model):
                 axis_extent.extend([-0.5, len(self.data_dict[name]["input2"]) - 0.5])
             else:
                 axis_extent.extend([self.data_dict[name]["input2"].min(), self.data_dict[name]["input2"].max()])
-            
-            ax = plt.Subplot(fig, outer[idx]) 
-            cf = ax.imshow(self.data_dict[name]["outputs"], interpolation='nearest', aspect='auto',
-                      extent=axis_extent)
+
+            inner = gridspec.GridSpecFromSubplotSpec(2, 2, subplot_spec=outer[idx],
+                                                     wspace=0.1, hspace=0.1, height_ratios=[4, 1], width_ratios=[4, 1])
+            inner_left = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=inner[0])
+            ax_main = plt.Subplot(fig, inner[0])
+            interact_plot = ax_main.imshow(self.data_dict[name]["outputs"], interpolation='nearest',
+                                aspect='auto', extent=axis_extent)
+            ax_main.set_xticklabels([])
+            ax_main.set_title(name + " (" + str(np.round(100 * self.data_dict[name]["importance"], 1)) + "%)", fontsize=12)
+            fig.add_subplot(ax_main)
+
+            ax_bottom = plt.Subplot(fig, inner[2])
             if feature_name1 in self.categ_variable_list:
-                ax.set_xticks(interact_input1_ticks)
-                ax.set_xticklabels(interact_input1_labels)
-                if np.sum([len(ax.get_xticklabels()[i].get_text()) for i in range(len(ax.get_xticklabels()))]) > 20:
-                    ax.xaxis.set_tick_params(rotation=20)
-            elif (max(self.data_dict[name]["input1"]) - min(self.data_dict[name]["input1"])) > 10000:
-                    ax.xaxis.set_tick_params(rotation=20)
+                xint = np.arange(len(self.data_dict[feature_name1]["density"]["names"]))
+                ax_bottom.bar(xint, self.data_dict[feature_name1]['density']['scores'])
+                ax_bottom.set_yticklabels([])
+                ax_bottom.get_shared_x_axes().join(ax_bottom, ax_main)
+            else:
+                xint = ((np.array(self.data_dict[feature_name1]['density']['names'][1:]) 
+                                + np.array(self.data_dict[feature_name1]['density']['names'][:-1])) / 2).reshape([-1, 1]).reshape([-1])
+                ax_bottom.bar(xint, self.data_dict[feature_name1]['density']['scores'], width=xint[1] - xint[0])
+                ax_bottom.set_yticklabels([])
+                ax_bottom.get_shared_x_axes().join(ax_bottom, ax_main)
+            fig.add_subplot(ax_bottom)
+
+            ax_right = plt.Subplot(fig, inner [1])
             if feature_name2 in self.categ_variable_list:
-                ax.set_yticks(interact_input2_ticks)
-                ax.set_yticklabels(interact_input2_labels)
-                if np.sum([len(ax.get_yticklabels()[i].get_text()) for i in range(len(ax.get_yticklabels()))]) > 20:
-                    ax.yaxis.set_tick_params(rotation=20)
-            elif (max(self.data_dict[name]["input2"]) - min(self.data_dict[name]["input2"])) > 10000:
-                    ax.yaxis.set_tick_params(rotation=20)
+                xint = np.arange(len(self.data_dict[feature_name2]["density"]["names"]))
+                ax_right.barh(xint, self.data_dict[feature_name2]['density']['scores'])
+                ax_right.set_xticklabels([])
+                ax_right.set_yticklabels([])
+                ax_right.get_shared_y_axes().join(ax_right, ax_main)
+            else:
+                xint = ((np.array(self.data_dict[feature_name2]['density']['names'][1:]) 
+                                + np.array(self.data_dict[feature_name2]['density']['names'][:-1])) / 2).reshape([-1, 1]).reshape([-1])
+                ax_right.barh(xint, self.data_dict[feature_name2]['density']['scores'], height=xint[1] - xint[0])
+                ax_right.set_xticklabels([])
+                ax_right.set_yticklabels([])
+                ax_right.get_shared_y_axes().join(ax_right, ax_main)
+            fig.add_subplot(ax_right)
 
             response_precision = max(int(- np.log10(np.max(self.data_dict[name]["outputs"]) 
-                                            - np.min(self.data_dict[name]["outputs"]))) + 2, 0)
-            fig.colorbar(cf, ax=ax, format='%0.' + str(response_precision) + 'f')
-            ax.set_title(name + " (" + str(np.round(100 * self.data_dict[name]["importance"], 1)) + "%)", fontsize=12)
-            fig.add_subplot(ax)
+                                        - np.min(self.data_dict[name]["outputs"]))) + 2, 0)
+            fig.colorbar(interact_plot, ax=ax_right, orientation="vertical", pad=0.15,
+                         format='%0.' + str(response_precision) + 'f', use_gridspec=True)
             idx = idx + 1
 
         if max_ids > 0:
