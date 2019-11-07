@@ -14,17 +14,18 @@ from .utils import get_interaction_list
 
 class GAMIxNN(tf.keras.Model):
 
-    def __init__(self, meta_info, 
+    def __init__(self, meta_info,
                  subnet_arch=[10, 6],
                  interact_num=10,
                  interact_arch=[100, 60],
                  task_type="Regression",
                  activation_func=tf.tanh,
-                 grid_size=21,
+                 main_grid_size=101,
+                 interact_grid_size=21,
                  lr_bp=0.001,
                  batch_size=1000,
                  init_training_epochs=10000,
-                 interact_training_epochs=1000, 
+                 interact_training_epochs=1000,
                  tuning_epochs=500,
                  main_threshold=0.01,
                  total_threshold=0.01,
@@ -40,7 +41,8 @@ class GAMIxNN(tf.keras.Model):
         
         self.task_type = task_type
         self.subnet_arch = subnet_arch
-        self.grid_size = grid_size
+        self.main_grid_size = main_grid_size
+        self.interact_grid_size = interact_grid_size
         self.activation_func = activation_func
         self.interact_arch = interact_arch
         self.max_interact_num = int(round(self.input_num * (self.input_num - 1) / 2))
@@ -90,12 +92,12 @@ class GAMIxNN(tf.keras.Model):
                                  categ_index_list=self.categ_index_list,
                                  subnet_arch=self.subnet_arch,
                                  activation_func=self.activation_func,
-                                 grid_size=self.grid_size)
+                                 grid_size=self.main_grid_size)
         self.interact_blocks = InteractionBlock(interact_num=self.interact_num,
                                 meta_info=self.meta_info,
                                 interact_arch=self.interact_arch,
                                 activation_func=self.activation_func,
-                                grid_size=self.grid_size)
+                                grid_size=self.interact_grid_size)
         self.output_layer = OutputLayer(input_num=self.input_num,
                                 interact_num=self.interact_num)
 
@@ -281,9 +283,11 @@ class GAMIxNN(tf.keras.Model):
                 length = len(self.meta_info[self.variables_names[i]]['values'])
                 input_grid = np.arange(len(self.meta_info[self.variables_names[i]]['values']))
             else:
-                length = self.grid_size
+                length = self.main_grid_size
                 input_grid = np.linspace(0, 1, length)
-            pdf_grid = np.ones([length]) / length            
+            pdf_grid = np.ones([length]) / length    
+            # H, bin_edges = np.histogram(train_x[:, i], bins=length)
+            # pdf_grid = H / np.sum(H)
             self.maineffect_blocks.subnets[i].set_pdf(np.array(input_grid, dtype=np.float32).reshape([-1, 1]),
                                         np.array(pdf_grid, dtype=np.float32).reshape([1, -1]))
 
@@ -368,18 +372,20 @@ class GAMIxNN(tf.keras.Model):
                     length1 = len(self.meta_info[feature_name1]['values']) 
                     length1_grid = np.arange(length1)
                 else:
-                    length1 = self.grid_size
-                    length1_grid = np.linspace(0, 1, self.grid_size)
+                    length1 = self.interact_grid_size
+                    length1_grid = np.linspace(0, 1, length1)
                 if feature_name2 in self.categ_variable_list:
                     length2 = len(self.meta_info[feature_name2]['values']) 
                     length2_grid = np.arange(length2)
                 else:
-                    length2 = self.grid_size
-                    length2_grid = np.linspace(0, 1, self.grid_size)
+                    length2 = self.interact_grid_size
+                    length2_grid = np.linspace(0, 1, length2)
 
                 x1, x2 = np.meshgrid(length1_grid, length2_grid)
                 input_grid = np.hstack([np.reshape(x1, [-1, 1]), np.reshape(x2, [-1, 1])])
                 pdf_grid = np.ones([length1, length2]) / (length1 * length2)
+                # H, xedges, yedges = np.histogram2d(train_x[:,idx1], train_x[:,idx2], bins=[length1, length2])
+                # pdf_grid = H / np.sum(H)
                 self.interact_blocks.interacts[interact_id].set_pdf(np.array(input_grid, dtype=np.float32),
                                                    np.array(pdf_grid, dtype=np.float32).T)
 
@@ -467,16 +473,22 @@ class GAMIxNN(tf.keras.Model):
             f.savefig("%s.eps" % save_path, bbox_inches='tight', dpi=100)
 
 
-    def global_visualize(self, folder="./results", name="demo", cols_per_row=4, save_png=False, save_eps=False, save_dict=False):
+    def global_visualize(self, folder="./results", name="demo", main_grid_size=None, interact_grid_size=None, 
+                         cols_per_row=4, save_png=False, save_eps=False, save_dict=False):
         
-        self.global_explain(256)
+        if main_grid_size is None:
+            main_grid_size = self.main_grid_size
+        if interact_grid_size is None:
+            interact_grid_size = self.interact_grid_size
+
+        self.global_explain(main_grid_size, interact_grid_size)
         if not os.path.exists(folder):
             os.makedirs(folder)
         save_path = folder + name
 
         active_univariate_index, active_interaction_index, beta, gamma, componment_scales = self.get_active_effects()
         max_ids = len(active_univariate_index) + len(active_interaction_index)
-        
+
         idx = 0
         fig = plt.figure(figsize=(6 * cols_per_row, 
                          4.6 * int(np.ceil(max_ids / cols_per_row))))
@@ -571,70 +583,71 @@ class GAMIxNN(tf.keras.Model):
             else:
                 axis_extent.extend([self.data_dict[name]["input2"].min(), self.data_dict[name]["input2"].max()])
 
-            inner = gridspec.GridSpecFromSubplotSpec(2, 2, subplot_spec=outer[idx],
-                                                     wspace=0.1, hspace=0.1, height_ratios=[6, 1], width_ratios=[4, 1])
-            inner_left = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=inner[0])
-            ax_main = plt.Subplot(fig, inner[0])
+            inner = gridspec.GridSpecFromSubplotSpec(2, 4, subplot_spec=outer[idx],
+                                    wspace=0.1, hspace=0.1, height_ratios=[6, 1], width_ratios=[0.6, 3, 0.5, 0.5])
+            ax_main = plt.Subplot(fig, inner[1])
             interact_plot = ax_main.imshow(self.data_dict[name]["outputs"], interpolation='nearest',
-                                aspect='auto', extent=axis_extent)
+                                 aspect='auto', extent=axis_extent)
             ax_main.set_xticklabels([])
+            ax_main.set_yticklabels([])
             ax_main.set_title(name + " (" + str(np.round(100 * self.data_dict[name]["importance"], 1)) + "%)", fontsize=12)
             fig.add_subplot(ax_main)
 
-            ax_bottom = plt.Subplot(fig, inner[2])
+            ax_bottom = plt.Subplot(fig, inner[5])
             if feature_name1 in self.categ_variable_list:
                 xint = np.arange(len(self.data_dict[feature_name1]["density"]["names"]))
                 ax_bottom.bar(xint, self.data_dict[feature_name1]['density']['scores'])
-                ax_bottom.set_yticklabels([])
-                ax_bottom.set_xlim([axis_extent[0], axis_extent[1]])
-                ax_bottom.get_shared_x_axes().join(ax_bottom, ax_main)
+
             else:
                 xint = ((np.array(self.data_dict[feature_name1]['density']['names'][1:]) 
                                 + np.array(self.data_dict[feature_name1]['density']['names'][:-1])) / 2).reshape([-1, 1]).reshape([-1])
                 ax_bottom.bar(xint, self.data_dict[feature_name1]['density']['scores'], width=xint[1] - xint[0])
-                ax_bottom.set_yticklabels([])
-                ax_bottom.set_xlim([axis_extent[0], axis_extent[1]])
-                ax_bottom.get_shared_x_axes().join(ax_bottom, ax_main)
+            ax_bottom.set_yticklabels([])
+            ax_bottom.set_xlim([axis_extent[0], axis_extent[1]])
+            ax_bottom.get_shared_x_axes().join(ax_bottom, ax_main)
+            if len(str(ax_bottom.get_xticks())) > 50:
+                ax_bottom.xaxis.set_tick_params(rotation=20)
             fig.add_subplot(ax_bottom)
 
-            ax_right = plt.Subplot(fig, inner [1])
+            ax_left = plt.Subplot(fig, inner [0])
             if feature_name2 in self.categ_variable_list:
                 xint = np.arange(len(self.data_dict[feature_name2]["density"]["names"]))
-                ax_right.barh(xint, self.data_dict[feature_name2]['density']['scores'])
-                ax_right.set_xticklabels([])
-                ax_right.set_yticklabels([])
-                ax_right.set_ylim([axis_extent[2], axis_extent[3]])
-                ax_right.get_shared_y_axes().join(ax_right, ax_main)
+                ax_left.barh(xint, self.data_dict[feature_name2]['density']['scores'])
             else:
                 xint = ((np.array(self.data_dict[feature_name2]['density']['names'][1:]) 
                                 + np.array(self.data_dict[feature_name2]['density']['names'][:-1])) / 2).reshape([-1, 1]).reshape([-1])
-                ax_right.barh(xint, self.data_dict[feature_name2]['density']['scores'], height=xint[1] - xint[0])
-                ax_right.set_xticklabels([])
-                ax_right.set_yticklabels([])
-                ax_right.set_ylim([axis_extent[2], axis_extent[3]])
-                ax_right.get_shared_y_axes().join(ax_right, ax_main)
-            fig.add_subplot(ax_right)
+                ax_left.barh(xint, self.data_dict[feature_name2]['density']['scores'], height=xint[1] - xint[0])
+            ax_left.set_xticklabels([])
+            ax_left.set_ylim([axis_extent[2], axis_extent[3]])
+            ax_left.get_shared_y_axes().join(ax_left, ax_main)
+            if len(str(ax_left.get_yticks())) > 50:
+                ax_left.yaxis.set_tick_params(rotation=20)
+            fig.add_subplot(ax_left)
 
+            ax_colorbar = plt.Subplot(fig, inner[2])
             response_precision = max(int(- np.log10(np.max(self.data_dict[name]["outputs"]) 
                                         - np.min(self.data_dict[name]["outputs"]))) + 2, 0)
-            fig.colorbar(interact_plot, ax=ax_right, orientation="vertical", pad=0.15,
+            fig.colorbar(interact_plot, cax=ax_colorbar, orientation="vertical",
                          format='%0.' + str(response_precision) + 'f', use_gridspec=True)
+            fig.add_subplot(ax_colorbar)
             idx = idx + 1
 
         if max_ids > 0:
-            if save_eps:
-                fig.savefig("%s.png" % save_path, bbox_inches='tight', dpi=100)
             if save_png:
+                fig.savefig("%s.png" % save_path, bbox_inches='tight', dpi=100)
+            if save_eps:
                 fig.savefig("%s.eps" % save_path, bbox_inches='tight', dpi=100)
             if save_dict:
                 np.save("%s.npy" % save_path, self.data_dict)
-    
-    def global_explain(self, grid_length=None):
 
-        ## By default, we use the same grid_length as that of the zero mean constraint
+    def global_explain(self, main_grid_size=None, interact_grid_size=None):
+
+        ## By default, we use the same main_grid_size and interact_grid_size as that of the zero mean constraint
         ## Alternatively, we can also specify it manually, e.g., when we want to have the same grid size as EBM (256).
-        if grid_length is None:
-            grid_length = self.grid_size
+        if main_grid_size is None:
+            main_grid_size = self.main_grid_size
+        if interact_grid_size is None:
+            interact_grid_size = self.interact_grid_size      
         
         _, _, _, _, componment_scales = self.get_active_effects()
         for indice in range(self.input_num):
@@ -642,7 +655,7 @@ class GAMIxNN(tf.keras.Model):
             subnet = self.maineffect_blocks.subnets[indice]
             if indice in self.numerical_index_list:
                 sx = self.meta_info[feature_name]['scaler']
-                subnets_inputs = np.linspace(0, 1, grid_length).reshape([-1, 1])
+                subnets_inputs = np.linspace(0, 1, main_grid_size).reshape([-1, 1])
                 subnets_inputs_original = sx.inverse_transform(subnets_inputs)
                 subnets_outputs = (self.output_layer.main_effect_weights.numpy()[indice]
                             * self.output_layer.main_effect_switcher.numpy()[indice]
@@ -674,7 +687,7 @@ class GAMIxNN(tf.keras.Model):
                 interact_input_list.append(interact_input1)
             else:
                 sx1 = self.meta_info[feature_name1]['scaler']
-                interact_input1 = np.array(np.linspace(0, 1, grid_length), dtype=np.float32)
+                interact_input1 = np.array(np.linspace(0, 1, interact_grid_size), dtype=np.float32)
                 interact_input1_original = sx1.inverse_transform(interact_input1.reshape([-1, 1])).ravel()
                 interact_input_list.append(interact_input1)
             if feature_name2 in self.categ_variable_list:
@@ -683,7 +696,7 @@ class GAMIxNN(tf.keras.Model):
                 interact_input_list.append(interact_input2)
             else:
                 sx2 = self.meta_info[feature_name2]['scaler']
-                interact_input2 = np.array(np.linspace(0, 1, grid_length), dtype=np.float32)
+                interact_input2 = np.array(np.linspace(0, 1, interact_grid_size), dtype=np.float32)
                 interact_input2_original = sx2.inverse_transform(interact_input2.reshape([-1, 1])).ravel()
                 interact_input_list.append(interact_input2)
 
