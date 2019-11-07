@@ -78,12 +78,12 @@ class NumerNet(tf.keras.layers.Layer):
         self.output_original = self.output_layer(x)
 
         if training:
-            
+
             input_grid = self.input_grid
             for dense_layer in self.layers:
                 input_grid = dense_layer(input_grid)
             self.output_grid = self.output_layer(input_grid)
-            
+
             self.subnet_mean = tf.reshape(tf.matmul(self.pdf_grid, tf.reshape(self.output_grid, [-1, 1])), [1])
             self.subnet_norm = tf.sqrt(tf.matmul(self.pdf_grid, tf.reshape(tf.square(self.output_grid - self.subnet_mean), [-1, 1])))
             self.subnet_norm = tf.reshape(tf.maximum(self.subnet_norm, 1e-10), [1])
