@@ -68,7 +68,6 @@ def get_interaction_list(tr_x, val_x, tr_y, val_y, pred_tr, pred_val, interactio
 def global_visualize_density(data_dict, active_univariate_index, active_interaction_index, cols_per_row, max_ids):
 
     idx = 0
-    max_ids = len(active_univariate_index) + len(active_interaction_index)
     fig = plt.figure(figsize=(6 * cols_per_row, 4.6 * int(np.ceil(max_ids / cols_per_row))))
     outer = gridspec.GridSpec(int(np.ceil(max_ids/cols_per_row)), cols_per_row, wspace=0.25, hspace=0.25)
     for indice in active_univariate_index:
