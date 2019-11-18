@@ -686,9 +686,9 @@ class GAMINet(tf.keras.Model):
                 interact_input1_original = self.meta_info[feature_name1]['values']
                 interact_input1_ticks = (interact_input1.astype(int) if len(interact_input1) <= 12 else 
                              np.arange(0, len(interact_input1) - 1, int(len(interact_input1) / 6)).astype(int))
-                interact_input1_labels = [meta_info[feature_name1]['values'][i] for i in interact_input1_ticks]
+                interact_input1_labels = [self.meta_info[feature_name1]['values'][i] for i in interact_input1_ticks]
                 if len(''.join(list(map(str, interact_input1_labels)))) > 30:
-                    interact_input1_labels = [meta_info[feature_name1]['values'][i][:4] for i in interact_input1_ticks]
+                    interact_input1_labels = [self.meta_info[feature_name1]['values'][i][:4] for i in interact_input1_ticks]
                 interact_input_list.append(interact_input1)
                 axis_extent.extend([-0.5, len(interact_input1_original) - 0.5])
             else:
@@ -704,9 +704,9 @@ class GAMINet(tf.keras.Model):
                 interact_input2_original = self.meta_info[feature_name2]['values']
                 interact_input2_ticks = (interact_input2.astype(int) if len(interact_input2) <= 12 else 
                              np.arange(0, len(interact_input2) - 1, int(len(interact_input2) / 6)).astype(int))
-                interact_input2_labels = [meta_info[feature_name2]['values'][i] for i in interact_input2_ticks]
+                interact_input2_labels = [self.meta_info[feature_name2]['values'][i] for i in interact_input2_ticks]
                 if len(''.join(list(map(str, interact_input2_labels)))) > 30:
-                    interact_input2_labels = [meta_info[feature_name2]['values'][i][:4] for i in interact_input2_ticks]
+                    interact_input2_labels = [self.meta_info[feature_name2]['values'][i][:4] for i in interact_input2_ticks]
                 interact_input_list.append(interact_input2)
                 axis_extent.extend([-0.5, len(interact_input2_original) - 0.5])
             else:
