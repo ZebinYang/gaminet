@@ -60,3 +60,198 @@ def get_interaction_list(tr_x, val_x, tr_y, val_y, pred_tr, pred_val, interactio
 
     interaction_list = [ranked_scores[i][0] for i in range(interactions)]
     return interaction_list
+
+
+    def global_visualize_density(active_univariate_index, active_interaction_index, cols_per_row, max_ids):
+
+        idx = 0
+        max_ids = len(active_univariate_index) + len(active_interaction_index)
+        fig = plt.figure(figsize=(6 * cols_per_row, 4.6 * int(np.ceil(max_ids / cols_per_row))))
+        outer = gridspec.GridSpec(int(np.ceil(max_ids/cols_per_row)), cols_per_row, wspace=0.25, hspace=0.25)
+        for indice in active_univariate_index:
+
+            feature_name = list(.data_dict.keys())[indice]
+            if .data_dict[feature_name]['type'] == 'continuous':
+
+                inner = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=outer[idx], wspace=0.1, hspace=0.1, height_ratios=[6, 1])
+                ax1 = plt.Subplot(fig, inner[0]) 
+                ax1.plot(.data_dict[feature_name]['inputs'], .data_dict[feature_name]['outputs'])
+                ax1.set_xticklabels([])
+                ax1.set_title(feature_name, fontsize=12)
+                fig.add_subplot(ax1)
+
+                ax2 = plt.Subplot(fig, inner[1]) 
+                xint = ((np.array(.data_dict[feature_name]['density']['names'][1:]) 
+                                + np.array(.data_dict[feature_name]['density']['names'][:-1])) / 2).reshape([-1, 1]).reshape([-1])
+                ax2.bar(xint, .data_dict[feature_name]['density']['scores'], width=xint[1] - xint[0])
+                ax1.get_shared_x_axes().join(ax1, ax2)
+                ax2.set_yticklabels([])
+                if len(str(ax2.get_xticks())) > 80:
+                    ax2.xaxis.set_tick_params(rotation=20)
+                fig.add_subplot(ax2)
+
+            elif .data_dict[feature_name]['type'] == 'categorical':
+
+                inner = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=outer[idx],
+                                            wspace=0.1, hspace=0.1, height_ratios=[6, 1])
+                ax1 = plt.Subplot(fig, inner[0])
+                ax1.bar(np.arange(len(.data_dict[feature_name]['inputs'])),
+                            .data_dict[feature_name]['outputs'])
+                ax1.set_xticklabels([])
+                ax1.set_title(feature_name, fontsize=12)
+                fig.add_subplot(ax1)
+
+                ax2 = plt.Subplot(fig, inner[1])
+                ax2.bar(np.arange(len(.data_dict[feature_name]['density']['names'])),
+                        .data_dict[feature_name]['density']['scores'])
+                ax1.get_shared_x_axes().join(ax1, ax2)
+
+                if len(.data_dict[feature_name]['inputs']) <= 12:
+                    xtick_loc = np.arange(len(.data_dict[feature_name]['inputs']))
+                else:
+                    xtick_loc = np.arange(0, len(.data_dict[feature_name]['inputs']) - 1,
+                                        int(len(.data_dict[feature_name]['inputs']) / 6)).astype(int)
+                xtick_label = [.data_dict[feature_name]['inputs'][i] for i in xtick_loc]
+                if len(''.join(list(map(str, xtick_label)))) > 30:
+                    xtick_label = [.data_dict[feature_name]['inputs'][i][:4] for i in xtick_loc]
+
+                ax2.set_xticks(xtick_loc)
+                ax2.set_xticklabels(xtick_label)
+                ax2.set_yticklabels([])
+                if len(str(ax2.get_xticks())) > 80:
+                    ax2.xaxis.set_tick_params(rotation=20)
+                fig.add_subplot(ax2)
+
+            idx = idx + 1
+            ax1.set_title(feature_name + ' (' + str(np.round(100 * .data_dict[feature_name]['importance'], 1)) + '%)', fontsize=12)
+
+        for indice in active_interaction_index:
+
+            feature_name = list(.data_dict.keys())[indice]
+            feature_name1 = feature_name.split(' vs. ')[0]
+            feature_name2 = feature_name.split(' vs. ')[1]
+            axis_extent = .data_dict[feature_name]['axis_extent']
+
+            inner = gridspec.GridSpecFromSubplotSpec(2, 4, subplot_spec=outer[idx],
+                                    wspace=0.1, hspace=0.1, height_ratios=[6, 1], width_ratios=[0.6, 3, 0.15, 0.2])
+            ax_main = plt.Subplot(fig, inner[1])
+            interact_plot = ax_main.imshow(.data_dict[feature_name]['outputs'], interpolation='nearest',
+                                 aspect='auto', extent=axis_extent)
+            ax_main.set_xticklabels([])
+            ax_main.set_yticklabels([])
+            ax_main.set_title(feature_name + ' (' + str(np.round(100 * .data_dict[feature_name]['importance'], 1)) + '%)', fontsize=12)
+            fig.add_subplot(ax_main)
+
+            ax_bottom = plt.Subplot(fig, inner[5])
+            if .data_dict[feature_name]['xtype'] == 'categorical':
+                xint = np.arange(len(.data_dict[feature_name1]['density']['names']))
+                ax_bottom.bar(xint, .data_dict[feature_name1]['density']['scores'])
+                ax_bottom.set_xticks(.data_dict[feature_name]['input1_ticks'])
+                ax_bottom.set_xticklabels(.data_dict[feature_name]['input1_labels'])
+                if len(str(ax_bottom.get_xticks())) > 50:
+                    ax_bottom.xaxis.set_tick_params(rotation=20)
+            else:
+                xint = ((np.array(.data_dict[feature_name1]['density']['names'][1:]) 
+                      + np.array(.data_dict[feature_name1]['density']['names'][:-1])) / 2).reshape([-1])
+                ax_bottom.bar(xint, .data_dict[feature_name1]['density']['scores'], width=xint[1] - xint[0])
+            ax_bottom.set_yticklabels([])
+            ax_bottom.set_xlim([axis_extent[0], axis_extent[1]])
+            ax_bottom.get_shared_x_axes().join(ax_bottom, ax_main)
+            fig.add_subplot(ax_bottom)
+
+            ax_left = plt.Subplot(fig, inner [0])
+            if .data_dict[feature_name]['ytype'] == 'categorical':
+                xint = np.arange(len(.data_dict[feature_name2]['density']['names']))
+                ax_left.barh(xint, .data_dict[feature_name2]['density']['scores'])
+                ax_left.set_xticks(.data_dict[feature_name]['input2_ticks'])
+                ax_left.set_xticklabels(.data_dict[feature_name]['input2_labels'])
+            else:
+                xint = ((np.array(.data_dict[feature_name2]['density']['names'][1:]) 
+                      + np.array(.data_dict[feature_name2]['density']['names'][:-1])) / 2).reshape([-1])
+                ax_left.barh(xint, .data_dict[feature_name2]['density']['scores'], height=xint[1] - xint[0])
+            ax_left.set_xticklabels([])
+            ax_left.set_ylim([axis_extent[2], axis_extent[3]])
+            ax_left.get_shared_y_axes().join(ax_left, ax_main)
+            fig.add_subplot(ax_left)
+
+            ax_colorbar = plt.Subplot(fig, inner[2])
+            response_precision = max(int(- np.log10(np.max(.data_dict[feature_name]['outputs']) 
+                                       - np.min(.data_dict[feature_name]['outputs']))) + 2, 0)
+            fig.colorbar(interact_plot, cax=ax_colorbar, orientation='vertical',
+                         format='%0.' + str(response_precision) + 'f', use_gridspec=True)
+            fig.add_subplot(ax_colorbar)
+            idx = idx + 1
+
+        return fig
+
+    def global_visualize_wo_density(active_univariate_index, active_interaction_index, cols_per_row, max_ids):
+
+        idx = 0
+        fig = plt.figure(figsize=(5.2 * cols_per_row, 4 * int(np.ceil(max_ids / cols_per_row))))
+        outer = gridspec.GridSpec(int(np.ceil(max_ids/cols_per_row)), cols_per_row, wspace=0.25, hspace=0.25)
+        for indice in active_univariate_index:
+
+            feature_name = list(.data_dict.keys())[indice]
+            if indice in .numerical_index_list:
+
+                ax1 = plt.Subplot(fig, outer[idx]) 
+                ax1.plot(.data_dict[feature_name]['inputs'], .data_dict[feature_name]['outputs'])
+                if len(str(ax1.get_yticks())) > 80:
+                    ax1.yaxis.set_tick_params(rotation=20)
+                ax1.set_title(feature_name, fontsize=12)
+                fig.add_subplot(ax1)
+
+            elif indice in .categ_index_list:
+
+                ax1 = plt.Subplot(fig, outer[idx]) 
+                ax1.bar(np.arange(len(.data_dict[feature_name]['inputs'])),
+                            .data_dict[feature_name]['outputs'])
+                ax1.set_title(feature_name, fontsize=12)
+                if len(.data_dict[feature_name]['inputs']) <= 12:
+                    xtick_loc = np.arange(len(.data_dict[feature_name]['inputs']))
+                else:
+                    xtick_loc = np.arange(0, len(.data_dict[feature_name]['inputs']) - 1,
+                                        int(len(.data_dict[feature_name]['inputs']) / 6)).astype(int)
+                xtick_label = [.data_dict[feature_name]['inputs'][i] for i in xtick_loc]
+                if len(''.join(list(map(str, xtick_label)))) > 30:
+                    xtick_label = [.data_dict[feature_name]['inputs'][i][:4] for i in xtick_loc]
+
+                ax1.set_xticks(xtick_loc)
+                ax1.set_xticklabels(xtick_label)
+                if len(str(ax1.get_xticks())) > 80:
+                    ax1.xaxis.set_tick_params(rotation=20)
+                fig.add_subplot(ax1)
+
+            idx = idx + 1
+            ax1.set_title(feature_name + ' (' + str(np.round(100 * .data_dict[feature_name]['importance'], 1)) + '%)', fontsize=12)
+
+        for indice in active_interaction_index:
+
+            feature_name = list(.data_dict.keys())[indice]
+            feature_name1 = feature_name.split(' vs. ')[0]
+            feature_name2 = feature_name.split(' vs. ')[1]
+            axis_extent = .data_dict[feature_name]['axis_extent']
+
+            ax_main = plt.Subplot(fig, outer[idx])
+            interact_plot = ax_main.imshow(.data_dict[feature_name]['outputs'], interpolation='nearest',
+                                 aspect='auto', extent=axis_extent)
+
+            if .data_dict[feature_name]['xtype'] == 'categorical':
+                ax_main.set_xticks(.data_dict[feature_name]['input1_ticks'])
+                ax_main.set_xticklabels(.data_dict[feature_name]['input1_labels'])
+                if len(str(ax_main.get_xticks())) > 50:
+                    ax_main.xaxis.set_tick_params(rotation=20)
+            if .data_dict[feature_name]['ytype'] == 'categorical':
+                ax_main.set_yticks(.data_dict[feature_name]['input2_ticks'])
+                ax_main.set_yticklabels(.data_dict[feature_name]['input2_labels'])
+
+            response_precision = max(int(- np.log10(np.max(.data_dict[feature_name]['outputs']) 
+                                       - np.min(.data_dict[feature_name]['outputs']))) + 2, 0)
+            fig.colorbar(interact_plot, ax=ax_main, orientation='vertical',
+                         format='%0.' + str(response_precision) + 'f', use_gridspec=True)
+
+            ax_main.set_title(feature_name + ' (' + str(np.round(100 * .data_dict[feature_name]['importance'], 1)) + '%)', fontsize=12)
+            fig.add_subplot(ax_main)
+            idx = idx + 1
+
+        return fig
