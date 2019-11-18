@@ -158,7 +158,7 @@ def global_visualize_density(data_dict, active_univariate_index, active_interact
         ax_bottom.set_xlim([axis_extent[0], axis_extent[1]])
         ax_bottom.get_shared_x_axes().join(ax_bottom, ax_main)
         fig.add_subplot(ax_bottom)
-        if len(str(ax_bottom.get_xticks())) > 40:
+        if len(str(ax_bottom.get_xticks())) > 60:
             ax_bottom.xaxis.set_tick_params(rotation=20)
 
         ax_left = plt.Subplot(fig, inner [0])
