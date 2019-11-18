@@ -544,7 +544,7 @@ class GAMINet(tf.keras.Model):
             axis_extent = self.data_dict[feature_name]['axis_extent']
 
             inner = gridspec.GridSpecFromSubplotSpec(2, 4, subplot_spec=outer[idx],
-                                    wspace=0.1, hspace=0.1, height_ratios=[6, 1], width_ratios=[0.6, 3, 0.5, 0.2])
+                                    wspace=0.1, hspace=0.1, height_ratios=[6, 1], width_ratios=[0.6, 3, 0.2, 0.5])
             ax_main = plt.Subplot(fig, inner[1])
             interact_plot = ax_main.imshow(self.data_dict[feature_name]['outputs'], interpolation='nearest',
                                  aspect='auto', extent=axis_extent)
@@ -599,7 +599,7 @@ class GAMINet(tf.keras.Model):
 
         idx = 0
         
-        fig = plt.figure(figsize=(5 * cols_per_row, 4 * int(np.ceil(max_ids / cols_per_row))))
+        fig = plt.figure(figsize=(5.2 * cols_per_row, 4 * int(np.ceil(max_ids / cols_per_row))))
         outer = gridspec.GridSpec(int(np.ceil(max_ids/cols_per_row)), cols_per_row, wspace=0.25, hspace=0.25)
         for indice in active_univariate_index:
 
