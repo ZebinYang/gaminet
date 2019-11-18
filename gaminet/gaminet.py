@@ -5,7 +5,6 @@ import tensorflow as tf
 from scipy import stats
 from tensorflow.keras import layers
 from matplotlib import pyplot as plt
-import matplotlib.gridspec as gridspec
 from sklearn.model_selection import train_test_split
 
 from .layers import *
