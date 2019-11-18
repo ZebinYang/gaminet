@@ -488,8 +488,6 @@ class GAMINet(tf.keras.Model):
                 ax1 = plt.Subplot(fig, inner[0]) 
                 ax1.plot(self.data_dict[feature_name]['inputs'], self.data_dict[feature_name]['outputs'])
                 ax1.set_xticklabels([])
-                if len(str(ax1.get_yticks())) > 80:
-                    ax1.yaxis.set_tick_params(rotation=20)
                 ax1.set_title(feature_name, fontsize=12)
                 fig.add_subplot(ax1)
 
@@ -511,8 +509,6 @@ class GAMINet(tf.keras.Model):
                 ax1.bar(np.arange(len(self.data_dict[feature_name]['inputs'])),
                             self.data_dict[feature_name]['outputs'])
                 ax1.set_xticklabels([])
-                if len(str(ax1.get_yticks())) > 80:
-                    ax1.yaxis.set_tick_params(rotation=20)
                 ax1.set_title(feature_name, fontsize=12)
                 fig.add_subplot(ax1)
 
@@ -563,6 +559,8 @@ class GAMINet(tf.keras.Model):
                 ax_bottom.bar(xint, self.data_dict[feature_name1]['density']['scores'])
                 ax_bottom.set_xticks(self.data_dict[feature_name]['input1_ticks'])
                 ax_bottom.set_xticklabels(self.data_dict[feature_name]['input1_labels'])
+                if len(str(ax_bottom.get_xticks())) > 50:
+                    ax_bottom.xaxis.set_tick_params(rotation=20)
             else:
                 xint = ((np.array(self.data_dict[feature_name1]['density']['names'][1:]) 
                       + np.array(self.data_dict[feature_name1]['density']['names'][:-1])) / 2).reshape([-1])
@@ -570,8 +568,6 @@ class GAMINet(tf.keras.Model):
             ax_bottom.set_yticklabels([])
             ax_bottom.set_xlim([axis_extent[0], axis_extent[1]])
             ax_bottom.get_shared_x_axes().join(ax_bottom, ax_main)
-            if len(str(ax_bottom.get_xticks())) > 50:
-                ax_bottom.xaxis.set_tick_params(rotation=20)
             fig.add_subplot(ax_bottom)
 
             ax_left = plt.Subplot(fig, inner [0])
@@ -587,8 +583,6 @@ class GAMINet(tf.keras.Model):
             ax_left.set_xticklabels([])
             ax_left.set_ylim([axis_extent[2], axis_extent[3]])
             ax_left.get_shared_y_axes().join(ax_left, ax_main)
-            if len(str(ax_left.get_yticks())) > 50:
-                ax_left.yaxis.set_tick_params(rotation=20)
             fig.add_subplot(ax_left)
 
             ax_colorbar = plt.Subplot(fig, inner[2])
@@ -624,9 +618,6 @@ class GAMINet(tf.keras.Model):
                 ax1 = plt.Subplot(fig, outer[idx]) 
                 ax1.bar(np.arange(len(self.data_dict[feature_name]['inputs'])),
                             self.data_dict[feature_name]['outputs'])
-                ax1.set_xticklabels([])
-                if len(str(ax1.get_yticks())) > 80:
-                    ax1.yaxis.set_tick_params(rotation=20)
                 ax1.set_title(feature_name, fontsize=12)
                 if len(self.data_dict[feature_name]['inputs']) <= 12:
                     xtick_loc = np.arange(len(self.data_dict[feature_name]['inputs']))
@@ -660,14 +651,11 @@ class GAMINet(tf.keras.Model):
             if self.data_dict[feature_name]['xtype'] == 'categorical':
                 ax_main.set_xticks(self.data_dict[feature_name]['input1_ticks'])
                 ax_main.set_xticklabels(self.data_dict[feature_name]['input1_labels'])
+                if len(str(ax_main.get_xticks())) > 50:
+                    ax_main.xaxis.set_tick_params(rotation=20)
             if self.data_dict[feature_name]['ytype'] == 'categorical':
-                ax_main.set_xticks(self.data_dict[feature_name]['input2_ticks'])
-                ax_main.set_xticklabels(self.data_dict[feature_name]['input2_labels'])
-
-            if len(str(ax_main.get_xticks())) > 50:
-                ax_main.xaxis.set_tick_params(rotation=20)
-            if len(str(ax_left.get_yticks())) > 50:
-                ax_left.yaxis.set_tick_params(rotation=20)
+                ax_main.set_yticks(self.data_dict[feature_name]['input2_ticks'])
+                ax_main.set_yticklabels(self.data_dict[feature_name]['input2_labels'])
 
             response_precision = max(int(- np.log10(np.max(self.data_dict[feature_name]['outputs']) 
                                        - np.min(self.data_dict[feature_name]['outputs']))) + 2, 0)
