@@ -12,7 +12,7 @@ from .layers import *
 from .utils import get_interaction_list
 
 
-class GAMIxNN(tf.keras.Model):
+class GAMINet(tf.keras.Model):
 
     def __init__(self, meta_info,
                  subnet_arch=[10, 6],
@@ -34,7 +34,7 @@ class GAMIxNN(tf.keras.Model):
                  early_stop_thres=100,
                  random_state=0):
 
-        super(GAMIxNN, self).__init__()
+        super(GAMINet, self).__init__()
         # Parameter initiation
         self.meta_info = meta_info
         self.input_num = len(meta_info) - 1
