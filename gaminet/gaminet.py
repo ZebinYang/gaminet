@@ -473,7 +473,7 @@ class GAMINet(tf.keras.Model):
             f.savefig('%s.eps' % save_path, bbox_inches='tight', dpi=100)
 
 
-    def global_visualize_density(self, active_univariate_index, active_interaction_index, cols_per_row):
+    def global_visualize_density(self, active_univariate_index, active_interaction_index, cols_per_row, max_ids):
 
         idx = 0
         max_ids = len(active_univariate_index) + len(active_interaction_index)
@@ -595,10 +595,10 @@ class GAMINet(tf.keras.Model):
 
         return fig
 
-    def global_visualize_wo_density(self, active_univariate_index, active_interaction_index, cols_per_row):
+    def global_visualize_wo_density(self, active_univariate_index, active_interaction_index, cols_per_row, max_ids):
 
         idx = 0
-        max_ids = len(active_univariate_index) + len(active_interaction_index)
+        
         fig = plt.figure(figsize=(6 * cols_per_row, 4 * int(np.ceil(max_ids / cols_per_row))))
         outer = gridspec.GridSpec(int(np.ceil(max_ids/cols_per_row)), cols_per_row, wspace=0.25, hspace=0.25)
         for indice in active_univariate_index:
@@ -693,12 +693,13 @@ class GAMINet(tf.keras.Model):
         active_index = sorted_index[componment_scales[sorted_index].cumsum()>0][::-1]
         active_univariate_index = active_index[active_index < maineffect_count]
         active_interaction_index = active_index[active_index >= maineffect_count]
-
+        max_ids = len(active_univariate_index) + len(active_interaction_index)
+        
         idx = 0
         if density_flag:
-            fig = self.global_visualize_density(active_univariate_index, active_interaction_index, cols_per_row)
+            fig = self.global_visualize_density(active_univariate_index, active_interaction_index, cols_per_row, max_ids)
         else:
-            fig = self.global_visualize_wo_density(active_univariate_index, active_interaction_index, cols_per_row)
+            fig = self.global_visualize_wo_density(active_univariate_index, active_interaction_index, cols_per_row, max_ids)
         
         if max_ids > 0:
             if save_png:
