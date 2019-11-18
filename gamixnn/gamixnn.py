@@ -718,8 +718,6 @@ class GAMIxNN(tf.keras.Model):
                 interact_input_list.append(interact_input2)
                 axis_extent.extend([interact_input2_original.min(), interact_input2_original.max()])
                 
-            if feature_name1 in categ_variable_list:
-
             x1, x2 = np.meshgrid(interact_input_list[0], interact_input_list[1][::-1])
             input_grid = np.hstack([np.reshape(x1, [-1, 1]), np.reshape(x2, [-1, 1])])
             
