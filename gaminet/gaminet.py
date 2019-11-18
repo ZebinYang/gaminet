@@ -697,7 +697,7 @@ class GAMINet(tf.keras.Model):
         componment_scales = []
         for key, item in self.data_dict.items():
             componment_scales.append(item['importance'])
-            if item['type'] != 'pairwise'
+            if item['type'] != 'pairwise':
                 maineffect_count += 1
 
         componment_scales = np.array(componment_scales)
