@@ -192,7 +192,7 @@ def get_interaction_list(tr_x, val_x, tr_y, val_y, pred_tr, pred_val, interactio
         for indice in active_univariate_index:
 
             feature_name = list(data_dict.keys())[indice]
-            if indice in .numerical_index_list:
+            if data_dict[feature_name]['type'] == 'continuous':
 
                 ax1 = plt.Subplot(fig, outer[idx]) 
                 ax1.plot(data_dict[feature_name]['inputs'], data_dict[feature_name]['outputs'])
@@ -201,7 +201,7 @@ def get_interaction_list(tr_x, val_x, tr_y, val_y, pred_tr, pred_val, interactio
                 ax1.set_title(feature_name, fontsize=12)
                 fig.add_subplot(ax1)
 
-            elif indice in .categ_index_list:
+            elif data_dict[feature_name]['type'] == 'categorical':
 
                 ax1 = plt.Subplot(fig, outer[idx]) 
                 ax1.bar(np.arange(len(data_dict[feature_name]['inputs'])),
