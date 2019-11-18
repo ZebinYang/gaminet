@@ -659,7 +659,7 @@ class GAMINet(tf.keras.Model):
 
             response_precision = max(int(- np.log10(np.max(self.data_dict[feature_name]['outputs']) 
                                        - np.min(self.data_dict[feature_name]['outputs']))) + 2, 0)
-            fig.colorbar(interact_plot, ax=ax, orientation='vertical',
+            fig.colorbar(interact_plot, ax=ax_main, orientation='vertical',
                          format='%0.' + str(response_precision) + 'f', use_gridspec=True)
 
             ax_main.set_title(feature_name + ' (' + str(np.round(100 * self.data_dict[feature_name]['importance'], 1)) + '%)', fontsize=12)
