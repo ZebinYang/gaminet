@@ -3,7 +3,7 @@ from setuptools import setup
 setup(name='gaminet',
       version='0.1',
       description='Explainable Neural Networks based on Generalized Additive Models with Structured Interactions',
-      url='https://github.com/ZebinYang/GAMIxNN',
+      url='https://github.com/ZebinYang/GAMINet',
       author='Zebin Yang',
       author_email='yangzb2010@hku.hk',
       license='GPL',
