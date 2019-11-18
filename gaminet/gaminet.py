@@ -677,7 +677,7 @@ class GAMINet(tf.keras.Model):
             feature_name1 = self.variables_names[self.interaction_list[indice][0]]
             feature_name2 = self.variables_names[self.interaction_list[indice][1]]
             feature_type1 = 'categorical' if feature_name1 in self.categ_variable_list else 'continuous'
-            feature_type2 = 'categorical' if feature_name1 in self.categ_variable_list else 'continuous'
+            feature_type2 = 'categorical' if feature_name2 in self.categ_variable_list else 'continuous'
             
             axis_extent = []
             interact_input_list = []
