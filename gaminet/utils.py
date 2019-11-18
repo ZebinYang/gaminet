@@ -151,7 +151,7 @@ def global_visualize_density(data_dict, active_univariate_index, active_interact
             ax_bottom.bar(xint, data_dict[feature_name1]['density']['scores'])
             ax_bottom.set_xticks(data_dict[feature_name]['input1_ticks'])
             ax_bottom.set_xticklabels(data_dict[feature_name]['input1_labels'])
-            if len(str(ax_bottom.get_xticks())) > 50:
+            if len(str(ax_bottom.get_xticks())) > 40:
                 ax_bottom.xaxis.set_tick_params(rotation=20)
         else:
             xint = ((np.array(data_dict[feature_name1]['density']['names'][1:]) 
@@ -242,7 +242,7 @@ def global_visualize_wo_density(data_dict, active_univariate_index, active_inter
         if data_dict[feature_name]['xtype'] == 'categorical':
             ax_main.set_xticks(data_dict[feature_name]['input1_ticks'])
             ax_main.set_xticklabels(data_dict[feature_name]['input1_labels'])
-            if len(str(ax_main.get_xticks())) > 50:
+            if len(str(ax_main.get_xticks())) > 40:
                 ax_main.xaxis.set_tick_params(rotation=20)
         if data_dict[feature_name]['ytype'] == 'categorical':
             ax_main.set_yticks(data_dict[feature_name]['input2_ticks'])
