@@ -727,6 +727,7 @@ class GAMIxNN(tf.keras.Model):
             self.data_dict.update({feature_name1 + ' vs. ' + feature_name2:{'type':'pairwise',
                                                        'xtype':feature_type1,
                                                        'ytype':feature_type2,
+                                                       'importance':componment_scales[self.input_num + indice],
                                                        'input1':interact_input1_original,
                                                        'input2':interact_input2_original,
                                                        'outputs':interact_outputs,
