@@ -473,7 +473,7 @@ class GAMINet(tf.keras.Model):
             f.savefig('%s.eps' % save_path, bbox_inches='tight', dpi=100)
 
 
-    def global_visualize_density(self, active_univariate_index, active_interaction_index):
+    def global_visualize_density(self, active_univariate_index, active_interaction_index, cols_per_row):
 
         idx = 0
         max_ids = len(active_univariate_index) + len(active_interaction_index)
@@ -482,7 +482,7 @@ class GAMINet(tf.keras.Model):
         for indice in active_univariate_index:
 
             feature_name = list(self.data_dict.keys())[indice]
-            if indice in self.numerical_index_list:
+            if self.data_dict[feature_name]['type'] == 'continuous':
 
                 inner = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=outer[idx], wspace=0.1, hspace=0.1, height_ratios=[6, 1])
                 ax1 = plt.Subplot(fig, inner[0]) 
@@ -503,7 +503,7 @@ class GAMINet(tf.keras.Model):
                     ax2.xaxis.set_tick_params(rotation=20)
                 fig.add_subplot(ax2)
 
-            elif indice in self.categ_index_list:
+            elif self.data_dict[feature_name]['type'] == 'categorical':
 
                 inner = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=outer[idx],
                                             wspace=0.1, hspace=0.1, height_ratios=[6, 1])
@@ -542,27 +542,27 @@ class GAMINet(tf.keras.Model):
 
         for indice in active_interaction_index:
 
-            name = list(self.data_dict.keys())[indice]
-            feature_name1 = name.split(' vs. ')[0]
-            feature_name2 = name.split(' vs. ')[1]
-            axis_extent = self.data_dict[name]['axis_extent']
+            feature_name = list(self.data_dict.keys())[indice]
+            feature_name1 = feature_name.split(' vs. ')[0]
+            feature_name2 = feature_name.split(' vs. ')[1]
+            axis_extent = self.data_dict[feature_name]['axis_extent']
 
             inner = gridspec.GridSpecFromSubplotSpec(2, 4, subplot_spec=outer[idx],
                                     wspace=0.1, hspace=0.1, height_ratios=[6, 1], width_ratios=[0.6, 3, 0.5, 0.5])
             ax_main = plt.Subplot(fig, inner[1])
-            interact_plot = ax_main.imshow(self.data_dict[name]['outputs'], interpolation='nearest',
+            interact_plot = ax_main.imshow(self.data_dict[feature_name]['outputs'], interpolation='nearest',
                                  aspect='auto', extent=axis_extent)
             ax_main.set_xticklabels([])
             ax_main.set_yticklabels([])
-            ax_main.set_title(name + ' (' + str(np.round(100 * self.data_dict[name]['importance'], 1)) + '%)', fontsize=12)
+            ax_main.set_title(feature_name + ' (' + str(np.round(100 * self.data_dict[feature_name]['importance'], 1)) + '%)', fontsize=12)
             fig.add_subplot(ax_main)
 
             ax_bottom = plt.Subplot(fig, inner[5])
-            if self.data_dict[name]['xtype'] == 'categorical':
+            if self.data_dict[feature_name]['xtype'] == 'categorical':
                 xint = np.arange(len(self.data_dict[feature_name1]['density']['names']))
                 ax_bottom.bar(xint, self.data_dict[feature_name1]['density']['scores'])
-                ax_bottom.set_xticks(self.data_dict[name]['input1_ticks'])
-                ax_bottom.set_xticklabels(self.data_dict[name]['input1_labels'])
+                ax_bottom.set_xticks(self.data_dict[feature_name]['input1_ticks'])
+                ax_bottom.set_xticklabels(self.data_dict[feature_name]['input1_labels'])
             else:
                 xint = ((np.array(self.data_dict[feature_name1]['density']['names'][1:]) 
                       + np.array(self.data_dict[feature_name1]['density']['names'][:-1])) / 2).reshape([-1])
@@ -575,11 +575,11 @@ class GAMINet(tf.keras.Model):
             fig.add_subplot(ax_bottom)
 
             ax_left = plt.Subplot(fig, inner [0])
-            if self.data_dict[name]['ytype'] == 'categorical':
+            if self.data_dict[feature_name]['ytype'] == 'categorical':
                 xint = np.arange(len(self.data_dict[feature_name2]['density']['names']))
                 ax_left.barh(xint, self.data_dict[feature_name2]['density']['scores'])
-                ax_left.set_xticks(self.data_dict[name]['input2_ticks'])
-                ax_left.set_xticklabels(self.data_dict[name]['input2_labels'])
+                ax_left.set_xticks(self.data_dict[feature_name]['input2_ticks'])
+                ax_left.set_xticklabels(self.data_dict[feature_name]['input2_labels'])
             else:
                 xint = ((np.array(self.data_dict[feature_name2]['density']['names'][1:]) 
                       + np.array(self.data_dict[feature_name2]['density']['names'][:-1])) / 2).reshape([-1])
@@ -592,8 +592,8 @@ class GAMINet(tf.keras.Model):
             fig.add_subplot(ax_left)
 
             ax_colorbar = plt.Subplot(fig, inner[2])
-            response_precision = max(int(- np.log10(np.max(self.data_dict[name]['outputs']) 
-                                       - np.min(self.data_dict[name]['outputs']))) + 2, 0)
+            response_precision = max(int(- np.log10(np.max(self.data_dict[feature_name]['outputs']) 
+                                       - np.min(self.data_dict[feature_name]['outputs']))) + 2, 0)
             fig.colorbar(interact_plot, cax=ax_colorbar, orientation='vertical',
                          format='%0.' + str(response_precision) + 'f', use_gridspec=True)
             fig.add_subplot(ax_colorbar)
@@ -601,7 +601,7 @@ class GAMINet(tf.keras.Model):
 
         return fig
 
-    def global_visualize_wo_density(self, active_univariate_index, active_interaction_index):
+    def global_visualize_wo_density(self, active_univariate_index, active_interaction_index, cols_per_row):
 
         idx = 0
         max_ids = len(active_univariate_index) + len(active_interaction_index)
@@ -648,33 +648,33 @@ class GAMINet(tf.keras.Model):
 
         for indice in active_interaction_index:
 
-            name = list(self.data_dict.keys())[indice]
-            feature_name1 = name.split(' vs. ')[0]
-            feature_name2 = name.split(' vs. ')[1]
-            axis_extent = self.data_dict[name]['axis_extent']
+            feature_name = list(self.data_dict.keys())[indice]
+            feature_name1 = feature_name.split(' vs. ')[0]
+            feature_name2 = feature_name.split(' vs. ')[1]
+            axis_extent = self.data_dict[feature_name]['axis_extent']
 
             ax_main = plt.Subplot(fig, outer[idx])
-            interact_plot = ax_main.imshow(self.data_dict[name]['outputs'], interpolation='nearest',
+            interact_plot = ax_main.imshow(self.data_dict[feature_name]['outputs'], interpolation='nearest',
                                  aspect='auto', extent=axis_extent)
 
-            if self.data_dict[name]['xtype'] == 'categorical':
-                ax_main.set_xticks(self.data_dict[name]['input1_ticks'])
-                ax_main.set_xticklabels(self.data_dict[name]['input1_labels'])
-            if self.data_dict[name]['ytype'] == 'categorical':
-                ax_main.set_xticks(self.data_dict[name]['input2_ticks'])
-                ax_main.set_xticklabels(self.data_dict[name]['input2_labels'])
+            if self.data_dict[feature_name]['xtype'] == 'categorical':
+                ax_main.set_xticks(self.data_dict[feature_name]['input1_ticks'])
+                ax_main.set_xticklabels(self.data_dict[feature_name]['input1_labels'])
+            if self.data_dict[feature_name]['ytype'] == 'categorical':
+                ax_main.set_xticks(self.data_dict[feature_name]['input2_ticks'])
+                ax_main.set_xticklabels(self.data_dict[feature_name]['input2_labels'])
 
             if len(str(ax_main.get_xticks())) > 50:
                 ax_main.xaxis.set_tick_params(rotation=20)
             if len(str(ax_left.get_yticks())) > 50:
                 ax_left.yaxis.set_tick_params(rotation=20)
 
-            response_precision = max(int(- np.log10(np.max(self.data_dict[name]['outputs']) 
-                                       - np.min(self.data_dict[name]['outputs']))) + 2, 0)
+            response_precision = max(int(- np.log10(np.max(self.data_dict[feature_name]['outputs']) 
+                                       - np.min(self.data_dict[feature_name]['outputs']))) + 2, 0)
             fig.colorbar(interact_plot, ax=ax, orientation='vertical',
                          format='%0.' + str(response_precision) + 'f', use_gridspec=True)
 
-            ax_main.set_title(name + ' (' + str(np.round(100 * self.data_dict[name]['importance'], 1)) + '%)', fontsize=12)
+            ax_main.set_title(feature_name + ' (' + str(np.round(100 * self.data_dict[feature_name]['importance'], 1)) + '%)', fontsize=12)
             fig.add_subplot(ax_main)
             idx = idx + 1
 
@@ -708,9 +708,9 @@ class GAMINet(tf.keras.Model):
 
         idx = 0
         if density_flag:
-            fig = self.global_visualize_density(active_univariate_index, active_interaction_index)
+            fig = self.global_visualize_density(active_univariate_index, active_interaction_index, cols_per_row)
         else:
-            fig = self.global_visualize_wo_density(active_univariate_index, active_interaction_index)
+            fig = self.global_visualize_wo_density(active_univariate_index, active_interaction_index, cols_per_row)
         
         if max_ids > 0:
             if save_png:
