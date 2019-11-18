@@ -544,7 +544,7 @@ class GAMINet(tf.keras.Model):
             axis_extent = self.data_dict[feature_name]['axis_extent']
 
             inner = gridspec.GridSpecFromSubplotSpec(2, 4, subplot_spec=outer[idx],
-                                    wspace=0.1, hspace=0.1, height_ratios=[6, 1], width_ratios=[0.6, 3, 0.5, 0.5])
+                                    wspace=0.1, hspace=0.1, height_ratios=[6, 1], width_ratios=[0.6, 3, 0.5, 0.2])
             ax_main = plt.Subplot(fig, inner[1])
             interact_plot = ax_main.imshow(self.data_dict[feature_name]['outputs'], interpolation='nearest',
                                  aspect='auto', extent=axis_extent)
@@ -599,7 +599,7 @@ class GAMINet(tf.keras.Model):
 
         idx = 0
         
-        fig = plt.figure(figsize=(6 * cols_per_row, 4 * int(np.ceil(max_ids / cols_per_row))))
+        fig = plt.figure(figsize=(5 * cols_per_row, 4 * int(np.ceil(max_ids / cols_per_row))))
         outer = gridspec.GridSpec(int(np.ceil(max_ids/cols_per_row)), cols_per_row, wspace=0.25, hspace=0.25)
         for indice in active_univariate_index:
 
@@ -730,7 +730,7 @@ class GAMINet(tf.keras.Model):
                 subnets_outputs = (self.output_layer.main_effect_weights.numpy()[indice]
                             * self.output_layer.main_effect_switcher.numpy()[indice]
                             * subnet.apply(tf.cast(tf.constant(subnets_inputs), tf.float32)).numpy())
-                self.data_dict[feature_name].update({'type':'categorical',
+                self.data_dict[feature_name].update({'type':'continuous',
                                          'importance':componment_scales[indice],
                                          'inputs':subnets_inputs_original.ravel(),
                                          'outputs':subnets_outputs.ravel()})
