@@ -473,38 +473,12 @@ class GAMINet(tf.keras.Model):
             f.savefig('%s.eps' % save_path, bbox_inches='tight', dpi=100)
 
 
-    def global_visualize(self, folder='./results', name='demo', main_grid_size=None, interact_grid_size=None, 
-                         cols_per_row=4, save_png=False, save_eps=False, save_dict=False):
-        
-        if main_grid_size is None:
-            main_grid_size = self.main_grid_size
-        if interact_grid_size is None:
-            interact_grid_size = self.interact_grid_size
-
-        self.global_explain(main_grid_size, interact_grid_size)
-        if not os.path.exists(folder):
-            os.makedirs(folder)
-        save_path = folder + name
-
-        componment_scales = []
-        maineffect_count = 0
-        for key, item in self.data_dict.items():
-            componment_scales.append(item['importance'])
-            if 'vs.' not in key:
-                maineffect_count += 1
-
-        componment_scales = np.array(componment_scales)
-        sorted_index = np.argsort(componment_scales)
-        active_index = sorted_index[componment_scales[sorted_index].cumsum()>0][::-1]
-        active_univariate_index = active_index[active_index < maineffect_count]
-        active_interaction_index = active_index[active_index >= maineffect_count]
-        max_ids = len(active_univariate_index) + len(active_interaction_index)
+    def global_visualize_density(self, active_univariate_index, active_interaction_index):
 
         idx = 0
-        fig = plt.figure(figsize=(6 * cols_per_row, 
-                         4.6 * int(np.ceil(max_ids / cols_per_row))))
+        max_ids = len(active_univariate_index) + len(active_interaction_index)
+        fig = plt.figure(figsize=(6 * cols_per_row, 4.6 * int(np.ceil(max_ids / cols_per_row))))
         outer = gridspec.GridSpec(int(np.ceil(max_ids/cols_per_row)), cols_per_row, wspace=0.25, hspace=0.25)
-        
         for indice in active_univariate_index:
 
             feature_name = list(self.data_dict.keys())[indice]
@@ -572,7 +546,7 @@ class GAMINet(tf.keras.Model):
             feature_name1 = name.split(' vs. ')[0]
             feature_name2 = name.split(' vs. ')[1]
             axis_extent = self.data_dict[name]['axis_extent']
-            
+
             inner = gridspec.GridSpecFromSubplotSpec(2, 4, subplot_spec=outer[idx],
                                     wspace=0.1, hspace=0.1, height_ratios=[6, 1], width_ratios=[0.6, 3, 0.5, 0.5])
             ax_main = plt.Subplot(fig, inner[1])
@@ -625,6 +599,119 @@ class GAMINet(tf.keras.Model):
             fig.add_subplot(ax_colorbar)
             idx = idx + 1
 
+        return fig
+
+    def global_visualize_wo_density(self, active_univariate_index, active_interaction_index):
+
+        idx = 0
+        max_ids = len(active_univariate_index) + len(active_interaction_index)
+        fig = plt.figure(figsize=(6 * cols_per_row, 4 * int(np.ceil(max_ids / cols_per_row))))
+        outer = gridspec.GridSpec(int(np.ceil(max_ids/cols_per_row)), cols_per_row, wspace=0.25, hspace=0.25)
+        for indice in active_univariate_index:
+
+            feature_name = list(self.data_dict.keys())[indice]
+            if indice in self.numerical_index_list:
+
+                ax1 = plt.Subplot(fig, outer[idx]) 
+                ax1.plot(self.data_dict[feature_name]['inputs'], self.data_dict[feature_name]['outputs'])
+                if len(str(ax1.get_yticks())) > 80:
+                    ax1.yaxis.set_tick_params(rotation=20)
+                ax1.set_title(feature_name, fontsize=12)
+                fig.add_subplot(ax1)
+
+            elif indice in self.categ_index_list:
+
+                ax1 = plt.Subplot(fig, outer[idx]) 
+                ax1.bar(np.arange(len(self.data_dict[feature_name]['inputs'])),
+                            self.data_dict[feature_name]['outputs'])
+                ax1.set_xticklabels([])
+                if len(str(ax1.get_yticks())) > 80:
+                    ax1.yaxis.set_tick_params(rotation=20)
+                ax1.set_title(feature_name, fontsize=12)
+                if len(self.data_dict[feature_name]['inputs']) <= 12:
+                    xtick_loc = np.arange(len(self.data_dict[feature_name]['inputs']))
+                else:
+                    xtick_loc = np.arange(0, len(self.data_dict[feature_name]['inputs']) - 1,
+                                        int(len(self.data_dict[feature_name]['inputs']) / 6)).astype(int)
+                xtick_label = [self.data_dict[feature_name]['inputs'][i] for i in xtick_loc]
+                if len(''.join(list(map(str, xtick_label)))) > 30:
+                    xtick_label = [self.data_dict[feature_name]['inputs'][i][:4] for i in xtick_loc]
+
+                ax1.set_xticks(xtick_loc)
+                ax1.set_xticklabels(xtick_label)
+                if len(str(ax1.get_xticks())) > 80:
+                    ax1.xaxis.set_tick_params(rotation=20)
+                fig.add_subplot(ax1)
+
+            idx = idx + 1
+            ax1.set_title(feature_name + ' (' + str(np.round(100 * self.data_dict[feature_name]['importance'], 1)) + '%)', fontsize=12)
+
+        for indice in active_interaction_index:
+
+            name = list(self.data_dict.keys())[indice]
+            feature_name1 = name.split(' vs. ')[0]
+            feature_name2 = name.split(' vs. ')[1]
+            axis_extent = self.data_dict[name]['axis_extent']
+
+            ax_main = plt.Subplot(fig, outer[idx])
+            interact_plot = ax_main.imshow(self.data_dict[name]['outputs'], interpolation='nearest',
+                                 aspect='auto', extent=axis_extent)
+
+            if self.data_dict[name]['xtype'] == 'categorical':
+                ax_main.set_xticks(self.data_dict[name]['input1_ticks'])
+                ax_main.set_xticklabels(self.data_dict[name]['input1_labels'])
+            if self.data_dict[name]['ytype'] == 'categorical':
+                ax_main.set_xticks(self.data_dict[name]['input2_ticks'])
+                ax_main.set_xticklabels(self.data_dict[name]['input2_labels'])
+
+            if len(str(ax_main.get_xticks())) > 50:
+                ax_main.xaxis.set_tick_params(rotation=20)
+            if len(str(ax_left.get_yticks())) > 50:
+                ax_left.yaxis.set_tick_params(rotation=20)
+
+            response_precision = max(int(- np.log10(np.max(self.data_dict[name]['outputs']) 
+                                       - np.min(self.data_dict[name]['outputs']))) + 2, 0)
+            fig.colorbar(interact_plot, ax=ax, orientation='vertical',
+                         format='%0.' + str(response_precision) + 'f', use_gridspec=True)
+
+            ax_main.set_title(name + ' (' + str(np.round(100 * self.data_dict[name]['importance'], 1)) + '%)', fontsize=12)
+            fig.add_subplot(ax_main)
+            idx = idx + 1
+
+        return fig
+
+    def global_visualize(self, folder='./results', name='demo', main_grid_size=None, interact_grid_size=None, 
+                         cols_per_row=4, density_flag=True, save_png=False, save_eps=False, save_dict=False):
+        
+        if main_grid_size is None:
+            main_grid_size = self.main_grid_size
+        if interact_grid_size is None:
+            interact_grid_size = self.interact_grid_size
+
+        self.global_explain(main_grid_size, interact_grid_size)
+        if not os.path.exists(folder):
+            os.makedirs(folder)
+        save_path = folder + name
+
+        maineffect_count = 0
+        componment_scales = []
+        for key, item in self.data_dict.items():
+            componment_scales.append(item['importance'])
+            if item['type'] != 'pairwise'
+                maineffect_count += 1
+
+        componment_scales = np.array(componment_scales)
+        sorted_index = np.argsort(componment_scales)
+        active_index = sorted_index[componment_scales[sorted_index].cumsum()>0][::-1]
+        active_univariate_index = active_index[active_index < maineffect_count]
+        active_interaction_index = active_index[active_index >= maineffect_count]
+
+        idx = 0
+        if density_flag:
+            fig = self.global_visualize_density(active_univariate_index, active_interaction_index)
+        else:
+            fig = self.global_visualize_wo_density(active_univariate_index, active_interaction_index)
+        
         if max_ids > 0:
             if save_png:
                 fig.savefig('%s.png' % save_path, bbox_inches='tight', dpi=100)
@@ -633,7 +720,7 @@ class GAMINet(tf.keras.Model):
             if save_dict:
                 np.save('%s.npy' % save_path, self.data_dict)
 
-
+    
     def global_explain(self, main_grid_size=None, interact_grid_size=None):
 
         ## By default, we use the same main_grid_size and interact_grid_size as that of the zero mean constraint
