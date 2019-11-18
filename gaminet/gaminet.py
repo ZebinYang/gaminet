@@ -587,8 +587,8 @@ class GAMINet(tf.keras.Model):
             if self.data_dict[name]['xtype'] == 'categorical':
                 xint = np.arange(len(self.data_dict[feature_name1]['density']['names']))
                 ax_bottom.bar(xint, self.data_dict[feature_name1]['density']['scores'])
-                ax.set_xticks(self.data_dict[name]['input1_ticks'])
-                ax.set_xticklabels(self.data_dict[name]['input1_labels'])
+                ax_bottom.set_xticks(self.data_dict[name]['input1_ticks'])
+                ax_bottom.set_xticklabels(self.data_dict[name]['input1_labels'])
             else:
                 xint = ((np.array(self.data_dict[feature_name1]['density']['names'][1:]) 
                       + np.array(self.data_dict[feature_name1]['density']['names'][:-1])) / 2).reshape([-1])
@@ -604,8 +604,8 @@ class GAMINet(tf.keras.Model):
             if self.data_dict[name]['ytype'] == 'categorical':
                 xint = np.arange(len(self.data_dict[feature_name2]['density']['names']))
                 ax_left.barh(xint, self.data_dict[feature_name2]['density']['scores'])
-                ax.set_xticks(self.data_dict[name]['input2_ticks'])
-                ax.set_xticklabels(self.data_dict[name]['input2_labels'])
+                ax_left.set_xticks(self.data_dict[name]['input2_ticks'])
+                ax_left.set_xticklabels(self.data_dict[name]['input2_labels'])
             else:
                 xint = ((np.array(self.data_dict[feature_name2]['density']['names'][1:]) 
                       + np.array(self.data_dict[feature_name2]['density']['names'][:-1])) / 2).reshape([-1])
