@@ -449,9 +449,9 @@ class GAMINet(tf.keras.Model):
         predicted = self.predict(x)
         intercept = self.output_layer.output_bias.numpy()
 
-        subnet_output = self.maineffect_blocks.apply(x).numpy()
+        subnet_output = self.maineffect_blocks.apply(tf.cast(tf.constant(x), tf.float32)).numpy()
         if self.interact_num > 0:
-            interact_output = self.interact_blocks.apply(x).numpy()
+            interact_output = self.interact_blocks.apply(tf.cast(tf.constant(x), tf.float32)).numpy()
         else:
             interact_output = np.array([])
         active_univariate_index, active_interaction_index, beta, gamma, componment_scales = self.get_active_effects()
