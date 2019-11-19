@@ -88,9 +88,9 @@ def global_visualize_density(data_dict, active_univariate_index, active_interact
             ax2.bar(xint, data_dict[feature_name]['density']['scores'], width=xint[1] - xint[0])
             ax1.get_shared_x_axes().join(ax1, ax2)
             ax2.set_yticklabels([])
+            fig.add_subplot(ax2)
             if len(str(ax2.get_xticks())) > 80:
                 ax2.xaxis.set_tick_params(rotation=20)
-            fig.add_subplot(ax2)
 
         elif data_dict[feature_name]['type'] == 'categorical':
 
@@ -120,9 +120,9 @@ def global_visualize_density(data_dict, active_univariate_index, active_interact
             ax2.set_xticks(xtick_loc)
             ax2.set_xticklabels(xtick_label)
             ax2.set_yticklabels([])
+            fig.add_subplot(ax2)
             if len(str(ax2.get_xticks())) > 80:
                 ax2.xaxis.set_tick_params(rotation=20)
-            fig.add_subplot(ax2)
 
         idx = idx + 1
         ax1.set_title(feature_name + ' (' + str(np.round(100 * data_dict[feature_name]['importance'], 1)) + '%)', fontsize=12)
@@ -198,10 +198,10 @@ def global_visualize_wo_density(data_dict, active_univariate_index, active_inter
 
             ax1 = plt.Subplot(fig, outer[idx]) 
             ax1.plot(data_dict[feature_name]['inputs'], data_dict[feature_name]['outputs'])
-            if len(str(ax1.get_yticks())) > 80:
-                ax1.yaxis.set_tick_params(rotation=20)
             ax1.set_title(feature_name, fontsize=12)
             fig.add_subplot(ax1)
+            if len(str(ax1.get_yticks())) > 80:
+                ax1.yaxis.set_tick_params(rotation=20)
 
         elif data_dict[feature_name]['type'] == 'categorical':
 
@@ -220,9 +220,9 @@ def global_visualize_wo_density(data_dict, active_univariate_index, active_inter
 
             ax1.set_xticks(xtick_loc)
             ax1.set_xticklabels(xtick_label)
+            fig.add_subplot(ax1)
             if len(str(ax1.get_xticks())) > 80:
                 ax1.xaxis.set_tick_params(rotation=20)
-            fig.add_subplot(ax1)
 
         idx = idx + 1
         ax1.set_title(feature_name + ' (' + str(np.round(100 * data_dict[feature_name]['importance'], 1)) + '%)', fontsize=12)
@@ -241,8 +241,6 @@ def global_visualize_wo_density(data_dict, active_univariate_index, active_inter
         if data_dict[feature_name]['xtype'] == 'categorical':
             ax_main.set_xticks(data_dict[feature_name]['input1_ticks'])
             ax_main.set_xticklabels(data_dict[feature_name]['input1_labels'])
-            if len(str(ax_main.get_xticks())) > 40:
-                ax_main.xaxis.set_tick_params(rotation=20)
         if data_dict[feature_name]['ytype'] == 'categorical':
             ax_main.set_yticks(data_dict[feature_name]['input2_ticks'])
             ax_main.set_yticklabels(data_dict[feature_name]['input2_labels'])
@@ -254,6 +252,9 @@ def global_visualize_wo_density(data_dict, active_univariate_index, active_inter
 
         ax_main.set_title(feature_name + ' (' + str(np.round(100 * data_dict[feature_name]['importance'], 1)) + '%)', fontsize=12)
         fig.add_subplot(ax_main)
+        if len(str(ax_main.get_xticks())) > 60:
+                ax_main.xaxis.set_tick_params(rotation=20)
+        
         idx = idx + 1
 
     return fig
