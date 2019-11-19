@@ -69,7 +69,7 @@ def global_visualize_density(data_dict, active_univariate_index, active_interact
 
     idx = 0
     fig = plt.figure(figsize=(6 * cols_per_row, 4.6 * int(np.ceil(max_ids / cols_per_row))))
-    outer = gridspec.GridSpec(int(np.ceil(max_ids/cols_per_row)), cols_per_row, wspace=0.25, hspace=0.25)
+    outer = gridspec.GridSpec(int(np.ceil(max_ids/cols_per_row)), cols_per_row, wspace=0.25, hspace=0.35)
     for indice in active_univariate_index:
 
         feature_name = list(data_dict.keys())[indice]
@@ -190,7 +190,7 @@ def global_visualize_wo_density(data_dict, active_univariate_index, active_inter
 
     idx = 0
     fig = plt.figure(figsize=(5.2 * cols_per_row, 4 * int(np.ceil(max_ids / cols_per_row))))
-    outer = gridspec.GridSpec(int(np.ceil(max_ids/cols_per_row)), cols_per_row, wspace=0.25, hspace=0.25)
+    outer = gridspec.GridSpec(int(np.ceil(max_ids/cols_per_row)), cols_per_row, wspace=0.25, hspace=0.35)
     for indice in active_univariate_index:
 
         feature_name = list(data_dict.keys())[indice]
