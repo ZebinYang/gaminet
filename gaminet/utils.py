@@ -320,7 +320,7 @@ def global_visualize_wo_density(data_dict, univariate_num=10**5, interaction_num
             fig.savefig('%s.png' % save_path, bbox_inches='tight', dpi=100)
 
             
-def feature_importance(data_dict):
+def feature_importance(data_dict, folder='./results', name='demo', save_png=True, save_eps=True):
 
     all_ir = []
     all_names = []
@@ -328,8 +328,9 @@ def feature_importance(data_dict):
         if item['importance'] > 0:
             all_ir.append(item['importance'])
             all_names.append(key)
-
-    plt.figure(figsize=(8, 0.8 * len(all_names)))
+            
+    max_ids = len(all_names)
+    fig = plt.figure(figsize=(6, 0.4 * max_ids))
     ax = plt.axes()
     rects = ax.barh(np.arange(len(all_ir)), [ir for ir,_ in sorted(zip(all_ir, all_names))])
     ax.set_yticks(np.arange(len(all_ir)))
@@ -340,5 +341,9 @@ def feature_importance(data_dict):
                 '%0.3f' % (rect.get_width()))
     plt.ylabel("Feature Name", fontsize=12)
     plt.xlim(0, np.max(all_ir) + 0.05)
+    plt.ylim(-1, len(all_names))
     plt.title("Feature Importance")
-    plt.show()
+    
+    if max_ids > 0:
+        fig.savefig('%s.eps' % save_path, bbox_inches='tight', dpi=100)
+        fig.savefig('%s.png' % save_path, bbox_inches='tight', dpi=100)            
