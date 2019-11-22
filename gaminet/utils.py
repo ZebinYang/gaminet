@@ -227,7 +227,7 @@ def global_visualize_density(data_dict, univariate_num=10**5, interaction_num=10
             fig.savefig('%s.png' % save_path, bbox_inches='tight', dpi=100)
 
 
-def global_visualize_wo_density(data_dict, univariate_num, interaction_num, cols_per_row=4,
+def global_visualize_wo_density(data_dict, univariate_num=10**5, interaction_num=10**5, cols_per_row=4,
                                 save_png=False, save_eps=False, folder='./results', name='demo'):
 
     maineffect_count = 0
