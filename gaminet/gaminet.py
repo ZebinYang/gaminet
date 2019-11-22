@@ -439,14 +439,9 @@ class GAMINet(tf.keras.Model):
                 if self.verbose & (epoch % 1 == 0):
                     print('Interaction tunning epoch: %d, train loss: %0.5f, val loss: %0.5f' %
                           (epoch + 1, self.err_train[-1], self.err_val[-1]))
-
-    def local_visualize(self, x, y=None, folder='./results', name='demo', save_png=False, save_eps=False):
+    
+    def local_explain(self, x, y=None, save_dict=False, folder='./', name='local_explain'):
         
-        if not os.path.exists(folder):
-            os.makedirs(folder)
-        save_path = folder + name
-
-        f = plt.figure(figsize=(6, round((len(self.variables_names)+1) * 0.45)))
         predicted = self.predict(x)
         intercept = self.output_layer.output_bias.numpy()
 
@@ -464,67 +459,31 @@ class GAMINet(tf.keras.Model):
                    [self.variables_names[self.interaction_list[i][0]] + ' x ' 
                     + self.variables_names[self.interaction_list[i][1]] for i in range(self.interact_num)]])
         
-        plt.barh(np.arange(len(active_indice)), scores[active_indice][::-1])
-        plt.yticks(np.arange(len(active_indice)), effect_names[active_indice][::-1])
-        title = 'Predicted: %0.4f | Actual: %0.4f'%(predicted, y) if y is not None else 'Predicted: %0.4f'%(predicted)
-        plt.title(title, fontsize=12)
-        if save_eps:
-            f.savefig('%s.png' % save_path, bbox_inches='tight', dpi=100)
-        if save_png:
-            f.savefig('%s.eps' % save_path, bbox_inches='tight', dpi=100)
-
-
-    def global_visualize(self, folder='./results', name='demo', main_grid_size=None, interact_grid_size=None, 
-                         cols_per_row=4, density_flag=True, save_png=False, save_eps=False, save_dict=False):
+        data_dict = {'active_indice': active_indice, 
+                 'scores': scores,
+                 'effect_names': effect_names,
+                 'predicted': predicted, 
+                 'actual': y}
         
-        if main_grid_size is None:
-            main_grid_size = self.main_grid_size
-        if interact_grid_size is None:
-            interact_grid_size = self.interact_grid_size
+        if save_dict:
+            if not os.path.exists(folder):
+                os.makedirs(folder)
+            save_path = folder + name
+            np.save('%s.npy' % save_path, data_dict)
 
-        self.global_explain(main_grid_size, interact_grid_size)
-        if not os.path.exists(folder):
-            os.makedirs(folder)
-        save_path = folder + name
-
-        maineffect_count = 0
-        componment_scales = []
-        for key, item in self.data_dict.items():
-            componment_scales.append(item['importance'])
-            if item['type'] != 'pairwise':
-                maineffect_count += 1
-
-        componment_scales = np.array(componment_scales)
-        sorted_index = np.argsort(componment_scales)
-        active_index = sorted_index[componment_scales[sorted_index].cumsum()>0][::-1]
-        active_univariate_index = active_index[active_index < maineffect_count]
-        active_interaction_index = active_index[active_index >= maineffect_count]
-        max_ids = len(active_univariate_index) + len(active_interaction_index)
-        
-        idx = 0
-        if density_flag:
-            fig = global_visualize_density(self.data_dict, active_univariate_index, active_interaction_index, cols_per_row, max_ids)
-        else:
-            fig = global_visualize_wo_density(self.data_dict, active_univariate_index, active_interaction_index, cols_per_row, max_ids)
-        
-        if max_ids > 0:
-            if save_png:
-                fig.savefig('%s.png' % save_path, bbox_inches='tight', dpi=100)
-            if save_eps:
-                fig.savefig('%s.eps' % save_path, bbox_inches='tight', dpi=100)
-            if save_dict:
-                np.save('%s.npy' % save_path, self.data_dict)
+        return data_dict
 
     
-    def global_explain(self, main_grid_size=None, interact_grid_size=None):
+    def global_explain(self, main_grid_size=None, interact_grid_size=None, save_dict=False, folder='./', name='global_explain'):
 
         ## By default, we use the same main_grid_size and interact_grid_size as that of the zero mean constraint
-        ## Alternatively, we can also specify it manually, e.g., when we want to have the same grid size as EBM (256).
+        ## Alternatively, we can also specify it manually, e.g., when we want to have the same grid size as EBM (256).        
         if main_grid_size is None:
             main_grid_size = self.main_grid_size
         if interact_grid_size is None:
             interact_grid_size = self.interact_grid_size      
-        
+
+        data_dict = self.data_dict
         _, _, _, _, componment_scales = self.get_active_effects()
         for indice in range(self.input_num):
             feature_name = list(self.variables_names)[indice]
@@ -536,7 +495,7 @@ class GAMINet(tf.keras.Model):
                 subnets_outputs = (self.output_layer.main_effect_weights.numpy()[indice]
                             * self.output_layer.main_effect_switcher.numpy()[indice]
                             * subnet.apply(tf.cast(tf.constant(subnets_inputs), tf.float32)).numpy())
-                self.data_dict[feature_name].update({'type':'continuous',
+                data_dict[feature_name].update({'type':'continuous',
                                          'importance':componment_scales[indice],
                                          'inputs':subnets_inputs_original.ravel(),
                                          'outputs':subnets_outputs.ravel()})
@@ -547,7 +506,7 @@ class GAMINet(tf.keras.Model):
                 subnets_outputs = (self.output_layer.main_effect_weights.numpy()[indice]
                             * self.output_layer.main_effect_switcher.numpy()[indice]
                             * subnet.apply(tf.cast(subnets_inputs, tf.float32)).numpy())
-                self.data_dict[feature_name].update({'type':'categorical',
+                data_dict[feature_name].update({'type':'categorical',
                                          'importance':componment_scales[indice],
                                          'inputs':subnets_inputs_original,
                                          'outputs':subnets_outputs.ravel()})
@@ -606,7 +565,7 @@ class GAMINet(tf.keras.Model):
             interact_outputs = (self.output_layer.interaction_weights.numpy()[indice]
                         * self.output_layer.interaction_switcher.numpy()[indice]
                         * inter_net.apply(input_grid, training=False).numpy().reshape(x1.shape))
-            self.data_dict.update({feature_name1 + ' vs. ' + feature_name2:{'type':'pairwise',
+            data_dict.update({feature_name1 + ' vs. ' + feature_name2:{'type':'pairwise',
                                                        'xtype':feature_type1,
                                                        'ytype':feature_type2,
                                                        'importance':componment_scales[self.input_num + indice],
@@ -618,3 +577,11 @@ class GAMINet(tf.keras.Model):
                                                        'input1_labels': interact_input1_labels,
                                                        'input2_labels': interact_input2_labels,
                                                        'axis_extent':axis_extent}})
+
+        if save_dict:
+            if not os.path.exists(folder):
+                os.makedirs(folder)
+            save_path = folder + name
+            np.save('%s.npy' % save_path, data_dict)
+            
+        return data_dict

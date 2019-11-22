@@ -65,7 +65,40 @@ def get_interaction_list(tr_x, val_x, tr_y, val_y, pred_tr, pred_val, interactio
     return interaction_list
 
 
-def global_visualize_density(data_dict, active_univariate_index, active_interaction_index, cols_per_row, max_ids):
+def local_visualize(data_dict, folder='./results', name='demo', save_png=False, save_eps=False):
+
+    if not os.path.exists(folder):
+        os.makedirs(folder)
+    save_path = folder + name
+
+    f = plt.figure(figsize=(6, round((len(data_dict['active_indice']) + 1) * 0.45)))
+    plt.barh(np.arange(len(data_dict['active_indice'])), data_dict['scores'][data_dict['active_indice']][::-1])
+    plt.yticks(np.arange(len(data_dict['active_indice'])), data_dict['effect_names'][data_dict['active_indice']][::-1])
+    title = 'Predicted: %0.4f | Actual: %0.4f' % (data_dict['predicted'], data_dict['actual']) 
+            if y is not None else 'Predicted: %0.4f'% (data_dict['predicted'])
+    plt.title(title, fontsize=12)
+    if save_eps:
+        f.savefig('%s.png' % save_path, bbox_inches='tight', dpi=100)
+    if save_png:
+        f.savefig('%s.eps' % save_path, bbox_inches='tight', dpi=100)
+
+
+def global_visualize_density(data_dict, univariate_num, interaction_num, cols_per_row=4,
+                        save_png=False, save_eps=False, folder='./results', name='demo'):
+
+    maineffect_count = 0
+    componment_scales = []
+    for key, item in data_dict.items():
+        componment_scales.append(item['importance'])
+        if item['type'] != 'pairwise':
+            maineffect_count += 1
+
+    componment_scales = np.array(componment_scales)
+    sorted_index = np.argsort(componment_scales)
+    active_index = sorted_index[componment_scales[sorted_index].cumsum()>0][::-1]
+    active_univariate_index = active_index[active_index < maineffect_count][:univariate_num]
+    active_interaction_index = active_index[active_index >= maineffect_count][:interaction_num]
+    max_ids = len(active_univariate_index) + len(active_interaction_index)
 
     idx = 0
     fig = plt.figure(figsize=(6 * cols_per_row, 4.6 * int(np.ceil(max_ids / cols_per_row))))
@@ -184,9 +217,29 @@ def global_visualize_density(data_dict, active_univariate_index, active_interact
         fig.add_subplot(ax_colorbar)
         idx = idx + 1
 
-    return fig
+    if max_ids > 0:
+        if save_eps:
+            fig.savefig('%s.eps' % save_path, bbox_inches='tight', dpi=100)
+        if save_png:
+            fig.savefig('%s.png' % save_path, bbox_inches='tight', dpi=100)
 
-def global_visualize_wo_density(data_dict, active_univariate_index, active_interaction_index, cols_per_row, max_ids):
+
+def global_visualize_wo_density(data_dict, univariate_num, interaction_num, cols_per_row=4,
+                                save_png=False, save_eps=False, folder='./results', name='demo'):
+
+    maineffect_count = 0
+    componment_scales = []
+    for key, item in data_dict.items():
+        componment_scales.append(item['importance'])
+        if item['type'] != 'pairwise':
+            maineffect_count += 1
+
+    componment_scales = np.array(componment_scales)
+    sorted_index = np.argsort(componment_scales)
+    active_index = sorted_index[componment_scales[sorted_index].cumsum()>0][::-1]
+    active_univariate_index = active_index[active_index < maineffect_count][:univariate_num]
+    active_interaction_index = active_index[active_index >= maineffect_count][:interaction_num]
+    max_ids = len(active_univariate_index) + len(active_interaction_index)
 
     idx = 0
     fig = plt.figure(figsize=(5.2 * cols_per_row, 4 * int(np.ceil(max_ids / cols_per_row))))
@@ -200,8 +253,8 @@ def global_visualize_wo_density(data_dict, active_univariate_index, active_inter
             ax1.plot(data_dict[feature_name]['inputs'], data_dict[feature_name]['outputs'])
             ax1.set_title(feature_name, fontsize=12)
             fig.add_subplot(ax1)
-            if len(str(ax1.get_yticks())) > 80:
-                ax1.yaxis.set_tick_params(rotation=20)
+            if len(str(ax1.get_xticks())) > 80:
+                ax1.xaxis.set_tick_params(rotation=20)
 
         elif data_dict[feature_name]['type'] == 'categorical':
 
@@ -221,8 +274,8 @@ def global_visualize_wo_density(data_dict, active_univariate_index, active_inter
             ax1.set_xticks(xtick_loc)
             ax1.set_xticklabels(xtick_label)
             fig.add_subplot(ax1)
-            if len(str(ax1.get_xticks())) > 80:
-                ax1.xaxis.set_tick_params(rotation=20)
+            if len(str(ax2.get_xticks())) > 80:
+                ax2.xaxis.set_tick_params(rotation=20)
 
         idx = idx + 1
         ax1.set_title(feature_name + ' (' + str(np.round(100 * data_dict[feature_name]['importance'], 1)) + '%)', fontsize=12)
@@ -257,4 +310,8 @@ def global_visualize_wo_density(data_dict, active_univariate_index, active_inter
         
         idx = idx + 1
 
-    return fig
+    if max_ids > 0:
+        if save_eps:
+            fig.savefig('%s.eps' % save_path, bbox_inches='tight', dpi=100)
+        if save_png:
+            fig.savefig('%s.png' % save_path, bbox_inches='tight', dpi=100)
