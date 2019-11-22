@@ -69,7 +69,7 @@ def get_interaction_list(tr_x, val_x, tr_y, val_y, pred_tr, pred_val, interactio
 def local_visualize(data_dict, folder='./results', name='demo', save_png=False, save_eps=False):
 
     max_ids = len(data_dict['active_indice'])
-    f = plt.figure(figsize=(6, round((len(data_dict['active_indice']) + 1) * 0.45)))
+    fig = plt.figure(figsize=(6, round((len(data_dict['active_indice']) + 1) * 0.45)))
     plt.barh(np.arange(len(data_dict['active_indice'])), data_dict['scores'][data_dict['active_indice']][::-1])
     plt.yticks(np.arange(len(data_dict['active_indice'])), data_dict['effect_names'][data_dict['active_indice']][::-1])
     
