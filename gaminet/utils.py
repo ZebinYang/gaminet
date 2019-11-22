@@ -74,8 +74,11 @@ def local_visualize(data_dict, folder='./results', name='demo', save_png=False, 
     f = plt.figure(figsize=(6, round((len(data_dict['active_indice']) + 1) * 0.45)))
     plt.barh(np.arange(len(data_dict['active_indice'])), data_dict['scores'][data_dict['active_indice']][::-1])
     plt.yticks(np.arange(len(data_dict['active_indice'])), data_dict['effect_names'][data_dict['active_indice']][::-1])
-    title = 'Predicted: %0.4f | Actual: %0.4f' % (data_dict['predicted'], data_dict['actual']) 
-            if y is not None else 'Predicted: %0.4f'% (data_dict['predicted'])
+    
+    if y is not None:
+        title = 'Predicted: %0.4f | Actual: %0.4f' % (data_dict['predicted'], data_dict['actual'])  
+    else:
+        title = 'Predicted: %0.4f'% (data_dict['predicted'])
     plt.title(title, fontsize=12)
     if save_eps:
         f.savefig('%s.png' % save_path, bbox_inches='tight', dpi=100)
