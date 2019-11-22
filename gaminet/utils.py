@@ -68,6 +68,7 @@ def get_interaction_list(tr_x, val_x, tr_y, val_y, pred_tr, pred_val, interactio
 
 def local_visualize(data_dict, folder='./results', name='demo', save_png=False, save_eps=False):
 
+    max_ids = len(data_dict['active_indice'])
     f = plt.figure(figsize=(6, round((len(data_dict['active_indice']) + 1) * 0.45)))
     plt.barh(np.arange(len(data_dict['active_indice'])), data_dict['scores'][data_dict['active_indice']][::-1])
     plt.yticks(np.arange(len(data_dict['active_indice'])), data_dict['effect_names'][data_dict['active_indice']][::-1])
@@ -78,13 +79,15 @@ def local_visualize(data_dict, folder='./results', name='demo', save_png=False, 
         title = 'Predicted: %0.4f'% (data_dict['predicted'])
     plt.title(title, fontsize=12)
     
-    if not os.path.exists(folder):
-        os.makedirs(folder)
-        save_path = folder + name
-    if save_eps:
-        f.savefig('%s.png' % save_path, bbox_inches='tight', dpi=100)
-    if save_png:
-        f.savefig('%s.eps' % save_path, bbox_inches='tight', dpi=100)
+    save_path = folder + name
+    if (max_ids > 0) & save_eps:
+        if not os.path.exists(folder):
+            os.makedirs(folder)
+        fig.savefig('%s.eps' % save_path, bbox_inches='tight', dpi=100)
+    if (max_ids > 0) & save_png:
+        if not os.path.exists(folder):
+            os.makedirs(folder)
+        fig.savefig('%s.png' % save_path, bbox_inches='tight', dpi=100)
 
 
 def global_visualize_density(data_dict, univariate_num=10**5, interaction_num=10**5, cols_per_row=4,
