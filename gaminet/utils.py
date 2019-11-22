@@ -221,14 +221,15 @@ def global_visualize_density(data_dict, univariate_num=10**5, interaction_num=10
         fig.add_subplot(ax_colorbar)
         idx = idx + 1
 
-    if max_ids > 0:
+    save_path = folder + name
+    if (max_ids > 0) & save_eps:
         if not os.path.exists(folder):
             os.makedirs(folder)
-            save_path = folder + name
-        if save_eps:
-            fig.savefig('%s.eps' % save_path, bbox_inches='tight', dpi=100)
-        if save_png:
-            fig.savefig('%s.png' % save_path, bbox_inches='tight', dpi=100)
+        fig.savefig('%s.eps' % save_path, bbox_inches='tight', dpi=100)
+    if (max_ids > 0) & save_png:
+        if not os.path.exists(folder):
+            os.makedirs(folder)
+        fig.savefig('%s.png' % save_path, bbox_inches='tight', dpi=100)
 
 
 def global_visualize_wo_density(data_dict, univariate_num=10**5, interaction_num=10**5, cols_per_row=4,
@@ -317,14 +318,15 @@ def global_visualize_wo_density(data_dict, univariate_num=10**5, interaction_num
         
         idx = idx + 1
 
-    if max_ids > 0:
+    save_path = folder + name
+    if (max_ids > 0) & save_eps:
         if not os.path.exists(folder):
             os.makedirs(folder)
-            save_path = folder + name
-        if save_eps:
-            fig.savefig('%s.eps' % save_path, bbox_inches='tight', dpi=100)
-        if save_png:
-            fig.savefig('%s.png' % save_path, bbox_inches='tight', dpi=100)
+        fig.savefig('%s.eps' % save_path, bbox_inches='tight', dpi=100)
+    if (max_ids > 0) & save_png:
+        if not os.path.exists(folder):
+            os.makedirs(folder)
+        fig.savefig('%s.png' % save_path, bbox_inches='tight', dpi=100)
 
             
 def feature_importance(data_dict, folder='./results', name='demo', save_png=True, save_eps=True):
@@ -350,12 +352,13 @@ def feature_importance(data_dict, folder='./results', name='demo', save_png=True
     plt.xlim(0, np.max(all_ir) + 0.05)
     plt.ylim(-1, len(all_names))
     plt.title("Feature Importance")
-    
-    if max_ids > 0:
+
+    save_path = folder + name
+    if (max_ids > 0) & save_eps:
         if not os.path.exists(folder):
             os.makedirs(folder)
-            save_path = folder + name
-        if save_eps:
-            fig.savefig('%s.eps' % save_path, bbox_inches='tight', dpi=100)
-        if save_png:
-            fig.savefig('%s.png' % save_path, bbox_inches='tight', dpi=100)
+        fig.savefig('%s.eps' % save_path, bbox_inches='tight', dpi=100)
+    if (max_ids > 0) & save_png:
+        if not os.path.exists(folder):
+            os.makedirs(folder)
+        fig.savefig('%s.png' % save_path, bbox_inches='tight', dpi=100)
