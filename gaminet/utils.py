@@ -277,8 +277,8 @@ def global_visualize_wo_density(data_dict, univariate_num=10**5, interaction_num
             ax1.set_xticks(xtick_loc)
             ax1.set_xticklabels(xtick_label)
             fig.add_subplot(ax1)
-            if len(str(ax2.get_xticks())) > 80:
-                ax2.xaxis.set_tick_params(rotation=20)
+            if len(str(ax1.get_xticks())) > 80:
+                ax1.xaxis.set_tick_params(rotation=20)
 
         idx = idx + 1
         ax1.set_title(feature_name + ' (' + str(np.round(100 * data_dict[feature_name]['importance'], 1)) + '%)', fontsize=12)
@@ -318,3 +318,27 @@ def global_visualize_wo_density(data_dict, univariate_num=10**5, interaction_num
             fig.savefig('%s.eps' % save_path, bbox_inches='tight', dpi=100)
         if save_png:
             fig.savefig('%s.png' % save_path, bbox_inches='tight', dpi=100)
+
+            
+def feature_importance(data_dict):
+
+    all_ir = []
+    all_names = []
+    for key, item in data_dict.items():
+        if item['importance'] > 0:
+            all_ir.append(item['importance'])
+            all_names.append(key)
+
+    plt.figure(figsize=(8, 10))
+    ax = plt.axes()
+    rects = ax.barh(np.arange(len(all_ir)), [ir for ir,_ in sorted(zip(all_ir, all_names))])
+    ax.set_yticks(np.arange(len(all_ir)))
+    ax.set_yticklabels([name for _,name in sorted(zip(all_ir, all_names))])
+    for rect in rects:
+        _, height = rect.get_xy()
+        ax.text(rect.get_x() + rect.get_width() + 0.005, height + 0.3,
+                '%0.3f' % (rect.get_width()))
+    plt.ylabel("Feature Name", fontsize=12)
+    plt.xlim(0, np.max(all_ir) + 0.05)
+    plt.title("Feature Importance")
+    plt.show()
