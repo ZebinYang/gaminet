@@ -72,7 +72,7 @@ def local_visualize(data_dict, folder='./results', name='demo', save_png=False, 
     plt.barh(np.arange(len(data_dict['active_indice'])), data_dict['scores'][data_dict['active_indice']][::-1])
     plt.yticks(np.arange(len(data_dict['active_indice'])), data_dict['effect_names'][data_dict['active_indice']][::-1])
     
-    if y is not None:
+    if 'actual' in data_dict.keys():
         title = 'Predicted: %0.4f | Actual: %0.4f' % (data_dict['predicted'], data_dict['actual'])  
     else:
         title = 'Predicted: %0.4f'% (data_dict['predicted'])
