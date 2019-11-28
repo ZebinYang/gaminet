@@ -119,7 +119,6 @@ def global_visualize_density(data_dict, univariate_num=10**5, interaction_num=10
             ax1 = plt.Subplot(fig, inner[0]) 
             ax1.plot(data_dict[feature_name]['inputs'], data_dict[feature_name]['outputs'])
             ax1.set_xticklabels([])
-            ax1.set_title(feature_name, fontsize=12)
             fig.add_subplot(ax1)
 
             ax2 = plt.Subplot(fig, inner[1]) 
@@ -140,7 +139,6 @@ def global_visualize_density(data_dict, univariate_num=10**5, interaction_num=10
             ax1.bar(np.arange(len(data_dict[feature_name]['inputs'])),
                         data_dict[feature_name]['outputs'])
             ax1.set_xticklabels([])
-            ax1.set_title(feature_name, fontsize=12)
             fig.add_subplot(ax1)
 
             ax2 = plt.Subplot(fig, inner[1])
