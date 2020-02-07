@@ -323,7 +323,7 @@ class GAMINet(tf.keras.Model):
             val_loss.append(self.evaluate(val_x, val_y, training=False))
 
         best_main_effect_num = np.argmin(val_loss)
-        main_effect_switcher[sortted_index[:(best_main_effect_num + 1)] = 1
+        main_effect_switcher[sortted_index[:(best_main_effect_num + 1)]] = 1
         self.output_layer.main_effect_switcher.assign(tf.constant(main_effect_switcher, dtype=tf.float32))
         for epoch in range(self.tuning_epochs):
             shuffle_index = np.arange(tr_x.shape[0])
@@ -431,7 +431,7 @@ class GAMINet(tf.keras.Model):
                 val_loss.append(self.evaluate(val_x, val_y, training=False))
 
             best_interact_num = np.argmin(val_loss)
-            interaction_switcher[sortted_index[:(best_interact_num + 1)] = 1
+            interaction_switcher[sortted_index[:(best_interact_num + 1)]] = 1
             self.output_layer.interaction_switcher.assign(tf.constant(interaction_switcher, dtype=tf.float32))
 
             for epoch in range(self.tuning_epochs):
