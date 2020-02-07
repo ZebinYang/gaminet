@@ -360,8 +360,8 @@ class GAMINet(tf.keras.Model):
                                           task_type=self.task_type)
 
             self.interaction_list = [interaction_list_all[i] for i in range(self.max_interact_num) 
-                                     if (interaction_list_all[i][0] in active_univariate_index)
-                                     or (interaction_list_all[i][1] in active_univariate_index)][:self.interact_num]
+                                     if (interaction_list_all[i][0] in self.active_univariate_index)
+                                     or (interaction_list_all[i][1] in self.active_univariate_index)][:self.interact_num]
             
             self.interact_num_heredity = len(self.interaction_list)
             interaction_switcher = np.zeros((self.interact_num, 1))
