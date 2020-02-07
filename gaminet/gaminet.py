@@ -28,8 +28,6 @@ class GAMINet(tf.keras.Model):
                  init_training_epochs=10000,
                  interact_training_epochs=1000,
                  tuning_epochs=500,
-                 main_threshold=0.01,
-                 total_threshold=0.01,
                  verbose=False,
                  val_ratio=0.2,
                  early_stop_thres=100,
@@ -55,8 +53,6 @@ class GAMINet(tf.keras.Model):
         self.tuning_epochs = tuning_epochs
         self.init_training_epochs = init_training_epochs
         self.interact_training_epochs = interact_training_epochs
-        self.main_threshold = main_threshold
-        self.total_threshold = total_threshold
 
         self.verbose = verbose
         self.val_ratio = val_ratio
@@ -198,8 +194,7 @@ class GAMINet(tf.keras.Model):
         componment_coefs = beta
         componment_scales = (np.abs(componment_coefs) / np.sum(np.abs(componment_coefs))).reshape([-1])
         sorted_index = np.argsort(componment_scales)
-        active_univariate_index = sorted_index[componment_scales[sorted_index].cumsum()>self.main_threshold][::-1]
-        return active_univariate_index
+        return sorted_index
     
     def get_active_interactions(self):
 
@@ -218,8 +213,7 @@ class GAMINet(tf.keras.Model):
         componment_scales_interact = componment_scales[self.input_num:]
 
         sorted_index = np.argsort(componment_scales_interact)
-        active_interaction_index = sorted_index[(componment_scales_interact[sorted_index].cumsum())>self.total_threshold][::-1]
-        return active_interaction_index
+        return sorted_index
 
     def get_active_effects(self):
 
@@ -319,8 +313,17 @@ class GAMINet(tf.keras.Model):
                 break
 
         main_effect_switcher = np.zeros((self.input_num, 1))
-        active_univariate_index = self.get_active_main_effects()
-        main_effect_switcher[active_univariate_index] = 1
+        sortted_index = self.get_active_main_effects()
+        val_loss = []
+        for idx, _ in enumerate(sortted_index):
+            self.output_layer.main_effect_switcher.assign(tf.constant(np.ones((self.input_num, 1)), dtype=tf.float32))
+            main_effect_switcher = np.zeros((self.input_num, 1))
+            main_effect_switcher[sortted_index[:(idx + 1)]] = 1
+            self.output_layer.main_effect_switcher.assign(tf.constant(main_effect_switcher, dtype=tf.float32))
+            val_loss.append(self.evaluate(val_x, val_y, training=False))
+
+        best_main_effect_num = np.argmin(val_loss)
+        main_effect_switcher[sortted_index[:(best_main_effect_num + 1)] = 1
         self.output_layer.main_effect_switcher.assign(tf.constant(main_effect_switcher, dtype=tf.float32))
         for epoch in range(self.tuning_epochs):
             shuffle_index = np.arange(tr_x.shape[0])
@@ -340,7 +343,7 @@ class GAMINet(tf.keras.Model):
                 print('Main effects tunning epoch: %d, train loss: %0.5f, val loss: %0.5f' %
                       (epoch + 1, self.err_train[-1], self.err_val[-1]))
 
-        # 2. interaction Training
+        # 2. interaction training
         if self.interact_num>0:
             if self.verbose:
                 print('Interaction Training.')
@@ -418,8 +421,17 @@ class GAMINet(tf.keras.Model):
                     break
 
             interaction_switcher = np.zeros((self.interact_num, 1))
-            active_interaction_index = self.get_active_interactions()
-            interaction_switcher[active_interaction_index] = 1
+            sortted_index = self.get_active_interactions()
+            val_loss = []
+            for idx, _ in enumerate(sortted_index):
+                self.output_layer.interaction_switcher.assign(tf.constant(np.ones((self.interact_num, 1)), dtype=tf.float32))
+                interaction_switcher = np.zeros((self.interact_num, 1))
+                interaction_switcher[sortted_index[:(idx + 1)]] = 1
+                self.output_layer.interaction_switcher.assign(tf.constant(interaction_switcher, dtype=tf.float32))
+                val_loss.append(self.evaluate(val_x, val_y, training=False))
+
+            best_interact_num = np.argmin(val_loss)
+            interaction_switcher[sortted_index[:(best_interact_num + 1)] = 1
             self.output_layer.interaction_switcher.assign(tf.constant(interaction_switcher, dtype=tf.float32))
 
             for epoch in range(self.tuning_epochs):

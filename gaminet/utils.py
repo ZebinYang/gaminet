@@ -234,7 +234,7 @@ def global_visualize_density(data_dict, univariate_num=10**5, interaction_num=10
 
 
 def global_visualize_wo_density(data_dict, univariate_num=10**5, interaction_num=10**5, cols_per_row=4,
-                                save_png=False, save_eps=False, folder='./results', name='demo'):
+                        save_png=False, save_eps=False, folder='./results', name='demo'):
 
     maineffect_count = 0
     componment_scales = []
