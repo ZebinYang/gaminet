@@ -427,7 +427,7 @@ class GAMINet(tf.keras.Model):
             for idx, _ in enumerate(sortted_index):
                 self.output_layer.interaction_switcher.assign(tf.constant(np.ones((self.interact_num, 1)), dtype=tf.float32))
                 interaction_switcher = np.zeros((self.interact_num, 1))
-                interaction_switcher[sortted_index[:(idx + 1)]] = 1
+                interaction_switcher[sortted_index[:idx]] = 1 ## here we allow no interactions to be included. 
                 self.output_layer.interaction_switcher.assign(tf.constant(interaction_switcher, dtype=tf.float32))
                 val_loss.append(self.evaluate(val_x, val_y, training=False))
 
