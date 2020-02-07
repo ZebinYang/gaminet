@@ -423,36 +423,37 @@ class GAMINet(tf.keras.Model):
 
             interaction_switcher = np.zeros((self.interact_num, 1))
             sortted_index = self.get_active_interactions()
-            val_loss = []
+            val_loss = [self.evaluate(val_x, val_y, training=False)] ## here we allow no interactions to be included. 
             for idx, _ in enumerate(sortted_index):
                 self.output_layer.interaction_switcher.assign(tf.constant(np.ones((self.interact_num, 1)), dtype=tf.float32))
                 interaction_switcher = np.zeros((self.interact_num, 1))
-                interaction_switcher[sortted_index[:idx]] = 1 ## here we allow no interactions to be included. 
+                interaction_switcher[sortted_index[:(idx + 1)]] = 1
                 self.output_layer.interaction_switcher.assign(tf.constant(interaction_switcher, dtype=tf.float32))
                 val_loss.append(self.evaluate(val_x, val_y, training=False))
 
             best_interact_num = np.argmin(val_loss)
-            active_interaction_index = sortted_index[:(best_interact_num + 1)]
+            active_interaction_index = sortted_index[:best_interact_num]
             interaction_switcher[active_interaction_index] = 1
             self.output_layer.interaction_switcher.assign(tf.constant(interaction_switcher, dtype=tf.float32))
+            
+            if len(active_interaction_index) > 0:
+                for epoch in range(self.tuning_epochs):
+                    shuffle_index = np.arange(tr_x.shape[0])
+                    np.random.shuffle(shuffle_index)
+                    tr_x = tr_x[shuffle_index]
+                    tr_y = tr_y[shuffle_index]
 
-            for epoch in range(self.tuning_epochs):
-                shuffle_index = np.arange(tr_x.shape[0])
-                np.random.shuffle(shuffle_index)
-                tr_x = tr_x[shuffle_index]
-                tr_y = tr_y[shuffle_index]
+                    for iterations in range(train_size // self.batch_size):
+                        offset = (iterations * self.batch_size) % train_size
+                        batch_xx = tr_x[offset:(offset + self.batch_size), :]
+                        batch_yy = tr_y[offset:(offset + self.batch_size)]
+                        self.train_step_interact(tf.cast(batch_xx, tf.float32), batch_yy)
 
-                for iterations in range(train_size // self.batch_size):
-                    offset = (iterations * self.batch_size) % train_size
-                    batch_xx = tr_x[offset:(offset + self.batch_size), :]
-                    batch_yy = tr_y[offset:(offset + self.batch_size)]
-                    self.train_step_interact(tf.cast(batch_xx, tf.float32), batch_yy)
-
-                self.err_train.append(self.evaluate(tr_x, tr_y, training=True))
-                self.err_val.append(self.evaluate(val_x, val_y, training=False))
-                if self.verbose & (epoch % 1 == 0):
-                    print('Interaction tunning epoch: %d, train loss: %0.5f, val loss: %0.5f' %
-                          (epoch + 1, self.err_train[-1], self.err_val[-1]))
+                    self.err_train.append(self.evaluate(tr_x, tr_y, training=True))
+                    self.err_val.append(self.evaluate(val_x, val_y, training=False))
+                    if self.verbose & (epoch % 1 == 0):
+                        print('Interaction tunning epoch: %d, train loss: %0.5f, val loss: %0.5f' %
+                              (epoch + 1, self.err_train[-1], self.err_val[-1]))
     
     def local_explain(self, x, y=None, save_dict=False, folder='./', name='local_explain'):
         
