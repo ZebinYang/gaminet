@@ -66,7 +66,7 @@ def get_interaction_list(tr_x, val_x, tr_y, val_y, pred_tr, pred_val, interactio
     return interaction_list
 
 
-def local_visualize(data_dict, folder='./results', name='demo', save_png=False, save_eps=False):
+def local_visualize(data_dict, folder='./results/', name='demo', save_png=False, save_eps=False):
 
     max_ids = len(data_dict['active_indice'])
     fig = plt.figure(figsize=(6, round((len(data_dict['active_indice']) + 1) * 0.45)))
@@ -91,7 +91,7 @@ def local_visualize(data_dict, folder='./results', name='demo', save_png=False, 
 
 
 def global_visualize_density(data_dict, univariate_num=10**5, interaction_num=10**5, cols_per_row=4,
-                        save_png=False, save_eps=False, folder='./results', name='demo'):
+                        save_png=False, save_eps=False, folder='./results/', name='demo'):
 
     maineffect_count = 0
     componment_scales = []
@@ -234,7 +234,7 @@ def global_visualize_density(data_dict, univariate_num=10**5, interaction_num=10
 
 
 def global_visualize_wo_density(data_dict, univariate_num=10**5, interaction_num=10**5, cols_per_row=4,
-                        save_png=False, save_eps=False, folder='./results', name='demo'):
+                        save_png=False, save_eps=False, folder='./results/', name='demo'):
 
     maineffect_count = 0
     componment_scales = []

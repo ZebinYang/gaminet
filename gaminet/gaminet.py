@@ -193,7 +193,7 @@ class GAMINet(tf.keras.Model):
 
         componment_coefs = beta
         componment_scales = (np.abs(componment_coefs) / np.sum(np.abs(componment_coefs))).reshape([-1])
-        sorted_index = np.argsort(componment_scales)
+        sorted_index = np.argsort(componment_scales)[::-1]
         return sorted_index
     
     def get_active_interactions(self):
@@ -212,7 +212,7 @@ class GAMINet(tf.keras.Model):
         componment_scales_main = componment_scales[:self.input_num]
         componment_scales_interact = componment_scales[self.input_num:]
 
-        sorted_index = np.argsort(componment_scales_interact)
+        sorted_index = np.argsort(componment_scales_interact)[::-1]
         return sorted_index
 
     def get_active_effects(self):
@@ -313,15 +313,15 @@ class GAMINet(tf.keras.Model):
                 break
 
         val_loss = []
-        sortted_index = self.get_active_main_effects()
-        for idx, _ in enumerate(sortted_index):
+        sorted_index = self.get_active_main_effects()
+        for idx, _ in enumerate(sorted_index):
             main_effect_switcher = np.zeros((self.input_num, 1))
-            main_effect_switcher[sortted_index[:(idx + 1)]] = 1
+            main_effect_switcher[sorted_index[:(idx + 1)]] = 1
             self.output_layer.main_effect_switcher.assign(tf.constant(main_effect_switcher, dtype=tf.float32))
             val_loss.append(self.evaluate(val_x, val_y, training=False))
 
         best_main_effect_num = np.argmin(val_loss)
-        self.active_univariate_index = sortted_index[:(best_main_effect_num + 1)]
+        self.active_univariate_index = sorted_index[:(best_main_effect_num + 1)]
         main_effect_switcher = np.zeros((self.input_num, 1))
         main_effect_switcher[self.active_univariate_index] = 1
         self.output_layer.main_effect_switcher.assign(tf.constant(main_effect_switcher, dtype=tf.float32))
@@ -423,15 +423,15 @@ class GAMINet(tf.keras.Model):
             ## here we allow no interactions to be included. 
             self.output_layer.interaction_switcher.assign(tf.constant(np.zeros((self.interact_num, 1)), dtype=tf.float32))
             val_loss = [self.evaluate(val_x, val_y, training=False)] 
-            sortted_index = self.get_active_interactions()
-            for idx, _ in enumerate(sortted_index):
+            sorted_index = self.get_active_interactions()
+            for idx, _ in enumerate(sorted_index):
                 interaction_switcher = np.zeros((self.interact_num, 1))
-                interaction_switcher[sortted_index[:(idx + 1)]] = 1
+                interaction_switcher[sorted_index[:(idx + 1)]] = 1
                 self.output_layer.interaction_switcher.assign(tf.constant(interaction_switcher, dtype=tf.float32))
                 val_loss.append(self.evaluate(val_x, val_y, training=False))
 
             best_interact_num = np.argmin(val_loss)
-            self.active_interaction_index = sortted_index[:best_interact_num]
+            self.active_interaction_index = sorted_index[:best_interact_num]
             interaction_switcher = np.zeros((self.interact_num, 1))
             interaction_switcher[self.active_interaction_index] = 1
             self.output_layer.interaction_switcher.assign(tf.constant(interaction_switcher, dtype=tf.float32))
