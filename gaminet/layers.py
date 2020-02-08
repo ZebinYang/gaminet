@@ -329,7 +329,7 @@ class OutputLayer(tf.keras.layers.Layer):
                                            initializer=tf.zeros_initializer(),
                                            trainable=True)
 
-    def call(self, inputs, training=False):
+    def call(self, inputs):
         self.input_main_effect = inputs[:,:self.input_num]
         if self.interact_num > 0:
             self.input_interactions = inputs[:,-self.interact_num:]

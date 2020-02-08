@@ -330,7 +330,7 @@ def global_visualize_wo_density(data_dict, univariate_num=10**5, interaction_num
         fig.savefig('%s.png' % save_path, bbox_inches='tight', dpi=100)
 
             
-def feature_importance(data_dict, folder='./results', name='demo', save_png=True, save_eps=True):
+def feature_importance(data_dict, folder='./results/', name='demo', save_png=True, save_eps=True):
 
     all_ir = []
     all_names = []
@@ -340,7 +340,7 @@ def feature_importance(data_dict, folder='./results', name='demo', save_png=True
             all_names.append(key)
             
     max_ids = len(all_names)
-    fig = plt.figure(figsize=(6, 0.4 * max_ids))
+    fig = plt.figure(figsize=(6.5, 0.4 + 0.4 * max_ids))
     ax = plt.axes()
     rects = ax.barh(np.arange(len(all_ir)), [ir for ir,_ in sorted(zip(all_ir, all_names))])
     ax.set_yticks(np.arange(len(all_ir)))
