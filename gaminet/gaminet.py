@@ -312,10 +312,9 @@ class GAMINet(tf.keras.Model):
                     print('Early stop at epoch %d, with validation loss: %0.5f' % (epoch + 1, self.err_val[-1]))
                 break
 
-        sortted_index = self.get_active_main_effects()
         val_loss = []
+        sortted_index = self.get_active_main_effects()
         for idx, _ in enumerate(sortted_index):
-            self.output_layer.main_effect_switcher.assign(tf.constant(np.ones((self.input_num, 1)), dtype=tf.float32))
             main_effect_switcher = np.zeros((self.input_num, 1))
             main_effect_switcher[sortted_index[:(idx + 1)]] = 1
             self.output_layer.main_effect_switcher.assign(tf.constant(main_effect_switcher, dtype=tf.float32))
@@ -421,10 +420,11 @@ class GAMINet(tf.keras.Model):
                         print('Early stop at epoch %d, with validation loss: %0.5f' % (epoch + 1, self.err_val[-1]))
                     break
 
+            ## here we allow no interactions to be included. 
+            self.output_layer.interaction_switcher.assign(tf.constant(np.zeros((gaminet.interact_num, 1)), dtype=tf.float32))
+            val_loss = [self.evaluate(val_x, val_y, training=False)] 
             sortted_index = self.get_active_interactions()
-            val_loss = [self.evaluate(val_x, val_y, training=False)] ## here we allow no interactions to be included. 
             for idx, _ in enumerate(sortted_index):
-                self.output_layer.interaction_switcher.assign(tf.constant(np.ones((self.interact_num, 1)), dtype=tf.float32))
                 interaction_switcher = np.zeros((self.interact_num, 1))
                 interaction_switcher[sortted_index[:(idx + 1)]] = 1
                 self.output_layer.interaction_switcher.assign(tf.constant(interaction_switcher, dtype=tf.float32))
