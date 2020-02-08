@@ -198,21 +198,14 @@ class GAMINet(tf.keras.Model):
     
     def get_active_interactions(self):
 
-        main_effect_norm = [self.maineffect_blocks.subnets[i].moving_norm.numpy()[0] for i in range(self.input_num)]
-        beta = (self.output_layer.main_effect_weights.numpy() * np.array([main_effect_norm]).reshape([-1, 1]) 
-             * self.output_layer.main_effect_switcher.numpy())
-
         interaction_norm = [self.interact_blocks.interacts[i].moving_norm.numpy()[0] for i in range(self.interact_num_heredity)]
         gamma = (self.output_layer.interaction_weights.numpy()[:self.interact_num_heredity] 
               * np.array([interaction_norm]).reshape([-1, 1])
               * self.output_layer.interaction_switcher.numpy()[:self.interact_num_heredity])
 
-        componment_coefs = np.vstack([beta, gamma])
+        componment_coefs = gamma
         componment_scales = (np.abs(componment_coefs) / np.sum(np.abs(componment_coefs))).reshape([-1])
-        componment_scales_main = componment_scales[:self.input_num]
-        componment_scales_interact = componment_scales[self.input_num:]
-
-        sorted_index = np.argsort(componment_scales_interact)[::-1]
+        sorted_index = np.argsort(componment_scales)[::-1]
         return sorted_index
 
     def get_active_effects(self):
