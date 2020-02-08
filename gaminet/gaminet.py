@@ -137,13 +137,13 @@ class GAMINet(tf.keras.Model):
 
     @tf.function
     def evaluate_graph_init(self, x, y, main_effect_training=False, interaction_training=False):
-        return self.loss_fn(y, self.apply(tf.cast(x, tf.float32),
+        return self.loss_fn(y, self.__call__(tf.cast(x, tf.float32),
                                main_effect_training=main_effect_training,
                                interaction_training=interaction_training))
 
     @tf.function
     def evaluate_graph_inter(self, x, y, main_effect_training=False, interaction_training=False):
-        return self.loss_fn(y, self.apply(tf.cast(x, tf.float32),
+        return self.loss_fn(y, self.__call__(tf.cast(x, tf.float32),
                                main_effect_training=main_effect_training,
                                interaction_training=interaction_training))
 
@@ -161,7 +161,7 @@ class GAMINet(tf.keras.Model):
     def train_step_main(self, inputs, labels):
 
         with tf.GradientTape() as tape:
-            pred = self.apply(inputs, main_effect_training=True, interaction_training=False)
+            pred = self.__call__(inputs, main_effect_training=True, interaction_training=False)
             total_loss = self.loss_fn(labels, pred)
 
         train_weights = self.maineffect_blocks.weights
@@ -179,7 +179,7 @@ class GAMINet(tf.keras.Model):
     def train_step_interact(self, inputs, labels):
 
         with tf.GradientTape() as tape:
-            pred = self.apply(inputs, main_effect_training=False, interaction_training=True)
+            pred = self.__call__(inputs, main_effect_training=False, interaction_training=True)
             total_loss = self.loss_fn(labels, pred)
 
         train_weights = self.interact_blocks.weights
@@ -351,8 +351,8 @@ class GAMINet(tf.keras.Model):
 
             last_improvement = 0
             best_validation = np.inf
-            tr_pred = self.apply(tf.cast(tr_x, tf.float32), main_effect_training=False, interaction_training=False).numpy().astype(np.float64)
-            val_pred = self.apply(tf.cast(val_x, tf.float32), main_effect_training=False, interaction_training=False).numpy().astype(np.float64)
+            tr_pred = self.__call__(tf.cast(tr_x, tf.float32), main_effect_training=False, interaction_training=False).numpy().astype(np.float64)
+            val_pred = self.__call__(tf.cast(val_x, tf.float32), main_effect_training=False, interaction_training=False).numpy().astype(np.float64)
             interaction_list_all = get_interaction_list(tr_x, val_x, tr_y.ravel(), val_y.ravel(),
                                           tr_pred.ravel(), val_pred.ravel(),
                                           interactions=int(round(self.input_num * (self.input_num - 1) / 2)),
@@ -465,9 +465,9 @@ class GAMINet(tf.keras.Model):
         predicted = self.predict(x)
         intercept = self.output_layer.main_effect_output_bias.numpy() + self.output_layer.interaction_output_bias.numpy()
 
-        subnet_output = self.maineffect_blocks.apply(tf.cast(tf.constant(x), tf.float32)).numpy()
+        subnet_output = self.maineffect_blocks.__call__(tf.cast(tf.constant(x), tf.float32)).numpy()
         if self.interact_num > 0:
-            interact_output = self.interact_blocks.apply(tf.cast(tf.constant(x), tf.float32)).numpy()
+            interact_output = self.interact_blocks.__call__(tf.cast(tf.constant(x), tf.float32)).numpy()
         else:
             interact_output = np.array([])
         active_univariate_index, active_interaction_index, beta, gamma, componment_scales = self.get_active_effects()
@@ -514,7 +514,7 @@ class GAMINet(tf.keras.Model):
                 subnets_inputs_original = sx.inverse_transform(subnets_inputs)
                 subnets_outputs = (self.output_layer.main_effect_weights.numpy()[indice]
                             * self.output_layer.main_effect_switcher.numpy()[indice]
-                            * subnet.apply(tf.cast(tf.constant(subnets_inputs), tf.float32)).numpy())
+                            * subnet.__call__(tf.cast(tf.constant(subnets_inputs), tf.float32)).numpy())
                 data_dict[feature_name].update({'type':'continuous',
                                          'importance':componment_scales[indice],
                                          'inputs':subnets_inputs_original.ravel(),
@@ -525,7 +525,7 @@ class GAMINet(tf.keras.Model):
                 subnets_inputs_original = self.meta_info[feature_name]['values']
                 subnets_outputs = (self.output_layer.main_effect_weights.numpy()[indice]
                             * self.output_layer.main_effect_switcher.numpy()[indice]
-                            * subnet.apply(tf.cast(subnets_inputs, tf.float32)).numpy())
+                            * subnet.__call__(tf.cast(subnets_inputs, tf.float32)).numpy())
                 data_dict[feature_name].update({'type':'categorical',
                                          'importance':componment_scales[indice],
                                          'inputs':subnets_inputs_original,
@@ -584,7 +584,7 @@ class GAMINet(tf.keras.Model):
             
             interact_outputs = (self.output_layer.interaction_weights.numpy()[indice]
                         * self.output_layer.interaction_switcher.numpy()[indice]
-                        * inter_net.apply(input_grid, training=False).numpy().reshape(x1.shape))
+                        * inter_net.__call__(input_grid, training=False).numpy().reshape(x1.shape))
             data_dict.update({feature_name1 + ' vs. ' + feature_name2:{'type':'pairwise',
                                                        'xtype':feature_type1,
                                                        'ytype':feature_type2,
