@@ -1,5 +1,6 @@
 import os 
 import numpy as np
+import pandas as pd 
 from contextlib import closing
 from itertools import combinations
 from matplotlib import pyplot as plt
