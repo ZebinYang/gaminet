@@ -291,7 +291,7 @@ class GAMINet(tf.keras.Model):
                 batch_yy = tr_y[offset:(offset + self.batch_size)]
                 self.train_step_main(tf.cast(batch_xx, tf.float32), batch_yy)
 
-            self.err_train.append(self.evaluate(tr_x, tr_y, training=True))
+            self.err_train.append(self.evaluate(tr_x, tr_y, training=False))
             self.err_val.append(self.evaluate(val_x, val_y, training=False))
             if self.verbose & (epoch % 1 == 0):
                 print('Main effects training epoch: %d, train loss: %0.5f, val loss: %0.5f' %
@@ -330,7 +330,7 @@ class GAMINet(tf.keras.Model):
                 batch_yy = tr_y[offset:(offset + self.batch_size)]
                 self.train_step_main(tf.cast(batch_xx, tf.float32), batch_yy)
 
-            self.err_train.append(self.evaluate(tr_x, tr_y, training=True))
+            self.err_train.append(self.evaluate(tr_x, tr_y, training=False))
             self.err_val.append(self.evaluate(val_x, val_y, training=False))
             if self.verbose & (epoch % 1 == 0):
                 print('Main effects tunning epoch: %d, train loss: %0.5f, val loss: %0.5f' %
@@ -399,7 +399,7 @@ class GAMINet(tf.keras.Model):
                     batch_yy = tr_y[offset:(offset + self.batch_size)]
                     self.train_step_interact(tf.cast(batch_xx, tf.float32), batch_yy)
 
-                self.err_train.append(self.evaluate(tr_x, tr_y, training=True))
+                self.err_train.append(self.evaluate(tr_x, tr_y, training=False))
                 self.err_val.append(self.evaluate(val_x, val_y, training=False))
                 if self.verbose & (epoch % 1 == 0):
                     print('Interaction training epoch: %d, train loss: %0.5f, val loss: %0.5f' %
