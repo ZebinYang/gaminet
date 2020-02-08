@@ -457,7 +457,7 @@ class GAMINet(tf.keras.Model):
                         print('Interaction tunning epoch: %d, train loss: %0.5f, val loss: %0.5f' %
                               (epoch + 1, self.err_train[-1], self.err_val[-1]))
             else:
-                self.output_layer.interaction_output_bias.assign(tf.constant(0, dtype=tf.float32))
+                self.output_layer.interaction_output_bias.assign(tf.constant(np.zeros((1)), dtype=tf.float32))
 
     
     def local_explain(self, x, y=None, save_dict=False, folder='./', name='local_explain'):
