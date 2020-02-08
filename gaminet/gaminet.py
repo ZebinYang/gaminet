@@ -413,10 +413,10 @@ class GAMINet(tf.keras.Model):
                         print('Early stop at epoch %d, with validation loss: %0.5f' % (epoch + 1, self.err_val[-1]))
                     break
 
-            ## here we allow no interactions to be included. 
+            ## here we allow no interactions to be included.
+            sorted_index = self.get_active_interactions()
             self.output_layer.interaction_switcher.assign(tf.constant(np.zeros((self.interact_num, 1)), dtype=tf.float32))
             val_loss = [self.evaluate(val_x, val_y, training=False)] 
-            sorted_index = self.get_active_interactions()
             for idx, _ in enumerate(sorted_index):
                 interaction_switcher = np.zeros((self.interact_num, 1))
                 interaction_switcher[sorted_index[:(idx + 1)]] = 1
