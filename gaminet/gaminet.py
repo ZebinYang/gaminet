@@ -421,7 +421,7 @@ class GAMINet(tf.keras.Model):
                     break
 
             ## here we allow no interactions to be included. 
-            self.output_layer.interaction_switcher.assign(tf.constant(np.zeros((gaminet.interact_num, 1)), dtype=tf.float32))
+            self.output_layer.interaction_switcher.assign(tf.constant(np.zeros((self.interact_num, 1)), dtype=tf.float32))
             val_loss = [self.evaluate(val_x, val_y, training=False)] 
             sortted_index = self.get_active_interactions()
             for idx, _ in enumerate(sortted_index):
