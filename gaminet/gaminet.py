@@ -166,7 +166,7 @@ class GAMINet(tf.keras.Model):
 
         train_weights = self.maineffect_blocks.weights
         train_weights.append(self.output_layer.main_effect_weights)
-        train_weights.append(self.output_layer.output_bias)
+        train_weights.append(self.output_layer.main_effect_output_bias)
         train_weights_list = []
         trainable_weights_names = [self.trainable_weights[j].name for j in range(len(self.trainable_weights))]
         for i in range(len(train_weights)):
@@ -184,7 +184,7 @@ class GAMINet(tf.keras.Model):
 
         train_weights = self.interact_blocks.weights
         train_weights.append(self.output_layer.interaction_weights)
-        train_weights.append(self.output_layer.output_bias)
+        train_weights.append(self.output_layer.interaction_output_bias)
         train_weights_list = []
         trainable_weights_names = [self.trainable_weights[j].name for j in range(len(self.trainable_weights))]
         for i in range(len(train_weights)):
@@ -437,6 +437,7 @@ class GAMINet(tf.keras.Model):
             interaction_switcher[self.active_interaction_index] = 1
             self.output_layer.interaction_switcher.assign(tf.constant(interaction_switcher, dtype=tf.float32))
             
+            # fine tunning if there exist active interactions 
             if len(self.active_interaction_index) > 0:
                 for epoch in range(self.tuning_epochs):
                     shuffle_index = np.arange(tr_x.shape[0])
@@ -455,6 +456,9 @@ class GAMINet(tf.keras.Model):
                     if self.verbose & (epoch % 1 == 0):
                         print('Interaction tunning epoch: %d, train loss: %0.5f, val loss: %0.5f' %
                               (epoch + 1, self.err_train[-1], self.err_val[-1]))
+            else:
+                self.output_layer.interaction_output_bias.assign(tf.constant(0, dtype=tf.float32))
+
     
     def local_explain(self, x, y=None, save_dict=False, folder='./', name='local_explain'):
         

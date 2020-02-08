@@ -340,7 +340,7 @@ def feature_importance(data_dict, folder='./results/', name='demo', save_png=Tru
             all_names.append(key)
             
     max_ids = len(all_names)
-    fig = plt.figure(figsize=(6.5, 0.4 + 0.4 * max_ids))
+    fig = plt.figure(figsize=(7, 0.4 + 0.6 * max_ids))
     ax = plt.axes()
     rects = ax.barh(np.arange(len(all_ir)), [ir for ir,_ in sorted(zip(all_ir, all_names))])
     ax.set_yticks(np.arange(len(all_ir)))

@@ -324,10 +324,15 @@ class OutputLayer(tf.keras.layers.Layer):
                                               shape=[self.interact_num, 1],
                                               initializer=tf.ones_initializer(),
                                               trainable=False)
-        self.output_bias = self.add_weight(name="output_bias",
+        self.main_effect_output_bias = self.add_weight(name="main_effect_output_bias",
                                            shape=[1],
                                            initializer=tf.zeros_initializer(),
                                            trainable=True)
+        self.interaction_output_bias = self.add_weight(name="interaction_output_bias",
+                                           shape=[1],
+                                           initializer=tf.zeros_initializer(),
+                                           trainable=True)
+
 
     def call(self, inputs):
         self.input_main_effect = inputs[:,:self.input_num]
@@ -335,9 +340,9 @@ class OutputLayer(tf.keras.layers.Layer):
             self.input_interactions = inputs[:,-self.interact_num:]
             output = (tf.matmul(self.input_main_effect, self.main_effect_switcher * self.main_effect_weights) 
                    + tf.matmul(self.input_interactions, self.interaction_switcher * self.interaction_weights) 
-                   + self.output_bias)
+                   + self.main_effect_output_bias + self.interaction_output_bias)
         else:
             output = (tf.matmul(self.input_main_effect, self.main_effect_switcher * self.main_effect_weights) 
-                   + self.output_bias)
+                   + self.main_effect_output_bias)
 
         return output
