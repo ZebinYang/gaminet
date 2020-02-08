@@ -580,7 +580,7 @@ class GAMINet(tf.keras.Model):
             
             interact_outputs = (self.output_layer.interaction_weights.numpy()[indice]
                         * self.output_layer.interaction_switcher.numpy()[indice]
-                        * inter_net.apply(input_grid, main_effect_training=False, interaction_training=False).numpy().reshape(x1.shape))
+                        * inter_net.apply(input_grid, training=False).numpy().reshape(x1.shape))
             data_dict.update({feature_name1 + ' vs. ' + feature_name2:{'type':'pairwise',
                                                        'xtype':feature_type1,
                                                        'ytype':feature_type2,
