@@ -463,7 +463,7 @@ class GAMINet(tf.keras.Model):
     def local_explain(self, x, y=None, save_dict=False, folder='./', name='local_explain'):
         
         predicted = self.predict(x)
-        intercept = self.output_layer.output_bias.numpy()
+        intercept = self.output_layer.main_effect_output_bias.numpy() + self.output_layer.interaction_output_bias.numpy()
 
         subnet_output = self.maineffect_blocks.apply(tf.cast(tf.constant(x), tf.float32)).numpy()
         if self.interact_num > 0:
