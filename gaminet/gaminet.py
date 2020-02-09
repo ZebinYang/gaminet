@@ -491,7 +491,7 @@ class GAMINet(tf.keras.Model):
         effect_names = np.hstack(['Intercept', np.array(self.variables_names)[self.numerical_index_list],
                    np.array(self.variables_names)[self.categ_index_list],
                    [self.variables_names[self.interaction_list[i][0]] + ' x ' 
-                    + self.variables_names[self.interaction_list[i][1]] for i in range(len(model.interaction_list))]])
+                    + self.variables_names[self.interaction_list[i][1]] for i in range(len(self.interaction_list))]])
         
         data_dict = {'active_indice': active_indice, 
                  'scores': scores,
