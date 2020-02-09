@@ -131,8 +131,10 @@ class GAMINet(tf.keras.Model):
         return output
     
     @tf.function
-    def predict_graph(self, x):
-        return self.__call__(tf.cast(x, tf.float32), main_effect_training=False, interaction_training=False)
+    def predict_graph(self, x, main_effect_training=False, interaction_training=False):
+        return self.__call__(tf.cast(x, tf.float32), 
+                      main_effect_training=main_effect_training,
+                      interaction_training=interaction_training)
 
     def predict(self, x):
         return self.predict_graph(x).numpy()
