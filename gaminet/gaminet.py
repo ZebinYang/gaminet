@@ -162,10 +162,11 @@ class GAMINet(tf.keras.Model):
                                   interaction_training=interaction_training).numpy()
 
     @tf.function
-    def train_step_main(self, inputs, labels):
+    def train_step_main(self, inputs, labels, main_effect_training=True, interaction_training=False):
 
         with tf.GradientTape() as tape:
-            pred = self.__call__(inputs, main_effect_training=True, interaction_training=False)
+            pred = self.__call__(inputs, main_effect_training=main_effect_training,
+                          interaction_training=interaction_training)
             total_loss = self.loss_fn(labels, pred)
 
         train_weights = self.maineffect_blocks.weights
@@ -180,10 +181,11 @@ class GAMINet(tf.keras.Model):
         self.optimizer.apply_gradients(zip(grads, train_weights_list))
 
     @tf.function
-    def train_step_interact(self, inputs, labels):
+    def train_step_interact(self, inputs, labels, main_effect_training=False, interaction_training=True):
 
         with tf.GradientTape() as tape:
-            pred = self.__call__(inputs, main_effect_training=False, interaction_training=True)
+            pred = self.__call__(inputs, main_effect_training=main_effect_training,
+                          interaction_training=interaction_training)
             total_loss = self.loss_fn(labels, pred)
 
         train_weights = self.interact_blocks.weights
@@ -430,10 +432,9 @@ class GAMINet(tf.keras.Model):
                     break
 
             ## here we allow no interactions to be included.
-            best_loss = 10 ** 5
             sorted_index = self.get_active_interactions()
             self.output_layer.interaction_switcher.assign(tf.constant(np.zeros((self.interact_num, 1)), dtype=tf.float32))
-            val_loss = [self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False)] 
+            best_loss = self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False) 
             for idx, _ in enumerate(sorted_index):
                 interaction_switcher = np.zeros((self.interact_num, 1))
                 interaction_switcher[sorted_index[:(idx + 1)]] = 1
