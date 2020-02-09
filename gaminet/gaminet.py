@@ -440,7 +440,7 @@ class GAMINet(tf.keras.Model):
                 if (best_loss - val_loss) / best_loss < self.loss_threshold:
                     break
                 else:
-                    best_main_effect_num = idx
+                    best_interact_num = idx
                     best_loss = val_loss
 
             self.active_interaction_index = sorted_index[:best_interact_num]
