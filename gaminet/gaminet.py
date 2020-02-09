@@ -241,41 +241,66 @@ class GAMINet(tf.keras.Model):
         active_interaction_index = active_index[active_index>=beta.shape[0]] - beta.shape[0]
         return active_univariate_index, active_interaction_index, beta, gamma, componment_scales
 
-    def fit(self, train_x, train_y):
-
-        self.err_val = []
-        self.err_train = []
+    def estimate_density(self, x):
         
-        ### data splits ###
-        n_samples = train_x.shape[0]
-        indices = np.arange(n_samples)
-        if self.task_type == 'Regression':
-            tr_x, val_x, tr_y, val_y, tr_idx, val_idx = train_test_split(train_x, train_y, indices, test_size=self.val_ratio, 
-                                          random_state=self.random_state)
-        elif self.task_type == 'Classification':
-            tr_x, val_x, tr_y, val_y, tr_idx, val_idx = train_test_split(train_x, train_y, indices, test_size=self.val_ratio, 
-                                      stratify=train_y, random_state=self.random_state)
-        self.tr_idx = tr_idx
-        self.val_idx = val_idx
-
-        ### density ###
         self.density = []
         for indice in range(self.input_num):
             feature_name = list(self.variables_names)[indice]
             if indice in self.numerical_index_list:
                 sx = self.meta_info[feature_name]['scaler']
-                density, bins = np.histogram(sx.inverse_transform(train_x[:,[indice]]), bins=10, density=True)
+                density, bins = np.histogram(sx.inverse_transform(x[:,[indice]]), bins=10, density=True)
                 self.data_dict[feature_name].update({'density':{'names':bins,'scores':density}})
             elif indice in self.categ_index_list:
-                unique, counts = np.unique(train_x[:, indice], return_counts=True)
+                unique, counts = np.unique(x[:, indice], return_counts=True)
                 density = np.zeros((len(self.meta_info[feature_name]['values'])))
                 density[unique.astype(int)] = counts / n_samples
                 self.data_dict[feature_name].update({'density':{'names':unique,'scores':density}})
+    
+    def select_active_main_effects(self, val_x, val_y):
+        
+        best_loss = 10 * 10
+        self.main_effects_val_loss = []
+        sorted_index = self.get_active_main_effects()
+        for idx, _ in enumerate(sorted_index):
+            main_effect_switcher = np.zeros((self.input_num, 1))
+            main_effect_switcher[sorted_index[:(idx + 1)]] = 1
+            self.output_layer.main_effect_switcher.assign(tf.constant(main_effect_switcher, dtype=tf.float32))
+            self.main_effects_val_loss.append(self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False))
+        
+        for val_loss in self.main_effects_val_loss: 
+            if (best_loss - val_loss) / best_loss < self.loss_threshold:
+                break
+            else:
+                best_main_effect_num = idx + 1
+                best_loss = val_loss
 
-        #### 1. Main Effects Training
-        if self.verbose:
-            print('Main Effects Training.')
+        self.active_univariate_index = sorted_index[:best_main_effect_num]
+        main_effect_switcher = np.zeros((self.input_num, 1))
+        main_effect_switcher[self.active_univariate_index] = 1
+        self.output_layer.main_effect_switcher.assign(tf.constant(main_effect_switcher, dtype=tf.float32))
+    
+    def fine_tune_main_effects(self, tr_x, tr_y, val_x, val_y):
+        
+        for epoch in range(self.tuning_epochs):
+            shuffle_index = np.arange(tr_x.shape[0])
+            np.random.shuffle(shuffle_index)
+            tr_x = tr_x[shuffle_index]
+            tr_y = tr_y[shuffle_index]
 
+            for iterations in range(train_size // self.batch_size):
+                offset = (iterations * self.batch_size) % train_size
+                batch_xx = tr_x[offset:(offset + self.batch_size), :]
+                batch_yy = tr_y[offset:(offset + self.batch_size)]
+                self.train_step_main(tf.cast(batch_xx, tf.float32), batch_yy)
+
+            self.err_train.append(self.evaluate(tr_x, tr_y, main_effect_training=False, interaction_training=False))
+            self.err_val.append(self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False))
+            if self.verbose & (epoch % 1 == 0):
+                print('Main effects tunning epoch: %d, train loss: %0.5f, val loss: %0.5f' %
+                      (epoch + 1, self.err_train[-1], self.err_val[-1]))
+
+    def fit_main_effects(self, tr_x, tr_y, val_x, val_y):
+        
         last_improvement = 0
         best_validation = np.inf
         train_size = tr_x.shape[0]
@@ -288,8 +313,6 @@ class GAMINet(tf.keras.Model):
                 length = self.main_grid_size
                 input_grid = np.linspace(0, 1, length)
             pdf_grid = np.ones([length]) / length    
-            # H, bin_edges = np.histogram(train_x[:, i], bins=length)
-            # pdf_grid = H / np.sum(H)
             self.maineffect_blocks.subnets[i].set_pdf(np.array(input_grid, dtype=np.float32).reshape([-1, 1]),
                                         np.array(pdf_grid, dtype=np.float32).reshape([1, -1]))
 
@@ -319,23 +342,56 @@ class GAMINet(tf.keras.Model):
                     print('Early stop at epoch %d, with validation loss: %0.5f' % (epoch + 1, self.err_val[-1]))
                 break
 
-        best_loss = 10 * 5
-        sorted_index = self.get_active_main_effects()
+    def filter_interactions(self, tr_x, tr_y, val_x, val_y):
+        
+        best_validation = np.inf
+        tr_pred = self.__call__(tf.cast(tr_x, tf.float32), main_effect_training=False, interaction_training=False).numpy().astype(np.float64)
+        val_pred = self.__call__(tf.cast(val_x, tf.float32), main_effect_training=False, interaction_training=False).numpy().astype(np.float64)
+        interaction_list_all = get_interaction_list(tr_x, val_x, tr_y.ravel(), val_y.ravel(),
+                                      tr_pred.ravel(), val_pred.ravel(),
+                                      interactions=int(round(self.input_num * (self.input_num - 1) / 2)),
+                                      meta_info=self.meta_info,
+                                      task_type=self.task_type)
+
+        self.interaction_list = [interaction_list_all[i] for i in range(self.max_interact_num) 
+                                 if (interaction_list_all[i][0] in self.active_univariate_index)
+                                 or (interaction_list_all[i][1] in self.active_univariate_index)][:self.interact_num]
+        
+        self.interact_num_heredity = len(self.interaction_list)
+        interaction_switcher = np.zeros((self.interact_num, 1))
+        interaction_switcher[:self.interact_num_heredity] = 1
+        self.output_layer.interaction_switcher.assign(tf.constant(interaction_switcher, dtype=tf.float32))
+        self.interact_blocks.set_interaction_list(self.interaction_list)
+
+    def select_active_interactions(self, val_x, val_y):
+        
+        self.interaction_val_loss = []
+        sorted_index = self.get_active_interactions()
+        self.output_layer.interaction_switcher.assign(tf.constant(np.zeros((self.interact_num, 1)), dtype=tf.float32))
+        best_loss = self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False) 
         for idx, _ in enumerate(sorted_index):
-            main_effect_switcher = np.zeros((self.input_num, 1))
-            main_effect_switcher[sorted_index[:(idx + 1)]] = 1
-            self.output_layer.main_effect_switcher.assign(tf.constant(main_effect_switcher, dtype=tf.float32))
-            val_loss = self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False)
+            interaction_switcher = np.zeros((self.interact_num, 1))
+            interaction_switcher[sorted_index[:(idx + 1)]] = 1
+            self.output_layer.interaction_switcher.assign(tf.constant(interaction_switcher, dtype=tf.float32))
+            self.interaction_val_loss.append(self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False))
+        
+        for val_loss in self.interaction_val_loss: 
             if (best_loss - val_loss) / best_loss < self.loss_threshold:
                 break
             else:
-                best_main_effect_num = idx
+                best_main_effect_num = idx + 1
                 best_loss = val_loss
+        self.active_interaction_index = sorted_index[:best_interact_num]
+        interaction_switcher = np.zeros((self.interact_num, 1))
+        interaction_switcher[self.active_interaction_index] = 1
+        self.output_layer.interaction_switcher.assign(tf.constant(interaction_switcher, dtype=tf.float32))
+       
+    def fine_tune_interactions(self, tr_x, tr_y, val_x, val_y):
+        
+        if len(self.active_interaction_index) == 0:
+            self.output_layer.interaction_output_bias.assign(tf.constant(np.zeros((1)), dtype=tf.float32))
+            return
 
-        self.active_univariate_index = sorted_index[:(best_main_effect_num + 1)]
-        main_effect_switcher = np.zeros((self.input_num, 1))
-        main_effect_switcher[self.active_univariate_index] = 1
-        self.output_layer.main_effect_switcher.assign(tf.constant(main_effect_switcher, dtype=tf.float32))
         for epoch in range(self.tuning_epochs):
             shuffle_index = np.arange(tr_x.shape[0])
             np.random.shuffle(shuffle_index)
@@ -346,133 +402,93 @@ class GAMINet(tf.keras.Model):
                 offset = (iterations * self.batch_size) % train_size
                 batch_xx = tr_x[offset:(offset + self.batch_size), :]
                 batch_yy = tr_y[offset:(offset + self.batch_size)]
-                self.train_step_main(tf.cast(batch_xx, tf.float32), batch_yy)
+                self.train_step_interact(tf.cast(batch_xx, tf.float32), batch_yy)
 
             self.err_train.append(self.evaluate(tr_x, tr_y, main_effect_training=False, interaction_training=False))
             self.err_val.append(self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False))
             if self.verbose & (epoch % 1 == 0):
-                print('Main effects tunning epoch: %d, train loss: %0.5f, val loss: %0.5f' %
+                print('Interaction tunning epoch: %d, train loss: %0.5f, val loss: %0.5f' %
                       (epoch + 1, self.err_train[-1], self.err_val[-1]))
 
-        # 2. interaction training
-        if self.interact_num>0:
-            if self.verbose:
-                print('Interaction Training.')
+    def fit_interactions(self, tr_x, tr_y, val_x, val_y):
+        
+        last_improvement = 0
+        for interact_id, (idx1, idx2) in enumerate(self.interaction_list):
 
-            last_improvement = 0
-            best_validation = np.inf
-            tr_pred = self.__call__(tf.cast(tr_x, tf.float32), main_effect_training=False, interaction_training=False).numpy().astype(np.float64)
-            val_pred = self.__call__(tf.cast(val_x, tf.float32), main_effect_training=False, interaction_training=False).numpy().astype(np.float64)
-            interaction_list_all = get_interaction_list(tr_x, val_x, tr_y.ravel(), val_y.ravel(),
-                                          tr_pred.ravel(), val_pred.ravel(),
-                                          interactions=int(round(self.input_num * (self.input_num - 1) / 2)),
-                                          meta_info=self.meta_info,
-                                          task_type=self.task_type)
-
-            self.interaction_list = [interaction_list_all[i] for i in range(self.max_interact_num) 
-                                     if (interaction_list_all[i][0] in self.active_univariate_index)
-                                     or (interaction_list_all[i][1] in self.active_univariate_index)][:self.interact_num]
-            
-            self.interact_num_heredity = len(self.interaction_list)
-            interaction_switcher = np.zeros((self.interact_num, 1))
-            interaction_switcher[:self.interact_num_heredity] = 1
-            self.output_layer.interaction_switcher.assign(tf.constant(interaction_switcher, dtype=tf.float32))
-            self.interact_blocks.set_interaction_list(self.interaction_list)
-
-            for interact_id, (idx1, idx2) in enumerate(self.interaction_list):
-
-                feature_name1 = self.variables_names[idx1]
-                feature_name2 = self.variables_names[idx2]
-                if feature_name1 in self.categ_variable_list:
-                    length1 = len(self.meta_info[feature_name1]['values']) 
-                    length1_grid = np.arange(length1)
-                else:
-                    length1 = self.interact_grid_size
-                    length1_grid = np.linspace(0, 1, length1)
-                if feature_name2 in self.categ_variable_list:
-                    length2 = len(self.meta_info[feature_name2]['values']) 
-                    length2_grid = np.arange(length2)
-                else:
-                    length2 = self.interact_grid_size
-                    length2_grid = np.linspace(0, 1, length2)
-
-                x1, x2 = np.meshgrid(length1_grid, length2_grid)
-                input_grid = np.hstack([np.reshape(x1, [-1, 1]), np.reshape(x2, [-1, 1])])
-                pdf_grid = np.ones([length1, length2]) / (length1 * length2)
-                # H, xedges, yedges = np.histogram2d(train_x[:,idx1], train_x[:,idx2], bins=[length1, length2])
-                # pdf_grid = H / np.sum(H)
-                self.interact_blocks.interacts[interact_id].set_pdf(np.array(input_grid, dtype=np.float32),
-                                                   np.array(pdf_grid, dtype=np.float32).T)
-
-            self.fit_interaction = True 
-            for epoch in range(self.interact_training_epochs):
-                shuffle_index = np.arange(tr_x.shape[0])
-                np.random.shuffle(shuffle_index)
-                tr_x = tr_x[shuffle_index]
-                tr_y = tr_y[shuffle_index]
-
-                for iterations in range(train_size // self.batch_size):
-                    offset = (iterations * self.batch_size) % train_size
-                    batch_xx = tr_x[offset:(offset + self.batch_size), :]
-                    batch_yy = tr_y[offset:(offset + self.batch_size)]
-                    self.train_step_interact(tf.cast(batch_xx, tf.float32), batch_yy)
-
-                self.err_train.append(self.evaluate(tr_x, tr_y, main_effect_training=False, interaction_training=False))
-                self.err_val.append(self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False))
-                if self.verbose & (epoch % 1 == 0):
-                    print('Interaction training epoch: %d, train loss: %0.5f, val loss: %0.5f' %
-                          (epoch + 1, self.err_train[-1], self.err_val[-1]))
-
-                if self.err_val[-1] < best_validation:
-                    best_validation = self.err_val[-1]
-                    last_improvement = epoch
-                if epoch - last_improvement > self.early_stop_thres:
-                    if self.verbose:
-                        print('Early stop at epoch %d, with validation loss: %0.5f' % (epoch + 1, self.err_val[-1]))
-                    break
-
-            ## here we allow no interactions to be included.
-            sorted_index = self.get_active_interactions()
-            self.output_layer.interaction_switcher.assign(tf.constant(np.zeros((self.interact_num, 1)), dtype=tf.float32))
-            best_loss = self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False) 
-            for idx, _ in enumerate(sorted_index):
-                interaction_switcher = np.zeros((self.interact_num, 1))
-                interaction_switcher[sorted_index[:(idx + 1)]] = 1
-                self.output_layer.interaction_switcher.assign(tf.constant(interaction_switcher, dtype=tf.float32))
-                val_loss = self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False)
-                if (best_loss - val_loss) / best_loss < self.loss_threshold:
-                    break
-                else:
-                    best_interact_num = idx
-                    best_loss = val_loss
-
-            self.active_interaction_index = sorted_index[:(best_interact_num + 1)]
-            interaction_switcher = np.zeros((self.interact_num, 1))
-            interaction_switcher[self.active_interaction_index] = 1
-            self.output_layer.interaction_switcher.assign(tf.constant(interaction_switcher, dtype=tf.float32))
-            
-            # fine tunning if there exist active interactions 
-            if len(self.active_interaction_index) > 0:
-                for epoch in range(self.tuning_epochs):
-                    shuffle_index = np.arange(tr_x.shape[0])
-                    np.random.shuffle(shuffle_index)
-                    tr_x = tr_x[shuffle_index]
-                    tr_y = tr_y[shuffle_index]
-
-                    for iterations in range(train_size // self.batch_size):
-                        offset = (iterations * self.batch_size) % train_size
-                        batch_xx = tr_x[offset:(offset + self.batch_size), :]
-                        batch_yy = tr_y[offset:(offset + self.batch_size)]
-                        self.train_step_interact(tf.cast(batch_xx, tf.float32), batch_yy)
-
-                    self.err_train.append(self.evaluate(tr_x, tr_y, main_effect_training=False, interaction_training=False))
-                    self.err_val.append(self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False))
-                    if self.verbose & (epoch % 1 == 0):
-                        print('Interaction tunning epoch: %d, train loss: %0.5f, val loss: %0.5f' %
-                              (epoch + 1, self.err_train[-1], self.err_val[-1]))
+            feature_name1 = self.variables_names[idx1]
+            feature_name2 = self.variables_names[idx2]
+            if feature_name1 in self.categ_variable_list:
+                length1 = len(self.meta_info[feature_name1]['values']) 
+                length1_grid = np.arange(length1)
             else:
-                self.output_layer.interaction_output_bias.assign(tf.constant(np.zeros((1)), dtype=tf.float32))
+                length1 = self.interact_grid_size
+                length1_grid = np.linspace(0, 1, length1)
+            if feature_name2 in self.categ_variable_list:
+                length2 = len(self.meta_info[feature_name2]['values']) 
+                length2_grid = np.arange(length2)
+            else:
+                length2 = self.interact_grid_size
+                length2_grid = np.linspace(0, 1, length2)
 
+            x1, x2 = np.meshgrid(length1_grid, length2_grid)
+            input_grid = np.hstack([np.reshape(x1, [-1, 1]), np.reshape(x2, [-1, 1])])
+            pdf_grid = np.ones([length1, length2]) / (length1 * length2)
+            self.interact_blocks.interacts[interact_id].set_pdf(np.array(input_grid, dtype=np.float32),
+                                               np.array(pdf_grid, dtype=np.float32).T)
+
+        self.fit_interaction = True 
+        for epoch in range(self.interact_training_epochs):
+            shuffle_index = np.arange(tr_x.shape[0])
+            np.random.shuffle(shuffle_index)
+            tr_x = tr_x[shuffle_index]
+            tr_y = tr_y[shuffle_index]
+
+            for iterations in range(train_size // self.batch_size):
+                offset = (iterations * self.batch_size) % train_size
+                batch_xx = tr_x[offset:(offset + self.batch_size), :]
+                batch_yy = tr_y[offset:(offset + self.batch_size)]
+                self.train_step_interact(tf.cast(batch_xx, tf.float32), batch_yy)
+
+            self.err_train.append(self.evaluate(tr_x, tr_y, main_effect_training=False, interaction_training=False))
+            self.err_val.append(self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False))
+            if self.verbose & (epoch % 1 == 0):
+                print('Interaction training epoch: %d, train loss: %0.5f, val loss: %0.5f' %
+                      (epoch + 1, self.err_train[-1], self.err_val[-1]))
+
+            if self.err_val[-1] < best_validation:
+                best_validation = self.err_val[-1]
+                last_improvement = epoch
+            if epoch - last_improvement > self.early_stop_thres:
+                if self.verbose:
+                    print('Early stop at epoch %d, with validation loss: %0.5f' % (epoch + 1, self.err_val[-1]))
+                break
+
+    def fit(self, train_x, train_y):
+
+        self.err_val = []
+        self.err_train = []
+        
+        n_samples = train_x.shape[0]
+        indices = np.arange(n_samples)
+        if self.task_type == 'Regression':
+            tr_x, val_x, tr_y, val_y, tr_idx, val_idx = train_test_split(train_x, train_y, indices, test_size=self.val_ratio, 
+                                          random_state=self.random_state)
+        elif self.task_type == 'Classification':
+            tr_x, val_x, tr_y, val_y, tr_idx, val_idx = train_test_split(train_x, train_y, indices, test_size=self.val_ratio, 
+                                      stratify=train_y, random_state=self.random_state)
+        self.tr_idx = tr_idx
+        self.val_idx = val_idx
+
+        self.estimate_density(tr_x)
+        self.fit_main_effects(tr_x, tr_y, val_x, val_y)
+        self.select_active_main_effects(val_x, val_y)
+        self.fine_tune_main_effects(tr_x, tr_y, val_x, val_y)
+
+        if self.interact_num>0:
+            self.filter_interactions(tr_x, tr_y, val_x, val_y)
+            self.fit_interactions(tr_x, tr_y, val_x, val_y)
+            self.select_active_interactions(val_x, val_y)
+            self.fine_tune_interactions(tr_x, tr_y, val_x, val_y)
     
     def local_explain(self, x, y=None, save_dict=False, folder='./', name='local_explain'):
         
