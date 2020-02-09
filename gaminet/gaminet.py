@@ -292,7 +292,7 @@ class GAMINet(tf.keras.Model):
                       (epoch + 1, self.err_train[-1], self.err_val[-1]))
 
             if self.err_val_main_effects_training[-1] < self.best_validation:
-                self.best_validation = self.err_val[-1]
+                self.best_validation = self.err_val_main_effects_training[-1]
                 last_improvement = epoch
             if epoch - last_improvement > self.early_stop_thres:
                 if self.verbose:
@@ -414,7 +414,7 @@ class GAMINet(tf.keras.Model):
                       (epoch + 1, self.err_train[-1], self.err_val[-1]))
 
             if self.err_val_interactions_training[-1] < self.best_validation:
-                self.best_validation = self.err_val[-1]
+                self.best_validation = self.err_val_interactions_training[-1]
                 last_improvement = epoch
             if epoch - last_improvement > self.early_stop_thres:
                 if self.verbose:
