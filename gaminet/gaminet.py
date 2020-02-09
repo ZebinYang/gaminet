@@ -446,7 +446,7 @@ class GAMINet(tf.keras.Model):
                     best_interact_num = idx
                     best_loss = val_loss
 
-            self.active_interaction_index = sorted_index[:best_interact_num]
+            self.active_interaction_index = sorted_index[:(best_interact_num + 1)]
             interaction_switcher = np.zeros((self.interact_num, 1))
             interaction_switcher[self.active_interaction_index] = 1
             self.output_layer.interaction_switcher.assign(tf.constant(interaction_switcher, dtype=tf.float32))
