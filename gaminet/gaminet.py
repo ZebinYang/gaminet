@@ -244,6 +244,7 @@ class GAMINet(tf.keras.Model):
     def estimate_density(self, x):
         
         self.density = []
+        n_samples = x.shape[0]
         for indice in range(self.input_num):
             feature_name = list(self.variables_names)[indice]
             if indice in self.numerical_index_list:
