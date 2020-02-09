@@ -94,7 +94,7 @@ def local_visualize(data_dict, folder='./results/', name='demo', save_png=False,
         fig.savefig('%s.png' % save_path, bbox_inches='tight', dpi=100)
 
 
-def global_visualize_density(data_dict, univariate_num=10**5, interaction_num=10**5, cols_per_row=4,
+def global_visualize_density(data_dict, main_effect_num=10**5, interaction_num=10**5, cols_per_row=4,
                         save_png=False, save_eps=False, folder='./results/', name='demo'):
 
     maineffect_count = 0
@@ -107,7 +107,7 @@ def global_visualize_density(data_dict, univariate_num=10**5, interaction_num=10
     componment_scales = np.array(componment_scales)
     sorted_index = np.argsort(componment_scales)
     active_index = sorted_index[componment_scales[sorted_index].cumsum()>0][::-1]
-    active_univariate_index = active_index[active_index < maineffect_count][:univariate_num]
+    active_univariate_index = active_index[active_index < maineffect_count][:main_effect_num]
     active_interaction_index = active_index[active_index >= maineffect_count][:interaction_num]
     max_ids = len(active_univariate_index) + len(active_interaction_index)
 
@@ -237,7 +237,7 @@ def global_visualize_density(data_dict, univariate_num=10**5, interaction_num=10
         fig.savefig('%s.png' % save_path, bbox_inches='tight', dpi=100)
 
 
-def global_visualize_wo_density(data_dict, univariate_num=10**5, interaction_num=10**5, cols_per_row=4,
+def global_visualize_wo_density(data_dict, main_effect_num=10**5, interaction_num=10**5, cols_per_row=4,
                         save_png=False, save_eps=False, folder='./results/', name='demo'):
 
     maineffect_count = 0
@@ -250,7 +250,7 @@ def global_visualize_wo_density(data_dict, univariate_num=10**5, interaction_num
     componment_scales = np.array(componment_scales)
     sorted_index = np.argsort(componment_scales)
     active_index = sorted_index[componment_scales[sorted_index].cumsum()>0][::-1]
-    active_univariate_index = active_index[active_index < maineffect_count][:univariate_num]
+    active_univariate_index = active_index[active_index < maineffect_count][:main_effect_num]
     active_interaction_index = active_index[active_index >= maineffect_count][:interaction_num]
     max_ids = len(active_univariate_index) + len(active_interaction_index)
 

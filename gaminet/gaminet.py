@@ -237,9 +237,9 @@ class GAMINet(tf.keras.Model):
         componment_scales = (np.abs(componment_coefs) / np.sum(np.abs(componment_coefs))).reshape([-1])
         sorted_index = np.argsort(componment_scales)
         active_index = sorted_index[componment_scales[sorted_index].cumsum()>0][::-1]
-        active_univariate_index = active_index[active_index<beta.shape[0]]
+        active_main_effect_index = active_index[active_index<beta.shape[0]]
         active_interaction_index = active_index[active_index>=beta.shape[0]] - beta.shape[0]
-        return active_univariate_index, active_interaction_index, beta, gamma, componment_scales
+        return active_main_effect_index, active_interaction_index, beta, gamma, componment_scales
 
     def estimate_density(self, x):
         
@@ -255,7 +255,8 @@ class GAMINet(tf.keras.Model):
                 unique, counts = np.unique(x[:, indice], return_counts=True)
                 density = np.zeros((len(self.meta_info[feature_name]['values'])))
                 density[unique.astype(int)] = counts / n_samples
-                self.data_dict[feature_name].update({'density':{'names':unique,'scores':density}})
+                self.data_dict[feature_name].update({'density':{'names':np.arange(len(self.meta_info[feature_name]['values'])),
+                                                'scores':density}})
     
     def fit_main_effects(self, tr_x, tr_y, val_x, val_y):
         
@@ -319,9 +320,9 @@ class GAMINet(tf.keras.Model):
                 best_main_effect_num = idx + 1
                 best_loss = val_loss
 
-        self.active_univariate_index = sorted_index[:best_main_effect_num]
+        self.active_main_effect_index = sorted_index[:best_main_effect_num]
         main_effect_switcher = np.zeros((self.input_num, 1))
-        main_effect_switcher[self.active_univariate_index] = 1
+        main_effect_switcher[self.active_main_effect_index] = 1
         self.output_layer.main_effect_switcher.assign(tf.constant(main_effect_switcher, dtype=tf.float32))
     
     def fine_tune_main_effects(self, tr_x, tr_y, val_x, val_y):
@@ -358,8 +359,8 @@ class GAMINet(tf.keras.Model):
                                       task_type=self.task_type)
 
         self.interaction_list = [interaction_list_all[i] for i in range(self.max_interact_num) 
-                                 if (interaction_list_all[i][0] in self.active_univariate_index)
-                                 or (interaction_list_all[i][1] in self.active_univariate_index)][:self.interact_num]
+                                 if (interaction_list_all[i][0] in self.active_main_effect_index)
+                                 or (interaction_list_all[i][1] in self.active_main_effect_index)][:self.interact_num]
         
         self.interact_num_heredity = len(self.interaction_list)
         interaction_switcher = np.zeros((self.interact_num, 1))
@@ -509,10 +510,10 @@ class GAMINet(tf.keras.Model):
             interact_output = self.interact_blocks.__call__(tf.cast(tf.constant(x), tf.float32)).numpy()
         else:
             interact_output = np.array([])
-        active_univariate_index, active_interaction_index, beta, gamma, componment_scales = self.get_active_effects()
+        active_main_effect_index, active_interaction_index, beta, gamma, componment_scales = self.get_active_effects()
         scores = np.hstack([intercept[0], (np.hstack([subnet_output.ravel(), interact_output.ravel()]) 
                                            * np.hstack([beta.ravel(), gamma.ravel()]).ravel()).ravel()])
-        active_indice = 1 + np.hstack([-1, active_univariate_index, self.numerical_input_num + self.categ_variable_num + active_interaction_index])
+        active_indice = 1 + np.hstack([-1, active_main_effect_index, self.numerical_input_num + self.categ_variable_num + active_interaction_index])
         effect_names = np.hstack(['Intercept', np.array(self.variables_names)[self.numerical_index_list],
                    np.array(self.variables_names)[self.categ_index_list],
                    [self.variables_names[self.interaction_list[i][0]] + ' x ' 
