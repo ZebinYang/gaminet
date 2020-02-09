@@ -281,6 +281,7 @@ class GAMINet(tf.keras.Model):
     
     def fine_tune_main_effects(self, tr_x, tr_y, val_x, val_y):
         
+        train_size = tr_x.shape[0]
         for epoch in range(self.tuning_epochs):
             shuffle_index = np.arange(tr_x.shape[0])
             np.random.shuffle(shuffle_index)
@@ -392,8 +393,9 @@ class GAMINet(tf.keras.Model):
             self.output_layer.interaction_output_bias.assign(tf.constant(np.zeros((1)), dtype=tf.float32))
             return
 
+        train_size = tr_x.shape[0]
         for epoch in range(self.tuning_epochs):
-            shuffle_index = np.arange(tr_x.shape[0])
+            shuffle_index = np.arange(train_size)
             np.random.shuffle(shuffle_index)
             tr_x = tr_x[shuffle_index]
             tr_y = tr_y[shuffle_index]
@@ -413,6 +415,7 @@ class GAMINet(tf.keras.Model):
     def fit_interactions(self, tr_x, tr_y, val_x, val_y):
         
         last_improvement = 0
+        train_size = tr_x.shape[0]
         for interact_id, (idx1, idx2) in enumerate(self.interaction_list):
 
             feature_name1 = self.variables_names[idx1]
