@@ -291,14 +291,14 @@ class GAMINet(tf.keras.Model):
             self.err_val_main_effects_training.append(self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False))
             if self.verbose & (epoch % 1 == 0):
                 print('Main effects training epoch: %d, train loss: %0.5f, val loss: %0.5f' %
-                      (epoch + 1, self.err_train[-1], self.err_val[-1]))
+                      (epoch + 1, self.err_train_main_effects_training[-1], self.err_val_main_effects_training[-1]))
 
             if self.err_val_main_effects_training[-1] < self.best_validation:
                 self.best_validation = self.err_val_main_effects_training[-1]
                 last_improvement = epoch
             if epoch - last_improvement > self.early_stop_thres:
                 if self.verbose:
-                    print('Early stop at epoch %d, with validation loss: %0.5f' % (epoch + 1, self.err_val[-1]))
+                    print('Early stop at epoch %d, with validation loss: %0.5f' % (epoch + 1, self.err_val_main_effects_training[-1]))
                 break
 
     def select_active_main_effects(self, val_x, val_y):
@@ -346,7 +346,7 @@ class GAMINet(tf.keras.Model):
             self.err_val_main_effects_tuning.append(self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False))
             if self.verbose & (epoch % 1 == 0):
                 print('Main effects tunning epoch: %d, train loss: %0.5f, val loss: %0.5f' %
-                      (epoch + 1, self.err_train[-1], self.err_val[-1]))
+                      (epoch + 1, self.err_train_main_effects_tuning[-1], self.err_val_main_effects_tuning[-1]))
 
     def filter_interactions(self, tr_x, tr_y, val_x, val_y):
         
@@ -414,14 +414,14 @@ class GAMINet(tf.keras.Model):
             self.err_val_interactions_training.append(self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False))
             if self.verbose & (epoch % 1 == 0):
                 print('Interaction training epoch: %d, train loss: %0.5f, val loss: %0.5f' %
-                      (epoch + 1, self.err_train[-1], self.err_val[-1]))
+                      (epoch + 1, self.err_train_interactions_training[-1], self.err_val_interactions_training[-1]))
 
             if self.err_val_interactions_training[-1] < self.best_validation:
                 self.best_validation = self.err_val_interactions_training[-1]
                 last_improvement = epoch
             if epoch - last_improvement > self.early_stop_thres:
                 if self.verbose:
-                    print('Early stop at epoch %d, with validation loss: %0.5f' % (epoch + 1, self.err_val[-1]))
+                    print('Early stop at epoch %d, with validation loss: %0.5f' % (epoch + 1, self.err_val_interactions_training[-1]))
                 break
 
     def select_active_interactions(self, val_x, val_y):
@@ -473,7 +473,7 @@ class GAMINet(tf.keras.Model):
             self.err_val_interactions_tunning.append(self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False))
             if self.verbose & (epoch % 1 == 0):
                 print('Interaction tunning epoch: %d, train loss: %0.5f, val loss: %0.5f' %
-                      (epoch + 1, self.err_train[-1], self.err_val[-1]))
+                      (epoch + 1, self.err_train_interactions_tunning[-1], self.err_val_interactions_tunning[-1]))
 
     def fit(self, train_x, train_y):
         
