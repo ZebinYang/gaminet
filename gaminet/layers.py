@@ -288,12 +288,13 @@ class InteractionBlock(tf.keras.layers.Layer):
 
         self.interact_outputs = []
         for i in range(self.interact_num):
-            interact = self.interacts[i]
-            interact_input = tf.gather(inputs, self.interaction_list[i], axis=1)
-            interact_output = interact(interact_input, training=training)
-            self.interact_outputs.append(interact_output)
             if i >= self.interact_num_filtered:
                 self.interact_outputs.append(tf.zeros([inputs.shape[0], 1]))
+            else:
+                interact = self.interacts[i]
+                interact_input = tf.gather(inputs, self.interaction_list[i], axis=1)
+                interact_output = interact(interact_input, training=training)
+                self.interact_outputs.append(interact_output)
                 
         if len(self.interact_outputs) > 0:
             output = tf.reshape(tf.squeeze(tf.stack(self.interact_outputs, 1)), [-1, self.interact_num])
