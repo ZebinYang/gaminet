@@ -546,7 +546,7 @@ class GAMINet(tf.keras.Model):
             interact_grid_size = self.interact_grid_size      
 
         data_dict = self.data_dict
-        _, _, _, _, componment_scales = self.get_active_effects()
+        _, _, _, _, componment_scales = self.get_rank()
         for indice in range(self.input_num):
             feature_name = list(self.variables_names)[indice]
             subnet = self.maineffect_blocks.subnets[indice]
