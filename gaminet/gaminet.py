@@ -311,8 +311,8 @@ class GAMINet(tf.keras.Model):
         
         best_loss = 10 * 10
         self.main_effect_val_loss = []
-        self.output_layer.interaction_switcher.assign(tf.constant(np.zeros((model.interact_num, 1)), dtype=tf.float32))
-        self.output_layer.main_effect_switcher.assign(tf.constant(np.ones((model.input_num, 1)), dtype=tf.float32))
+        self.output_layer.interaction_switcher.assign(tf.constant(np.zeros((self.interact_num, 1)), dtype=tf.float32))
+        self.output_layer.main_effect_switcher.assign(tf.constant(np.ones((self.input_num, 1)), dtype=tf.float32))
         sorted_index = self.get_active_main_effect()
         for idx, _ in enumerate(sorted_index):
             main_effect_switcher = np.zeros((self.input_num, 1))
