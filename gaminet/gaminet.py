@@ -199,35 +199,29 @@ class GAMINet(tf.keras.Model):
         grads = tape.gradient(total_loss, train_weights_list)
         self.optimizer.apply_gradients(zip(grads, train_weights_list))
 
-    def get_active_main_effect(self):
+    def get_main_effect_rank(self):
 
         main_effect_norm = [self.maineffect_blocks.subnets[i].moving_norm.numpy()[0] for i in range(self.input_num)]
         beta = (self.output_layer.main_effect_weights.numpy() * np.array([main_effect_norm]).reshape([-1, 1])
              * self.output_layer.main_effect_switcher.numpy())
-
-        componment_coefs = beta
-        componment_scales = (np.abs(componment_coefs) / np.sum(np.abs(componment_coefs))).reshape([-1])
+        componment_scales = (np.abs(beta) / np.sum(np.abs(beta))).reshape([-1])
         sorted_index = np.argsort(componment_scales)[::-1]
         return sorted_index
     
-    def get_active_interaction(self):
+    def get_interaction_rank(self):
 
+        sorted_index = []
         if self.interact_num_filtered > 0:
             interaction_norm = [self.interact_blocks.interacts[i].moving_norm.numpy()[0] for i in range(self.interact_num_filtered)]
             gamma = (self.output_layer.interaction_weights.numpy()[:self.interact_num_filtered] 
                   * np.array([interaction_norm]).reshape([-1, 1])
                   * self.output_layer.interaction_switcher.numpy()[:self.interact_num_filtered])
-            gamma = np.vstack([gamma, np.zeros((self.interact_num - self.interact_num_filtered, 1))]) 
-
-            componment_coefs = gamma
-            if np.sum(np.abs(componment_coefs)) > 0:
-                componment_scales = (np.abs(componment_coefs) / np.sum(np.abs(componment_coefs))).reshape([-1])
-            sorted_index = np.argsort(componment_scales)[::-1]
-        else:
-            sorted_index = []
+            if np.sum(np.abs(gamma)) > 0:
+                componment_scales = (np.abs(gamma) / np.sum(np.abs(gamma))).reshape([-1])
+                sorted_index = np.argsort(componment_scales)[::-1]
         return sorted_index
     
-    def get_active_effects(self):
+    def get_rank(self):
 
         main_effect_norm = [self.maineffect_blocks.subnets[i].moving_norm.numpy()[0] for i in range(self.input_num)]
         beta = (self.output_layer.main_effect_weights.numpy() * np.array([main_effect_norm]).reshape([-1, 1]) 
@@ -242,9 +236,9 @@ class GAMINet(tf.keras.Model):
         componment_coefs = np.vstack([beta, gamma])
         componment_scales = (np.abs(componment_coefs) / np.sum(np.abs(componment_coefs))).reshape([-1])
         sorted_index = np.argsort(componment_scales)
-        active_index = sorted_index[componment_scales[sorted_index].cumsum()>0][::-1]
-        active_main_effect_index = active_index[active_index<beta.shape[0]]
-        active_interaction_index = active_index[active_index>=beta.shape[0]] - beta.shape[0]
+        active_index = sorted_index[componment_scales[sorted_index].cumsum() > 0][::-1]
+        active_main_effect_index = active_index[active_index < beta.shape[0]]
+        active_interaction_index = active_index[active_index >= beta.shape[0]] - beta.shape[0]
         return active_main_effect_index, active_interaction_index, beta, gamma, componment_scales
 
     def estimate_density(self, x):
@@ -308,12 +302,10 @@ class GAMINet(tf.keras.Model):
                 break
 
     def select_active_main_effect(self, val_x, val_y):
-        
+
         best_loss = 10 * 10
         self.main_effect_val_loss = []
-        self.output_layer.interaction_switcher.assign(tf.constant(np.zeros((self.interact_num, 1)), dtype=tf.float32))
-        self.output_layer.main_effect_switcher.assign(tf.constant(np.ones((self.input_num, 1)), dtype=tf.float32))
-        sorted_index = self.get_active_main_effect()
+        sorted_index = self.get_main_effect_rank()
         for idx, _ in enumerate(sorted_index):
             main_effect_switcher = np.zeros((self.input_num, 1))
             main_effect_switcher[sorted_index[:(idx + 1)]] = 1
@@ -435,7 +427,7 @@ class GAMINet(tf.keras.Model):
     def select_active_interaction(self, val_x, val_y):
         
         self.interaction_val_loss = []
-        sorted_index = self.get_active_interaction()
+        sorted_index = self.get_interaction_rank()        
         self.output_layer.interaction_switcher.assign(tf.constant(np.zeros((self.interact_num, 1)), dtype=tf.float32))
         best_loss = self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False) 
         for idx, _ in enumerate(sorted_index):
@@ -520,7 +512,7 @@ class GAMINet(tf.keras.Model):
             interact_output = self.interact_blocks.__call__(tf.cast(tf.constant(x), tf.float32)).numpy()
         else:
             interact_output = np.array([])
-        active_main_effect_index, active_interaction_index, beta, gamma, componment_scales = self.get_active_effects()
+        active_main_effect_index, active_interaction_index, beta, gamma, componment_scales = self.get_rank()
         scores = np.hstack([intercept[0], (np.hstack([subnet_output.ravel(), interact_output.ravel()]) 
                                            * np.hstack([beta.ravel(), gamma.ravel()]).ravel()).ravel()])
         active_indice = 1 + np.hstack([-1, active_main_effect_index, self.numerical_input_num + self.categ_variable_num + active_interaction_index])
