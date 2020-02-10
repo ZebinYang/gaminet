@@ -228,11 +228,13 @@ class GAMINet(tf.keras.Model):
         beta = (self.output_layer.main_effect_weights.numpy() * np.array([main_effect_norm]).reshape([-1, 1]) 
              * self.output_layer.main_effect_switcher.numpy())
 
-        interaction_norm = [self.interact_blocks.interacts[i].moving_norm.numpy()[0] for i in range(self.interact_num)]
-        gamma = (self.output_layer.interaction_weights.numpy()
+        interaction_norm = [self.interact_blocks.interacts[i].moving_norm.numpy()[0] for i in range(self.interact_num_filtered)]
+        gamma = (self.output_layer.interaction_weights.numpy()[:self.interact_num_filtered] 
               * np.array([interaction_norm]).reshape([-1, 1])
-              * self.output_layer.interaction_switcher.numpy())
-
+              * self.output_layer.interaction_switcher.numpy()[:self.interact_num_filtered])
+        gamma = np.vstack([gamma, np.zeros((self.interact_num - self.interact_num_filtered, 1))]) 
+        
+        
         componment_coefs = np.vstack([beta, gamma])
         componment_scales = (np.abs(componment_coefs) / np.sum(np.abs(componment_coefs))).reshape([-1])
         sorted_index = np.argsort(componment_scales)

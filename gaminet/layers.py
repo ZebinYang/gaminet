@@ -172,19 +172,20 @@ class Interactnetwork(tf.keras.layers.Layer):
     def set_interaction(self, interaction):
 
         self.interaction = interaction
-        self.length1 = len(self.meta_info[list(self.meta_info.keys())[self.interaction[0]]]['values']) \
-                    if self.interaction[0] in self.categ_index_list else self.grid_size
-        self.length2 = len(self.meta_info[list(self.meta_info.keys())[self.interaction[1]]]['values']) \
-                    if self.interaction[1] in self.categ_index_list else self.grid_size
+        if self.interaction is not None:
+            self.length1 = len(self.meta_info[list(self.meta_info.keys())[self.interaction[0]]]['values']) \
+                        if self.interaction[0] in self.categ_index_list else self.grid_size
+            self.length2 = len(self.meta_info[list(self.meta_info.keys())[self.interaction[1]]]['values']) \
+                        if self.interaction[1] in self.categ_index_list else self.grid_size
 
-        self.moving_mean1 = self.add_weight(name="mean1_"+str(self.interact_id), 
-                    shape=[self.length1], initializer=tf.zeros_initializer(), trainable=False)
-        self.moving_mean2 = self.add_weight(name="mean2_"+str(self.interact_id), 
-                    shape=[self.length2], initializer=tf.zeros_initializer(), trainable=False)
-        self.moving_mean = self.add_weight(name="mean_"+str(self.interact_id), 
-                                shape=[1], initializer=tf.zeros_initializer(), trainable=False)
-        self.moving_norm = self.add_weight(name="norm_"+str(self.interact_id),
-                                shape=[1], initializer=tf.ones_initializer(), trainable=False)
+            self.moving_mean1 = self.add_weight(name="mean1_"+str(self.interact_id), 
+                        shape=[self.length1], initializer=tf.zeros_initializer(), trainable=False)
+            self.moving_mean2 = self.add_weight(name="mean2_"+str(self.interact_id), 
+                        shape=[self.length2], initializer=tf.zeros_initializer(), trainable=False)
+            self.moving_mean = self.add_weight(name="mean_"+str(self.interact_id), 
+                                    shape=[1], initializer=tf.zeros_initializer(), trainable=False)
+            self.moving_norm = self.add_weight(name="norm_"+str(self.interact_id),
+                                    shape=[1], initializer=tf.ones_initializer(), trainable=False)
 
     def set_pdf(self, input_grid, pdf_grid):
 
