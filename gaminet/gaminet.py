@@ -47,7 +47,7 @@ class GAMINet(tf.keras.Model):
         self.interact_arch = interact_arch
         self.max_interact_num = int(round(self.input_num * (self.input_num - 1) / 2))
         self.interact_num = min(interact_num, self.max_interact_num)
-        self.interact_num_heredity = self.interact_num
+        self.interact_num_filtered = self.interact_num
         self.loss_threshold = loss_threshold
         
         self.lr_bp = lr_bp
@@ -115,7 +115,7 @@ class GAMINet(tf.keras.Model):
         if self.fit_interaction:
             self.interact_outputs = self.interact_blocks(inputs, training=interaction_training)
         else:
-            self.interact_outputs = tf.zeros([self.maineffect_outputs.shape[0], self.interact_num])
+            self.interact_outputs = tf.zeros([inputs.shape[0], self.interact_num])
 
         concat_list = [self.maineffect_outputs]
         if self.interact_num > 0:
@@ -212,10 +212,10 @@ class GAMINet(tf.keras.Model):
     
     def get_active_interactions(self):
 
-        interaction_norm = [self.interact_blocks.interacts[i].moving_norm.numpy()[0] for i in range(self.interact_num_heredity)]
-        gamma = (self.output_layer.interaction_weights.numpy()[:self.interact_num_heredity] 
+        interaction_norm = [self.interact_blocks.interacts[i].moving_norm.numpy()[0] for i in range(self.interact_num_filtered)]
+        gamma = (self.output_layer.interaction_weights.numpy()[:self.interact_num_filtered] 
               * np.array([interaction_norm]).reshape([-1, 1])
-              * self.output_layer.interaction_switcher.numpy()[:self.interact_num_heredity])
+              * self.output_layer.interaction_switcher.numpy()[:self.interact_num_filtered])
 
         componment_coefs = gamma
         componment_scales = (np.abs(componment_coefs) / np.sum(np.abs(componment_coefs))).reshape([-1])
@@ -228,10 +228,10 @@ class GAMINet(tf.keras.Model):
         beta = (self.output_layer.main_effect_weights.numpy() * np.array([main_effect_norm]).reshape([-1, 1]) 
              * self.output_layer.main_effect_switcher.numpy())
 
-        interaction_norm = [self.interact_blocks.interacts[i].moving_norm.numpy()[0] for i in range(self.interact_num_heredity)]
-        gamma = (self.output_layer.interaction_weights.numpy()[:self.interact_num_heredity] 
+        interaction_norm = [self.interact_blocks.interacts[i].moving_norm.numpy()[0] for i in range(self.interact_num_filtered)]
+        gamma = (self.output_layer.interaction_weights.numpy()[:self.interact_num_filtered] 
               * np.array([interaction_norm]).reshape([-1, 1])
-              * self.output_layer.interaction_switcher.numpy()[:self.interact_num_heredity])
+              * self.output_layer.interaction_switcher.numpy()[:self.interact_num_filtered])
 
         componment_coefs = np.vstack([beta, gamma])
         componment_scales = (np.abs(componment_coefs) / np.sum(np.abs(componment_coefs))).reshape([-1])
@@ -311,7 +311,7 @@ class GAMINet(tf.keras.Model):
             main_effect_switcher[sorted_index[:(idx + 1)]] = 1
             self.output_layer.main_effect_switcher.assign(tf.constant(main_effect_switcher, dtype=tf.float32))
             self.main_effects_val_loss.append(self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False))
-        
+
         best_main_effect_num = 0
         for idx, val_loss in enumerate(self.main_effects_val_loss): 
             if (best_loss - val_loss) / best_loss < self.loss_threshold:
@@ -362,9 +362,9 @@ class GAMINet(tf.keras.Model):
                                  if (interaction_list_all[i][0] in self.active_main_effect_index)
                                  or (interaction_list_all[i][1] in self.active_main_effect_index)][:self.interact_num]
         
-        self.interact_num_heredity = len(self.interaction_list)
+        self.interact_num_filtered = len(self.interaction_list)
         interaction_switcher = np.zeros((self.interact_num, 1))
-        interaction_switcher[:self.interact_num_heredity] = 1
+        interaction_switcher[:self.interact_num_filtered] = 1
         self.output_layer.interaction_switcher.assign(tf.constant(interaction_switcher, dtype=tf.float32))
         self.interact_blocks.set_interaction_list(self.interaction_list)
     
@@ -571,7 +571,7 @@ class GAMINet(tf.keras.Model):
                                          'inputs':subnets_inputs_original,
                                          'outputs':subnets_outputs.ravel()})
 
-        for indice in range(self.interact_num_heredity):
+        for indice in range(self.interact_num_filtered):
             
             response = []
             inter_net = self.interact_blocks.interacts[indice]

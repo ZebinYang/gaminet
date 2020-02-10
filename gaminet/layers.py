@@ -250,6 +250,7 @@ class InteractionBlock(tf.keras.layers.Layer):
 
         super(InteractionBlock, self).__init__()
         self.interact_num = interact_num
+        self.interact_num_filtered = interact_num
         self.interact_arch = interact_arch
         self.activation_func = activation_func
         self.grid_size = grid_size
@@ -279,8 +280,8 @@ class InteractionBlock(tf.keras.layers.Layer):
     def set_interaction_list(self, interaction_list):
         
         self.interaction_list = interaction_list
-        self.interact_num = len(interaction_list)
-        for i in range(self.interact_num):
+        self.interact_num_filtered = len(interaction_list)
+        for i in range(self.interact_num_filtered):
             self.interacts[i].set_interaction(interaction_list[i])
 
     def call(self, inputs, training=False):
@@ -291,7 +292,9 @@ class InteractionBlock(tf.keras.layers.Layer):
             interact_input = tf.gather(inputs, self.interaction_list[i], axis=1)
             interact_output = interact(interact_input, training=training)
             self.interact_outputs.append(interact_output)
-
+            if i >= self.interact_num_filtered:
+                self.interact_outputs.append(tf.zeros([inputs.shape[0], 1]))
+                
         if len(self.interact_outputs) > 0:
             output = tf.reshape(tf.squeeze(tf.stack(self.interact_outputs, 1)), [-1, self.interact_num])
         else:
@@ -337,7 +340,7 @@ class OutputLayer(tf.keras.layers.Layer):
     def call(self, inputs):
         self.input_main_effect = inputs[:,:self.input_num]
         if self.interact_num > 0:
-            self.input_interactions = inputs[:,-self.interact_num:]
+            self.input_interactions = inputs[:,self.input_num:]
             output = (tf.matmul(self.input_main_effect, self.main_effect_switcher * self.main_effect_weights) 
                    + tf.matmul(self.input_interactions, self.interaction_switcher * self.interaction_weights) 
                    + self.main_effect_output_bias + self.interaction_output_bias)
