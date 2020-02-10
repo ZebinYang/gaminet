@@ -100,7 +100,7 @@ class GAMINet(tf.keras.Model):
         self.output_layer = OutputLayer(input_num=self.input_num,
                                 interact_num=self.interact_num)
 
-        self.fit_interaction = False
+        self.interaction_status = False
         self.optimizer = tf.keras.optimizers.Adam(learning_rate=self.lr_bp)
         if self.task_type == 'Regression':
             self.loss_fn = tf.keras.losses.MeanSquaredError()
@@ -112,7 +112,7 @@ class GAMINet(tf.keras.Model):
     def call(self, inputs, main_effect_training=False, interaction_training=False):
 
         self.maineffect_outputs = self.maineffect_blocks(inputs, training=main_effect_training)
-        if self.fit_interaction:
+        if self.interaction_status:
             self.interact_outputs = self.interact_blocks(inputs, training=interaction_training)
         else:
             self.interact_outputs = tf.zeros([inputs.shape[0], self.interact_num])
@@ -152,7 +152,7 @@ class GAMINet(tf.keras.Model):
                                interaction_training=interaction_training))
 
     def evaluate(self, x, y, main_effect_training=False, interaction_training=False):
-        if self.fit_interaction:
+        if self.interaction_status:
             return self.evaluate_graph_inter(x, y,
                                   main_effect_training=main_effect_training,
                                   interaction_training=interaction_training).numpy()
@@ -405,7 +405,7 @@ class GAMINet(tf.keras.Model):
             self.interact_blocks.interacts[interact_id].set_pdf(np.array(input_grid, dtype=np.float32),
                                                np.array(pdf_grid, dtype=np.float32).T)
 
-        self.fit_interaction = True 
+        self.interaction_status = True 
         for epoch in range(self.interact_training_epochs):
             shuffle_index = np.arange(tr_x.shape[0])
             np.random.shuffle(shuffle_index)
