@@ -313,7 +313,7 @@ class GAMINet(tf.keras.Model):
             self.main_effects_val_loss.append(self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False))
         
         best_main_effect_num = 0
-        for val_loss in self.main_effects_val_loss: 
+        for idx, val_loss in enumerate(self.main_effects_val_loss): 
             if (best_loss - val_loss) / best_loss < self.loss_threshold:
                 break
             else:
@@ -437,7 +437,7 @@ class GAMINet(tf.keras.Model):
             self.interaction_val_loss.append(self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False))
         
         best_interact_num = 0
-        for val_loss in self.interaction_val_loss: 
+        for idx, val_loss in enumerate(self.interaction_val_loss): 
             if (best_loss - val_loss) / best_loss < self.loss_threshold:
                 break
             else:
