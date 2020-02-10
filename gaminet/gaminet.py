@@ -47,7 +47,7 @@ class GAMINet(tf.keras.Model):
         self.interact_arch = interact_arch
         self.max_interact_num = int(round(self.input_num * (self.input_num - 1) / 2))
         self.interact_num = min(interact_num, self.max_interact_num)
-        self.interact_num_filtered = self.interact_num
+        self.interact_num_filtered = 0
         self.loss_threshold = loss_threshold
         
         self.lr_bp = lr_bp
@@ -199,7 +199,7 @@ class GAMINet(tf.keras.Model):
         grads = tape.gradient(total_loss, train_weights_list)
         self.optimizer.apply_gradients(zip(grads, train_weights_list))
 
-    def get_active_main_effects(self):
+    def get_active_main_effect(self):
 
         main_effect_norm = [self.maineffect_blocks.subnets[i].moving_norm.numpy()[0] for i in range(self.input_num)]
         beta = (self.output_layer.main_effect_weights.numpy() * np.array([main_effect_norm]).reshape([-1, 1])
@@ -210,18 +210,23 @@ class GAMINet(tf.keras.Model):
         sorted_index = np.argsort(componment_scales)[::-1]
         return sorted_index
     
-    def get_active_interactions(self):
+    def get_active_interaction(self):
 
-        interaction_norm = [self.interact_blocks.interacts[i].moving_norm.numpy()[0] for i in range(self.interact_num_filtered)]
-        gamma = (self.output_layer.interaction_weights.numpy()[:self.interact_num_filtered] 
-              * np.array([interaction_norm]).reshape([-1, 1])
-              * self.output_layer.interaction_switcher.numpy()[:self.interact_num_filtered])
+        if self.interact_num_filtered > 0:
+            interaction_norm = [self.interact_blocks.interacts[i].moving_norm.numpy()[0] for i in range(self.interact_num_filtered)]
+            gamma = (self.output_layer.interaction_weights.numpy()[:self.interact_num_filtered] 
+                  * np.array([interaction_norm]).reshape([-1, 1])
+                  * self.output_layer.interaction_switcher.numpy()[:self.interact_num_filtered])
+            gamma = np.vstack([gamma, np.zeros((self.interact_num - self.interact_num_filtered, 1))]) 
 
-        componment_coefs = gamma
-        componment_scales = (np.abs(componment_coefs) / np.sum(np.abs(componment_coefs))).reshape([-1])
-        sorted_index = np.argsort(componment_scales)[::-1]
+            componment_coefs = gamma
+            if np.sum(np.abs(componment_coefs)) > 0:
+                componment_scales = (np.abs(componment_coefs) / np.sum(np.abs(componment_coefs))).reshape([-1])
+            sorted_index = np.argsort(componment_scales)[::-1]
+        else:
+            sorted_index = []
         return sorted_index
-
+    
     def get_active_effects(self):
 
         main_effect_norm = [self.maineffect_blocks.subnets[i].moving_norm.numpy()[0] for i in range(self.input_num)]
@@ -233,8 +238,7 @@ class GAMINet(tf.keras.Model):
               * np.array([interaction_norm]).reshape([-1, 1])
               * self.output_layer.interaction_switcher.numpy()[:self.interact_num_filtered])
         gamma = np.vstack([gamma, np.zeros((self.interact_num - self.interact_num_filtered, 1))]) 
-        
-        
+
         componment_coefs = np.vstack([beta, gamma])
         componment_scales = (np.abs(componment_coefs) / np.sum(np.abs(componment_coefs))).reshape([-1])
         sorted_index = np.argsort(componment_scales)
@@ -260,12 +264,12 @@ class GAMINet(tf.keras.Model):
                 self.data_dict[feature_name].update({'density':{'names':np.arange(len(self.meta_info[feature_name]['values'])),
                                                 'scores':density}})
     
-    def fit_main_effects(self, tr_x, tr_y, val_x, val_y):
+    def fit_main_effect(self, tr_x, tr_y, val_x, val_y):
         
         last_improvement = 0
         train_size = tr_x.shape[0]
-        self.err_train_main_effects_training = []
-        self.err_val_main_effects_training = []
+        self.err_train_main_effect_training = []
+        self.err_val_main_effect_training = []
         for i in range(self.input_num):
             if i in self.categ_index_list:
                 length = len(self.meta_info[self.variables_names[i]]['values'])
@@ -289,33 +293,35 @@ class GAMINet(tf.keras.Model):
                 batch_yy = tr_y[offset:(offset + self.batch_size)]
                 self.train_step_main(tf.cast(batch_xx, tf.float32), batch_yy)
 
-            self.err_train_main_effects_training.append(self.evaluate(tr_x, tr_y, main_effect_training=False, interaction_training=False))
-            self.err_val_main_effects_training.append(self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False))
+            self.err_train_main_effect_training.append(self.evaluate(tr_x, tr_y, main_effect_training=False, interaction_training=False))
+            self.err_val_main_effect_training.append(self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False))
             if self.verbose & (epoch % 1 == 0):
                 print('Main effects training epoch: %d, train loss: %0.5f, val loss: %0.5f' %
-                      (epoch + 1, self.err_train_main_effects_training[-1], self.err_val_main_effects_training[-1]))
+                      (epoch + 1, self.err_train_main_effect_training[-1], self.err_val_main_effect_training[-1]))
 
-            if self.err_val_main_effects_training[-1] < self.best_validation:
-                self.best_validation = self.err_val_main_effects_training[-1]
+            if self.err_val_main_effect_training[-1] < self.best_validation:
+                self.best_validation = self.err_val_main_effect_training[-1]
                 last_improvement = epoch
             if epoch - last_improvement > self.early_stop_thres:
                 if self.verbose:
-                    print('Early stop at epoch %d, with validation loss: %0.5f' % (epoch + 1, self.err_val_main_effects_training[-1]))
+                    print('Early stop at epoch %d, with validation loss: %0.5f' % (epoch + 1, self.err_val_main_effect_training[-1]))
                 break
 
-    def select_active_main_effects(self, val_x, val_y):
+    def select_active_main_effect(self, val_x, val_y):
         
         best_loss = 10 * 10
-        self.main_effects_val_loss = []
-        sorted_index = self.get_active_main_effects()
+        self.main_effect_val_loss = []
+        self.output_layer.interaction_switcher.assign(tf.constant(np.zeros((model.interact_num, 1)), dtype=tf.float32))
+        self.output_layer.main_effect_switcher.assign(tf.constant(np.ones((model.input_num, 1)), dtype=tf.float32))
+        sorted_index = self.get_active_main_effect()
         for idx, _ in enumerate(sorted_index):
             main_effect_switcher = np.zeros((self.input_num, 1))
             main_effect_switcher[sorted_index[:(idx + 1)]] = 1
             self.output_layer.main_effect_switcher.assign(tf.constant(main_effect_switcher, dtype=tf.float32))
-            self.main_effects_val_loss.append(self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False))
+            self.main_effect_val_loss.append(self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False))
 
         best_main_effect_num = 0
-        for idx, val_loss in enumerate(self.main_effects_val_loss): 
+        for idx, val_loss in enumerate(self.main_effect_val_loss): 
             if (best_loss - val_loss) / best_loss < self.loss_threshold:
                 break
             else:
@@ -327,11 +333,11 @@ class GAMINet(tf.keras.Model):
         main_effect_switcher[self.active_main_effect_index] = 1
         self.output_layer.main_effect_switcher.assign(tf.constant(main_effect_switcher, dtype=tf.float32))
     
-    def fine_tune_main_effects(self, tr_x, tr_y, val_x, val_y):
+    def fine_tune_main_effect(self, tr_x, tr_y, val_x, val_y):
         
         train_size = tr_x.shape[0]
-        self.err_train_main_effects_tuning = []
-        self.err_val_main_effects_tuning = []
+        self.err_train_main_effect_tuning = []
+        self.err_val_main_effect_tuning = []
         for epoch in range(self.tuning_epochs):
             shuffle_index = np.arange(tr_x.shape[0])
             np.random.shuffle(shuffle_index)
@@ -344,19 +350,19 @@ class GAMINet(tf.keras.Model):
                 batch_yy = tr_y[offset:(offset + self.batch_size)]
                 self.train_step_main(tf.cast(batch_xx, tf.float32), batch_yy)
 
-            self.err_train_main_effects_tuning.append(self.evaluate(tr_x, tr_y, main_effect_training=False, interaction_training=False))
-            self.err_val_main_effects_tuning.append(self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False))
+            self.err_train_main_effect_tuning.append(self.evaluate(tr_x, tr_y, main_effect_training=False, interaction_training=False))
+            self.err_val_main_effect_tuning.append(self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False))
             if self.verbose & (epoch % 1 == 0):
                 print('Main effects tunning epoch: %d, train loss: %0.5f, val loss: %0.5f' %
-                      (epoch + 1, self.err_train_main_effects_tuning[-1], self.err_val_main_effects_tuning[-1]))
+                      (epoch + 1, self.err_train_main_effect_tuning[-1], self.err_val_main_effect_tuning[-1]))
 
-    def filter_interactions(self, tr_x, tr_y, val_x, val_y):
+    def filter_interaction(self, tr_x, tr_y, val_x, val_y):
         
         tr_pred = self.__call__(tf.cast(tr_x, tf.float32), main_effect_training=False, interaction_training=False).numpy().astype(np.float64)
         val_pred = self.__call__(tf.cast(val_x, tf.float32), main_effect_training=False, interaction_training=False).numpy().astype(np.float64)
         interaction_list_all = get_interaction_list(tr_x, val_x, tr_y.ravel(), val_y.ravel(),
                                       tr_pred.ravel(), val_pred.ravel(),
-                                      interactions=int(round(self.input_num * (self.input_num - 1) / 2)),
+                                      interaction_num=int(round(self.input_num * (self.input_num - 1) / 2)),
                                       meta_info=self.meta_info,
                                       task_type=self.task_type)
 
@@ -370,12 +376,12 @@ class GAMINet(tf.keras.Model):
         self.output_layer.interaction_switcher.assign(tf.constant(interaction_switcher, dtype=tf.float32))
         self.interact_blocks.set_interaction_list(self.interaction_list)
     
-    def fit_interactions(self, tr_x, tr_y, val_x, val_y):
+    def fit_interaction(self, tr_x, tr_y, val_x, val_y):
         
         last_improvement = 0
         train_size = tr_x.shape[0]
-        self.err_train_interactions_training = []
-        self.err_val_interactions_training = []
+        self.err_train_interaction_training = []
+        self.err_val_interaction_training = []
         for interact_id, (idx1, idx2) in enumerate(self.interaction_list):
 
             feature_name1 = self.variables_names[idx1]
@@ -412,24 +418,24 @@ class GAMINet(tf.keras.Model):
                 batch_yy = tr_y[offset:(offset + self.batch_size)]
                 self.train_step_interact(tf.cast(batch_xx, tf.float32), batch_yy)
 
-            self.err_train_interactions_training.append(self.evaluate(tr_x, tr_y, main_effect_training=False, interaction_training=False))
-            self.err_val_interactions_training.append(self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False))
+            self.err_train_interaction_training.append(self.evaluate(tr_x, tr_y, main_effect_training=False, interaction_training=False))
+            self.err_val_interaction_training.append(self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False))
             if self.verbose & (epoch % 1 == 0):
                 print('Interaction training epoch: %d, train loss: %0.5f, val loss: %0.5f' %
-                      (epoch + 1, self.err_train_interactions_training[-1], self.err_val_interactions_training[-1]))
+                      (epoch + 1, self.err_train_interaction_training[-1], self.err_val_interaction_training[-1]))
 
-            if self.err_val_interactions_training[-1] < self.best_validation:
-                self.best_validation = self.err_val_interactions_training[-1]
+            if self.err_val_interaction_training[-1] < self.best_validation:
+                self.best_validation = self.err_val_interaction_training[-1]
                 last_improvement = epoch
             if epoch - last_improvement > self.early_stop_thres:
                 if self.verbose:
-                    print('Early stop at epoch %d, with validation loss: %0.5f' % (epoch + 1, self.err_val_interactions_training[-1]))
+                    print('Early stop at epoch %d, with validation loss: %0.5f' % (epoch + 1, self.err_val_interaction_training[-1]))
                 break
 
-    def select_active_interactions(self, val_x, val_y):
+    def select_active_interaction(self, val_x, val_y):
         
         self.interaction_val_loss = []
-        sorted_index = self.get_active_interactions()
+        sorted_index = self.get_active_interaction()
         self.output_layer.interaction_switcher.assign(tf.constant(np.zeros((self.interact_num, 1)), dtype=tf.float32))
         best_loss = self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False) 
         for idx, _ in enumerate(sorted_index):
@@ -450,15 +456,15 @@ class GAMINet(tf.keras.Model):
         interaction_switcher[self.active_interaction_index] = 1
         self.output_layer.interaction_switcher.assign(tf.constant(interaction_switcher, dtype=tf.float32))
        
-    def fine_tune_interactions(self, tr_x, tr_y, val_x, val_y):
+    def fine_tune_interaction(self, tr_x, tr_y, val_x, val_y):
         
         if len(self.active_interaction_index) == 0:
             self.output_layer.interaction_output_bias.assign(tf.constant(np.zeros((1)), dtype=tf.float32))
             return
 
         train_size = tr_x.shape[0]
-        self.err_train_interactions_tunning = []
-        self.err_val_interactions_tunning = []
+        self.err_train_interaction_tunning = []
+        self.err_val_interaction_tunning = []
         for epoch in range(self.tuning_epochs):
             shuffle_index = np.arange(train_size)
             np.random.shuffle(shuffle_index)
@@ -471,11 +477,11 @@ class GAMINet(tf.keras.Model):
                 batch_yy = tr_y[offset:(offset + self.batch_size)]
                 self.train_step_interact(tf.cast(batch_xx, tf.float32), batch_yy)
 
-            self.err_train_interactions_tunning.append(self.evaluate(tr_x, tr_y, main_effect_training=False, interaction_training=False))
-            self.err_val_interactions_tunning.append(self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False))
+            self.err_train_interaction_tunning.append(self.evaluate(tr_x, tr_y, main_effect_training=False, interaction_training=False))
+            self.err_val_interaction_tunning.append(self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False))
             if self.verbose & (epoch % 1 == 0):
                 print('Interaction tunning epoch: %d, train loss: %0.5f, val loss: %0.5f' %
-                      (epoch + 1, self.err_train_interactions_tunning[-1], self.err_val_interactions_tunning[-1]))
+                      (epoch + 1, self.err_train_interaction_tunning[-1], self.err_val_interaction_tunning[-1]))
 
     def fit(self, train_x, train_y):
         
@@ -492,15 +498,17 @@ class GAMINet(tf.keras.Model):
 
         self.best_validation = np.inf
         self.estimate_density(tr_x)
-        self.fit_main_effects(tr_x, tr_y, val_x, val_y)
-        self.select_active_main_effects(val_x, val_y)
-        self.fine_tune_main_effects(tr_x, tr_y, val_x, val_y)
+        self.fit_main_effect(tr_x, tr_y, val_x, val_y)
+        self.select_active_main_effect(val_x, val_y)
+        self.fine_tune_main_effect(tr_x, tr_y, val_x, val_y)
 
-        if self.interact_num>0:
-            self.filter_interactions(tr_x, tr_y, val_x, val_y)
-            self.fit_interactions(tr_x, tr_y, val_x, val_y)
-            self.select_active_interactions(val_x, val_y)
-            self.fine_tune_interactions(tr_x, tr_y, val_x, val_y)
+        if self.interact_num > 0:
+            self.filter_interaction(tr_x, tr_y, val_x, val_y)
+        if self.interact_num_filtered > 0:
+            self.fit_interaction(tr_x, tr_y, val_x, val_y)
+            self.select_active_interaction(val_x, val_y)
+            if len(self.active_interaction_index) > 0:
+                self.fine_tune_interaction(tr_x, tr_y, val_x, val_y)
     
     def local_explain(self, x, y=None, save_dict=False, folder='./', name='local_explain'):
         

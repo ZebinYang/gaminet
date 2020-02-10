@@ -14,7 +14,7 @@ from interpret.glassbox.ebm.internal import NativeEBM
 from interpret.glassbox.ebm.ebm import EBMPreprocessor
 
 
-def get_interaction_list(tr_x, val_x, tr_y, val_y, pred_tr, pred_val, interactions, meta_info, task_type="Regression"):
+def get_interaction_list(tr_x, val_x, tr_y, val_y, pred_tr, pred_val, interaction_num, meta_info, task_type="Regression"):
 
     if task_type == "Regression":
         num_classes_ = -1
@@ -66,7 +66,7 @@ def get_interaction_list(tr_x, val_x, tr_y, val_y, pred_tr, pred_val, interactio
             sorted(interaction_scores, key=lambda item: item[1], reverse=True)
         )
 
-    interaction_list = [ranked_scores[i][0] for i in range(interactions)]
+    interaction_list = [ranked_scores[i][0] for i in range(interaction_num)]
     return interaction_list
 
 

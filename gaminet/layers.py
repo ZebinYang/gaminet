@@ -338,13 +338,12 @@ class OutputLayer(tf.keras.layers.Layer):
                                            initializer=tf.zeros_initializer(),
                                            trainable=True)
 
-
     def call(self, inputs):
         self.input_main_effect = inputs[:,:self.input_num]
         if self.interact_num > 0:
-            self.input_interactions = inputs[:,self.input_num:]
+            self.input_interaction = inputs[:,self.input_num:]
             output = (tf.matmul(self.input_main_effect, self.main_effect_switcher * self.main_effect_weights) 
-                   + tf.matmul(self.input_interactions, self.interaction_switcher * self.interaction_weights) 
+                   + tf.matmul(self.input_interaction, self.interaction_switcher * self.interaction_weights) 
                    + self.main_effect_output_bias + self.interaction_output_bias)
         else:
             output = (tf.matmul(self.input_main_effect, self.main_effect_switcher * self.main_effect_weights) 
