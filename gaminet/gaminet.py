@@ -23,7 +23,6 @@ class GAMINet(tf.keras.Model):
                  activation_func=tf.tanh,
                  main_grid_size=101,
                  interact_grid_size=21,
-                 scale_thres_list=[0.9, 0.95, 0.99],
                  lr_bp=0.001,
                  batch_size=1000,
                  init_training_epochs=10000,
@@ -48,7 +47,6 @@ class GAMINet(tf.keras.Model):
         self.max_interact_num = int(round(self.input_num * (self.input_num - 1) / 2))
         self.interact_num = min(interact_num, self.max_interact_num)
         self.interact_num_filtered = 0
-        self.scale_thres_list = scale_thres_list
         
         self.lr_bp = lr_bp
         self.batch_size = batch_size
@@ -234,8 +232,8 @@ class GAMINet(tf.keras.Model):
 
         componment_coefs = np.vstack([beta, gamma])
         componment_scales = (np.abs(componment_coefs) / np.sum(np.abs(componment_coefs))).reshape([-1])
-        sorted_index = np.argsort(componment_scales)
-        active_index = sorted_index[componment_scales[sorted_index].cumsum() > 0][::-1]
+        sorted_index = np.argsort(componment_scales)[::-1]
+        active_index = sorted_index[componment_scales[sorted_index].cumsum() < 1]
         active_main_effect_index = active_index[active_index < beta.shape[0]]
         active_interaction_index = active_index[active_index >= beta.shape[0]] - beta.shape[0]
         return active_main_effect_index, active_interaction_index, beta, gamma, componment_scales
@@ -307,8 +305,8 @@ class GAMINet(tf.keras.Model):
         sorted_index, componment_scales = self.get_main_effect_rank()        
         self.output_layer.main_effect_switcher.assign(tf.constant(np.zeros((self.input_num, 1)), dtype=tf.float32))
         best_loss = self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False) 
-        for scale_thres in self.scale_thres_list:
-            selected_index = sorted_index[componment_scales[sorted_index].cumsum() > (1 - scale_thres)]
+        for idx in range(self.input_num):
+            selected_index = sorted_index[:(idx + 1)]
             main_effect_switcher = np.zeros((self.input_num, 1))
             main_effect_switcher[selected_index] = 1
             self.output_layer.main_effect_switcher.assign(tf.constant(main_effect_switcher, dtype=tf.float32))
@@ -429,8 +427,8 @@ class GAMINet(tf.keras.Model):
         sorted_index, componment_scales = self.get_interaction_rank()        
         self.output_layer.interaction_switcher.assign(tf.constant(np.zeros((self.interact_num, 1)), dtype=tf.float32))
         best_loss = self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False) 
-        for scale_thres in self.scale_thres_list:
-            selected_index = sorted_index[componment_scales[sorted_index].cumsum() > (1 - scale_thres)][::-1]
+        for idx in range(self.interact_num_filtered) :
+            selected_index = sorted_index[:(idx + 1)]
             interaction_switcher = np.zeros((self.interact_num, 1))
             interaction_switcher[selected_index] = 1
             self.output_layer.interaction_switcher.assign(tf.constant(interaction_switcher, dtype=tf.float32))
