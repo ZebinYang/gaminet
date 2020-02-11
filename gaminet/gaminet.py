@@ -302,6 +302,7 @@ class GAMINet(tf.keras.Model):
 
     def select_active_main_effect(self, val_x, val_y):
 
+        best_selected_index = []
         self.main_effect_val_loss = []
         sorted_index, componment_scales = self.get_main_effect_rank()        
         self.output_layer.main_effect_switcher.assign(tf.constant(np.zeros((self.input_num, 1)), dtype=tf.float32))
@@ -423,6 +424,7 @@ class GAMINet(tf.keras.Model):
 
     def select_active_interaction(self, val_x, val_y):
         
+        best_selected_index = []
         self.interaction_val_loss = []
         sorted_index, componment_scales = self.get_interaction_rank()        
         self.output_layer.interaction_switcher.assign(tf.constant(np.zeros((self.interact_num, 1)), dtype=tf.float32))
