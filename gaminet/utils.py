@@ -76,13 +76,13 @@ def local_visualize(data_dict, folder='./results/', name='demo', save_png=False,
     fig = plt.figure(figsize=(6, round((len(data_dict['active_indice']) + 1) * 0.45)))
     plt.barh(np.arange(len(data_dict['active_indice'])), data_dict['scores'][data_dict['active_indice']][::-1])
     plt.yticks(np.arange(len(data_dict['active_indice'])), data_dict['effect_names'][data_dict['active_indice']][::-1])
-    
+
     if 'actual' in data_dict.keys():
         title = 'Predicted: %0.4f | Actual: %0.4f' % (data_dict['predicted'], data_dict['actual'])  
     else:
         title = 'Predicted: %0.4f'% (data_dict['predicted'])
     plt.title(title, fontsize=12)
-    
+
     save_path = folder + name
     if (max_ids > 0) & save_eps:
         if not os.path.exists(folder):
@@ -344,26 +344,27 @@ def feature_importance(data_dict, folder='./results/', name='demo', save_png=Tru
             all_names.append(key)
             
     max_ids = len(all_names)
-    fig = plt.figure(figsize=(7, 0.4 + 0.6 * max_ids))
-    ax = plt.axes()
-    rects = ax.barh(np.arange(len(all_ir)), [ir for ir,_ in sorted(zip(all_ir, all_names))])
-    ax.set_yticks(np.arange(len(all_ir)))
-    ax.set_yticklabels([name for _,name in sorted(zip(all_ir, all_names))])
-    for rect in rects:
-        _, height = rect.get_xy()
-        ax.text(rect.get_x() + rect.get_width() + 0.005, height + 0.3,
-                '%0.3f' % (rect.get_width()))
-    plt.ylabel("Feature Name", fontsize=12)
-    plt.xlim(0, np.max(all_ir) + 0.05)
-    plt.ylim(-1, len(all_names))
-    plt.title("Feature Importance")
+    if max_ids > 0:
+        fig = plt.figure(figsize=(7, 0.4 + 0.6 * max_ids))
+        ax = plt.axes()
+        rects = ax.barh(np.arange(len(all_ir)), [ir for ir,_ in sorted(zip(all_ir, all_names))])
+        ax.set_yticks(np.arange(len(all_ir)))
+        ax.set_yticklabels([name for _,name in sorted(zip(all_ir, all_names))])
+        for rect in rects:
+            _, height = rect.get_xy()
+            ax.text(rect.get_x() + rect.get_width() + 0.005, height + 0.3,
+                    '%0.3f' % (rect.get_width()))
+        plt.ylabel("Feature Name", fontsize=12)
+        plt.xlim(0, np.max(all_ir) + 0.05)
+        plt.ylim(-1, len(all_names))
+        plt.title("Feature Importance")
 
-    save_path = folder + name
-    if (max_ids > 0) & save_eps:
-        if not os.path.exists(folder):
-            os.makedirs(folder)
-        fig.savefig('%s.eps' % save_path, bbox_inches='tight', dpi=100)
-    if (max_ids > 0) & save_png:
-        if not os.path.exists(folder):
-            os.makedirs(folder)
-        fig.savefig('%s.png' % save_path, bbox_inches='tight', dpi=100)
+        save_path = folder + name
+        if (max_ids > 0) & save_eps:
+            if not os.path.exists(folder):
+                os.makedirs(folder)
+            fig.savefig('%s.eps' % save_path, bbox_inches='tight', dpi=100)
+        if (max_ids > 0) & save_png:
+            if not os.path.exists(folder):
+                os.makedirs(folder)
+            fig.savefig('%s.png' % save_path, bbox_inches='tight', dpi=100)

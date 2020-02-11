@@ -527,7 +527,7 @@ class GAMINet(tf.keras.Model):
                    [self.variables_names[self.interaction_list[i][0]] + ' x ' 
                     + self.variables_names[self.interaction_list[i][1]] for i in range(len(self.interaction_list))]])
         
-        data_dict = {'active_indice': active_indice, 
+        data_dict = {'active_indice': active_indice.astype(int),
                  'scores': scores,
                  'effect_names': effect_names,
                  'predicted': predicted, 
