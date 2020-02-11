@@ -47,6 +47,7 @@ class GAMINet(tf.keras.Model):
         self.max_interact_num = int(round(self.input_num * (self.input_num - 1) / 2))
         self.interact_num = min(interact_num, self.max_interact_num)
         self.interact_num_filtered = 0
+        self.interaction_list = []
         
         self.lr_bp = lr_bp
         self.batch_size = batch_size
