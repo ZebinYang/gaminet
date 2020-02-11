@@ -251,7 +251,7 @@ class InteractionBlock(tf.keras.layers.Layer):
 
         super(InteractionBlock, self).__init__()
         self.interact_num = interact_num
-        self.interact_num_filtered = interact_num
+        self.interact_num_filtered = 0
         self.interact_arch = interact_arch
         self.activation_func = activation_func
         self.grid_size = grid_size
