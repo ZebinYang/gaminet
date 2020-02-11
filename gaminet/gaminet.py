@@ -238,7 +238,7 @@ class GAMINet(tf.keras.Model):
             active_main_effect_index = active_index[active_index < beta.shape[0]]
             active_interaction_index = active_index[active_index >= beta.shape[0]] - beta.shape[0]
         else:
-            componment_scales = [0 for i in range(self.interact_num_filtered)]
+            componment_scales = [0 for i in range(self.input_num + self.interact_num_filtered)]
             sorted_index = np.array([])
             active_index = np.array([])
             active_main_effect_index = np.array([])
