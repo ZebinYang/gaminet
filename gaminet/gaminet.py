@@ -349,7 +349,7 @@ class GAMINet(tf.keras.Model):
             self.err_train_main_effect_tuning.append(self.evaluate(tr_x, tr_y, main_effect_training=False, interaction_training=False))
             self.err_val_main_effect_tuning.append(self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False))
             if self.verbose & (epoch % 1 == 0):
-                print('Main effects tunning epoch: %d, train loss: %0.5f, val loss: %0.5f' %
+                print('Main effects tuning epoch: %d, train loss: %0.5f, val loss: %0.5f' %
                       (epoch + 1, self.err_train_main_effect_tuning[-1], self.err_val_main_effect_tuning[-1]))
 
     def filter_interaction(self, tr_x, tr_y, val_x, val_y):
@@ -458,8 +458,8 @@ class GAMINet(tf.keras.Model):
             return
 
         train_size = tr_x.shape[0]
-        self.err_train_interaction_tunning = []
-        self.err_val_interaction_tunning = []
+        self.err_train_interaction_tuning = []
+        self.err_val_interaction_tuning = []
         for epoch in range(self.tuning_epochs):
             shuffle_index = np.arange(train_size)
             np.random.shuffle(shuffle_index)
@@ -472,11 +472,11 @@ class GAMINet(tf.keras.Model):
                 batch_yy = tr_y[offset:(offset + self.batch_size)]
                 self.train_step_interact(tf.cast(batch_xx, tf.float32), batch_yy)
 
-            self.err_train_interaction_tunning.append(self.evaluate(tr_x, tr_y, main_effect_training=False, interaction_training=False))
-            self.err_val_interaction_tunning.append(self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False))
+            self.err_train_interaction_tuning.append(self.evaluate(tr_x, tr_y, main_effect_training=False, interaction_training=False))
+            self.err_val_interaction_tuning.append(self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False))
             if self.verbose & (epoch % 1 == 0):
-                print('Interaction tunning epoch: %d, train loss: %0.5f, val loss: %0.5f' %
-                      (epoch + 1, self.err_train_interaction_tunning[-1], self.err_val_interaction_tunning[-1]))
+                print('Interaction tuning epoch: %d, train loss: %0.5f, val loss: %0.5f' %
+                      (epoch + 1, self.err_train_interaction_tuning[-1], self.err_val_interaction_tuning[-1]))
 
     def fit(self, train_x, train_y):
         
