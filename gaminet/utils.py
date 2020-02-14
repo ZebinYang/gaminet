@@ -157,7 +157,7 @@ def global_visualize_density(data_dict, main_effect_num=10**5, interaction_num=1
                                     int(len(data_dict[feature_name]['inputs']) / 6)).astype(int)
             xtick_label = [data_dict[feature_name]['inputs'][i] for i in xtick_loc]
             if len(''.join(list(map(str, xtick_label)))) > 30:
-                xtick_label = [data_dict[feature_name]['inputs'][i][:4] for i in xtick_loc]
+                xtick_label = [str(data_dict[feature_name]['inputs'][i])[:4] for i in xtick_loc]
 
             ax2.set_xticks(xtick_loc)
             ax2.set_xticklabels(xtick_label)
@@ -282,7 +282,7 @@ def global_visualize_wo_density(data_dict, main_effect_num=10**5, interaction_nu
                                     int(len(data_dict[feature_name]['inputs']) / 6)).astype(int)
             xtick_label = [data_dict[feature_name]['inputs'][i] for i in xtick_loc]
             if len(''.join(list(map(str, xtick_label)))) > 30:
-                xtick_label = [data_dict[feature_name]['inputs'][i][:4] for i in xtick_loc]
+                xtick_label = [str(data_dict[feature_name]['inputs'][i])[:4] for i in xtick_loc]
 
             ax1.set_xticks(xtick_loc)
             ax1.set_xticklabels(xtick_label)

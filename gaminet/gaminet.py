@@ -599,7 +599,7 @@ class GAMINet(tf.keras.Model):
                              np.arange(0, len(interact_input1) - 1, int(len(interact_input1) / 6)).astype(int))
                 interact_input1_labels = [self.meta_info[feature_name1]['values'][i] for i in interact_input1_ticks]
                 if len(''.join(list(map(str, interact_input1_labels)))) > 30:
-                    interact_input1_labels = [self.meta_info[feature_name1]['values'][i][:4] for i in interact_input1_ticks]
+                    interact_input1_labels = [str(self.meta_info[feature_name1]['values'][i])[:4] for i in interact_input1_ticks]
                 interact_input_list.append(interact_input1)
                 axis_extent.extend([-0.5, len(interact_input1_original) - 0.5])
             else:
@@ -617,7 +617,7 @@ class GAMINet(tf.keras.Model):
                              np.arange(0, len(interact_input2) - 1, int(len(interact_input2) / 6)).astype(int))
                 interact_input2_labels = [self.meta_info[feature_name2]['values'][i] for i in interact_input2_ticks]
                 if len(''.join(list(map(str, interact_input2_labels)))) > 30:
-                    interact_input2_labels = [self.meta_info[feature_name2]['values'][i][:4] for i in interact_input2_ticks]
+                    interact_input2_labels = [str(self.meta_info[feature_name2]['values'][i])[:4] for i in interact_input2_ticks]
                 interact_input_list.append(interact_input2)
                 axis_extent.extend([-0.5, len(interact_input2_original) - 0.5])
             else:
