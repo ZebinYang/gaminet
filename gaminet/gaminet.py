@@ -46,7 +46,7 @@ class GAMINet(tf.keras.Model):
         self.interact_arch = interact_arch
         self.max_interact_num = int(round(self.input_num * (self.input_num - 1) / 2))
         self.interact_num = min(interact_num, self.max_interact_num)
-        self.interact_num_filtered = 0
+        self.interact_num_added = 0
         self.interaction_list = []
         
         self.lr_bp = lr_bp
@@ -161,7 +161,7 @@ class GAMINet(tf.keras.Model):
                                   interaction_training=interaction_training).numpy()
 
     @tf.function
-    def train_step_main(self, inputs, labels, main_effect_training=True, interaction_training=False):
+    def train_main_effect(self, inputs, labels, main_effect_training=True, interaction_training=False):
 
         with tf.GradientTape() as tape:
             pred = self.__call__(inputs, main_effect_training=main_effect_training,
@@ -180,7 +180,7 @@ class GAMINet(tf.keras.Model):
         self.optimizer.apply_gradients(zip(grads, train_weights_list))
 
     @tf.function
-    def train_step_interact(self, inputs, labels, main_effect_training=False, interaction_training=True):
+    def train_interaction(self, inputs, labels, main_effect_training=False, interaction_training=True):
 
         with tf.GradientTape() as tape:
             pred = self.__call__(inputs, main_effect_training=main_effect_training,
@@ -212,10 +212,10 @@ class GAMINet(tf.keras.Model):
     def get_interaction_rank(self):
 
         sorted_index = np.array([])
-        componment_scales = [0 for i in range(self.interact_num_filtered)]
-        if self.interact_num_filtered > 0:
-            interaction_norm = [self.interact_blocks.interacts[i].moving_norm.numpy()[0] for i in range(self.interact_num_filtered)]
-            gamma = (self.output_layer.interaction_weights.numpy()[:self.interact_num_filtered] 
+        componment_scales = [0 for i in range(self.interact_num_added)]
+        if self.interact_num_added > 0:
+            interaction_norm = [self.interact_blocks.interacts[i].moving_norm.numpy()[0] for i in range(self.interact_num_added)]
+            gamma = (self.output_layer.interaction_weights.numpy()[:self.interact_num_added] 
                   * np.array([interaction_norm]).reshape([-1, 1]))
             if np.sum(np.abs(gamma)) > 10**(-10):
                 componment_scales = (np.abs(gamma) / np.sum(np.abs(gamma))).reshape([-1])
@@ -228,11 +228,11 @@ class GAMINet(tf.keras.Model):
         beta = (self.output_layer.main_effect_weights.numpy() * np.array([main_effect_norm]).reshape([-1, 1]) 
              * self.output_layer.main_effect_switcher.numpy())
 
-        interaction_norm = [self.interact_blocks.interacts[i].moving_norm.numpy()[0] for i in range(self.interact_num_filtered)]
-        gamma = (self.output_layer.interaction_weights.numpy()[:self.interact_num_filtered] 
+        interaction_norm = [self.interact_blocks.interacts[i].moving_norm.numpy()[0] for i in range(self.interact_num_added)]
+        gamma = (self.output_layer.interaction_weights.numpy()[:self.interact_num_added] 
               * np.array([interaction_norm]).reshape([-1, 1])
-              * self.output_layer.interaction_switcher.numpy()[:self.interact_num_filtered])
-        gamma = np.vstack([gamma, np.zeros((self.interact_num - self.interact_num_filtered, 1))]) 
+              * self.output_layer.interaction_switcher.numpy()[:self.interact_num_added])
+        gamma = np.vstack([gamma, np.zeros((self.interact_num - self.interact_num_added, 1))]) 
 
         componment_coefs = np.vstack([beta, gamma])
         if np.sum(np.abs(componment_coefs)) > 10**(-10):
@@ -242,7 +242,7 @@ class GAMINet(tf.keras.Model):
             active_main_effect_index = active_index[active_index < beta.shape[0]]
             active_interaction_index = active_index[active_index >= beta.shape[0]] - beta.shape[0]
         else:
-            componment_scales = [0 for i in range(self.input_num + self.interact_num_filtered)]
+            componment_scales = [0 for i in range(self.input_num + self.interact_num_added)]
             sorted_index = np.array([])
             active_index = np.array([])
             active_main_effect_index = np.array([])
@@ -293,7 +293,7 @@ class GAMINet(tf.keras.Model):
                 offset = (iterations * self.batch_size) % train_size
                 batch_xx = tr_x[offset:(offset + self.batch_size), :]
                 batch_yy = tr_y[offset:(offset + self.batch_size)]
-                self.train_step_main(tf.cast(batch_xx, tf.float32), batch_yy)
+                self.train_main_effect(tf.cast(batch_xx, tf.float32), batch_yy)
 
             self.err_train_main_effect_training.append(self.evaluate(tr_x, tr_y, main_effect_training=False, interaction_training=False))
             self.err_val_main_effect_training.append(self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False))
@@ -309,7 +309,7 @@ class GAMINet(tf.keras.Model):
                     print('Early stop at epoch %d, with validation loss: %0.5f' % (epoch + 1, self.err_val_main_effect_training[-1]))
                 break
 
-    def select_active_main_effect(self, val_x, val_y):
+    def prune_main_effect(self, val_x, val_y):
 
         best_selected_index = []
         self.main_effect_val_loss = []
@@ -346,7 +346,7 @@ class GAMINet(tf.keras.Model):
                 offset = (iterations * self.batch_size) % train_size
                 batch_xx = tr_x[offset:(offset + self.batch_size), :]
                 batch_yy = tr_y[offset:(offset + self.batch_size)]
-                self.train_step_main(tf.cast(batch_xx, tf.float32), batch_yy)
+                self.train_main_effect(tf.cast(batch_xx, tf.float32), batch_yy)
 
             self.err_train_main_effect_tuning.append(self.evaluate(tr_x, tr_y, main_effect_training=False, interaction_training=False))
             self.err_val_main_effect_tuning.append(self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False))
@@ -354,7 +354,7 @@ class GAMINet(tf.keras.Model):
                 print('Main effects tuning epoch: %d, train loss: %0.5f, val loss: %0.5f' %
                       (epoch + 1, self.err_train_main_effect_tuning[-1], self.err_val_main_effect_tuning[-1]))
 
-    def filter_interaction(self, tr_x, tr_y, val_x, val_y):
+    def add_interaction(self, tr_x, tr_y, val_x, val_y):
         
         tr_pred = self.__call__(tf.cast(tr_x, tf.float32), main_effect_training=False, interaction_training=False).numpy().astype(np.float64)
         val_pred = self.__call__(tf.cast(val_x, tf.float32), main_effect_training=False, interaction_training=False).numpy().astype(np.float64)
@@ -368,9 +368,9 @@ class GAMINet(tf.keras.Model):
                                  if (interaction_list_all[i][0] in self.active_main_effect_index)
                                  or (interaction_list_all[i][1] in self.active_main_effect_index)][:self.interact_num]
         
-        self.interact_num_filtered = len(self.interaction_list)
+        self.interact_num_added = len(self.interaction_list)
         interaction_switcher = np.zeros((self.interact_num, 1))
-        interaction_switcher[:self.interact_num_filtered] = 1
+        interaction_switcher[:self.interact_num_added] = 1
         self.output_layer.interaction_switcher.assign(tf.constant(interaction_switcher, dtype=tf.float32))
         self.interact_blocks.set_interaction_list(self.interaction_list)
     
@@ -414,7 +414,7 @@ class GAMINet(tf.keras.Model):
                 offset = (iterations * self.batch_size) % train_size
                 batch_xx = tr_x[offset:(offset + self.batch_size), :]
                 batch_yy = tr_y[offset:(offset + self.batch_size)]
-                self.train_step_interact(tf.cast(batch_xx, tf.float32), batch_yy)
+                self.train_interaction(tf.cast(batch_xx, tf.float32), batch_yy)
 
             self.err_train_interaction_training.append(self.evaluate(tr_x, tr_y, main_effect_training=False, interaction_training=False))
             self.err_val_interaction_training.append(self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False))
@@ -430,7 +430,7 @@ class GAMINet(tf.keras.Model):
                     print('Early stop at epoch %d, with validation loss: %0.5f' % (epoch + 1, self.err_val_interaction_training[-1]))
                 break
 
-    def select_active_interaction(self, val_x, val_y):
+    def prune_interaction(self, val_x, val_y):
         
         best_selected_index = []
         self.interaction_val_loss = []
@@ -438,7 +438,7 @@ class GAMINet(tf.keras.Model):
         self.output_layer.interaction_switcher.assign(tf.constant(np.zeros((self.interact_num, 1)), dtype=tf.float32))
         best_loss = self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False) 
         self.interaction_val_loss.append(best_loss)
-        for idx in range(self.interact_num_filtered) :
+        for idx in range(self.interact_num_added) :
             selected_index = sorted_index[:(idx + 1)]
             interaction_switcher = np.zeros((self.interact_num, 1))
             interaction_switcher[selected_index] = 1
@@ -467,7 +467,7 @@ class GAMINet(tf.keras.Model):
                 offset = (iterations * self.batch_size) % train_size
                 batch_xx = tr_x[offset:(offset + self.batch_size), :]
                 batch_yy = tr_y[offset:(offset + self.batch_size)]
-                self.train_step_interact(tf.cast(batch_xx, tf.float32), batch_yy)
+                self.train_interaction(tf.cast(batch_xx, tf.float32), batch_yy)
 
             self.err_train_interaction_tuning.append(self.evaluate(tr_x, tr_y, main_effect_training=False, interaction_training=False))
             self.err_val_interaction_tuning.append(self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False))
@@ -502,7 +502,7 @@ class GAMINet(tf.keras.Model):
         ## step 1: main effects
         self.estimate_density(tr_x)
         self.fit_main_effect(tr_x, tr_y, val_x, val_y)
-        self.select_active_main_effect(val_x, val_y)
+        self.prune_active_main_effect(val_x, val_y)
         if len(self.active_main_effect_index) == 0:
             if self.verbose:
                 print("No main effect is selected, training stop.")
@@ -514,9 +514,9 @@ class GAMINet(tf.keras.Model):
             if self.verbose:
                 print("Max interaction is specified to zero, training stop.")
             return 
-        self.filter_interaction(tr_x, tr_y, val_x, val_y)
+        self.add_interaction(tr_x, tr_y, val_x, val_y)
         self.fit_interaction(tr_x, tr_y, val_x, val_y)
-        self.select_active_interaction(val_x, val_y)
+        self.prune_interaction(val_x, val_y)
         if len(self.active_interaction_index) == 0:
             if self.verbose:
                 print('No interaction is selected, the model returns to GAM.')
@@ -594,7 +594,7 @@ class GAMINet(tf.keras.Model):
                                          'inputs':subnets_inputs_original,
                                          'outputs':subnets_outputs.ravel()})
 
-        for indice in range(self.interact_num_filtered):
+        for indice in range(self.interact_num_added):
             
             response = []
             inter_net = self.interact_blocks.interacts[indice]
