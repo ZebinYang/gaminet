@@ -268,10 +268,7 @@ class GAMINet(tf.keras.Model):
     
     def fit_main_effect(self, tr_x, tr_y, val_x, val_y):
         
-        last_improvement = 0
-        train_size = tr_x.shape[0]
-        self.err_train_main_effect_training = []
-        self.err_val_main_effect_training = []
+        ## specify grid points
         for i in range(self.input_num):
             if i in self.categ_index_list:
                 length = len(self.meta_info[self.variables_names[i]]['values'])
@@ -283,6 +280,9 @@ class GAMINet(tf.keras.Model):
             self.maineffect_blocks.subnets[i].set_pdf(np.array(input_grid, dtype=np.float32).reshape([-1, 1]),
                                         np.array(pdf_grid, dtype=np.float32).reshape([1, -1]))
 
+        last_improvement = 0
+        train_size = tr_x.shape[0]
+        best_validation = self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False)
         for epoch in range(self.init_training_epochs):
             shuffle_index = np.arange(tr_x.shape[0])
             np.random.shuffle(shuffle_index)
@@ -301,8 +301,8 @@ class GAMINet(tf.keras.Model):
                 print('Main effects training epoch: %d, train loss: %0.5f, val loss: %0.5f' %
                       (epoch + 1, self.err_train_main_effect_training[-1], self.err_val_main_effect_training[-1]))
 
-            if self.err_val_main_effect_training[-1] < self.best_validation:
-                self.best_validation = self.err_val_main_effect_training[-1]
+            if self.err_val_main_effect_training[-1] < best_validation:
+                best_validation = self.err_val_main_effect_training[-1]
                 last_improvement = epoch
             if epoch - last_improvement > self.early_stop_thres:
                 if self.verbose:
@@ -335,8 +335,6 @@ class GAMINet(tf.keras.Model):
     def fine_tune_main_effect(self, tr_x, tr_y, val_x, val_y):
         
         train_size = tr_x.shape[0]
-        self.err_train_main_effect_tuning = []
-        self.err_val_main_effect_tuning = []
         for epoch in range(self.tuning_epochs):
             shuffle_index = np.arange(tr_x.shape[0])
             np.random.shuffle(shuffle_index)
@@ -377,10 +375,7 @@ class GAMINet(tf.keras.Model):
     
     def fit_interaction(self, tr_x, tr_y, val_x, val_y):
         
-        last_improvement = 0
-        train_size = tr_x.shape[0]
-        self.err_train_interaction_training = []
-        self.err_val_interaction_training = []
+        # specify grid points
         for interact_id, (idx1, idx2) in enumerate(self.interaction_list):
 
             feature_name1 = self.variables_names[idx1]
@@ -404,7 +399,10 @@ class GAMINet(tf.keras.Model):
             self.interact_blocks.interacts[interact_id].set_pdf(np.array(input_grid, dtype=np.float32),
                                                np.array(pdf_grid, dtype=np.float32).T)
 
+        last_improvement = 0
+        train_size = tr_x.shape[0]
         self.interaction_status = True 
+        best_validation = self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False)
         for epoch in range(self.interact_training_epochs):
             shuffle_index = np.arange(tr_x.shape[0])
             np.random.shuffle(shuffle_index)
@@ -423,8 +421,8 @@ class GAMINet(tf.keras.Model):
                 print('Interaction training epoch: %d, train loss: %0.5f, val loss: %0.5f' %
                       (epoch + 1, self.err_train_interaction_training[-1], self.err_val_interaction_training[-1]))
 
-            if self.err_val_interaction_training[-1] < self.best_validation:
-                self.best_validation = self.err_val_interaction_training[-1]
+            if self.err_val_interaction_training[-1] < best_validation:
+                best_validation = self.err_val_interaction_training[-1]
                 last_improvement = epoch
             if epoch - last_improvement > self.early_stop_thres:
                 if self.verbose:
@@ -457,14 +455,6 @@ class GAMINet(tf.keras.Model):
     def fine_tune_interaction(self, tr_x, tr_y, val_x, val_y):
         
         train_size = tr_x.shape[0]
-        self.err_train_interaction_tuning = []
-        self.err_val_interaction_tuning = []
-        if len(self.active_interaction_index) == 0:
-            self.output_layer.interaction_output_bias.assign(tf.constant(np.zeros((1)), dtype=tf.float32))
-            if self.verbose:
-                print('No interaction is selected, the model returns to GAM.')
-            return
-
         for epoch in range(self.tuning_epochs):
             shuffle_index = np.arange(train_size)
             np.random.shuffle(shuffle_index)
@@ -485,6 +475,7 @@ class GAMINet(tf.keras.Model):
 
     def fit(self, train_x, train_y):
         
+        ## data loading
         n_samples = train_x.shape[0]
         indices = np.arange(n_samples)
         if self.task_type == 'Regression':
@@ -496,22 +487,40 @@ class GAMINet(tf.keras.Model):
         self.tr_idx = tr_idx
         self.val_idx = val_idx
 
-        self.best_validation = np.inf
+        ## initialization
+        self.err_train_main_effect_training = []
+        self.err_val_main_effect_training = []
+        self.err_train_main_effect_tuning = []
+        self.err_val_main_effect_tuning = []
+        self.err_train_interaction_training = []
+        self.err_val_interaction_training = []
+        self.err_train_interaction_tuning = []
+        self.err_val_interaction_tuning = []
+
+        ## step 1: main effects
         self.estimate_density(tr_x)
         self.fit_main_effect(tr_x, tr_y, val_x, val_y)
         self.select_active_main_effect(val_x, val_y)
         if len(self.active_main_effect_index) == 0:
-            print("No main effect is selected, training stop.")
+            if self.verbose:
+                print("No main effect is selected, training stop.")
             return 
         self.fine_tune_main_effect(tr_x, tr_y, val_x, val_y)
-        
-        if self.interact_num > 0:
-            self.filter_interaction(tr_x, tr_y, val_x, val_y)
-        if self.interact_num_filtered > 0:
-            self.fit_interaction(tr_x, tr_y, val_x, val_y)
-            self.select_active_interaction(val_x, val_y)
-            if len(self.active_interaction_index) > 0:
-                self.fine_tune_interaction(tr_x, tr_y, val_x, val_y)
+
+        ## step2: interaction
+        if self.interact_num == 0:
+            if self.verbose:
+                print("Max interaction is specified to zero, training stop.")
+            return 
+        self.filter_interaction(tr_x, tr_y, val_x, val_y)
+        self.fit_interaction(tr_x, tr_y, val_x, val_y)
+        self.select_active_interaction(val_x, val_y)
+        if len(self.active_interaction_index) == 0:
+            if self.verbose:
+                print('No interaction is selected, the model returns to GAM.')
+            self.output_layer.interaction_output_bias.assign(tf.constant(np.zeros((1)), dtype=tf.float32))
+            return
+        self.fine_tune_interaction(tr_x, tr_y, val_x, val_y)
     
     def local_explain(self, x, y=None, save_dict=False, folder='./', name='local_explain'):
         
