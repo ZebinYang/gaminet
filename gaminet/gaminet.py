@@ -283,6 +283,8 @@ class GAMINet(tf.keras.Model):
         last_improvement = 0
         train_size = tr_x.shape[0]
         best_validation = self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False)
+        self.err_train_main_effect_training.append(self.evaluate(tr_x, tr_y, main_effect_training=False, interaction_training=False))
+        self.err_val_main_effect_training.append(self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False))
         for epoch in range(self.init_training_epochs):
             shuffle_index = np.arange(tr_x.shape[0])
             np.random.shuffle(shuffle_index)
@@ -335,6 +337,8 @@ class GAMINet(tf.keras.Model):
     def fine_tune_main_effect(self, tr_x, tr_y, val_x, val_y):
         
         train_size = tr_x.shape[0]
+        self.err_train_main_effect_tuning.append(self.evaluate(tr_x, tr_y, main_effect_training=False, interaction_training=False))
+        self.err_val_main_effect_tuning.append(self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False))
         for epoch in range(self.tuning_epochs):
             shuffle_index = np.arange(tr_x.shape[0])
             np.random.shuffle(shuffle_index)
@@ -403,6 +407,8 @@ class GAMINet(tf.keras.Model):
         train_size = tr_x.shape[0]
         self.interaction_status = True 
         best_validation = self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False)
+        self.err_train_interaction_training.append(self.evaluate(tr_x, tr_y, main_effect_training=False, interaction_training=False))
+        self.err_val_interaction_training.append(self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False))
         for epoch in range(self.interact_training_epochs):
             shuffle_index = np.arange(tr_x.shape[0])
             np.random.shuffle(shuffle_index)
@@ -455,6 +461,8 @@ class GAMINet(tf.keras.Model):
     def fine_tune_interaction(self, tr_x, tr_y, val_x, val_y):
         
         train_size = tr_x.shape[0]
+        self.err_train_interaction_tuning.append(self.evaluate(tr_x, tr_y, main_effect_training=False, interaction_training=False))
+        self.err_val_interaction_tuning.append(self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False))
         for epoch in range(self.tuning_epochs):
             shuffle_index = np.arange(train_size)
             np.random.shuffle(shuffle_index)
