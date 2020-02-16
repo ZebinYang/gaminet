@@ -150,11 +150,11 @@ def global_visualize_density(data_dict, main_effect_num=10**5, interaction_num=1
                     data_dict[feature_name]['density']['scores'])
             ax1.get_shared_x_axes().join(ax1, ax2)
 
-            if len(data_dict[feature_name]['inputs']) <= 12:
+            if len(data_dict[feature_name]['inputs']) <= 4:
                 xtick_loc = np.arange(len(data_dict[feature_name]['inputs']))
             else:
                 xtick_loc = np.arange(0, len(data_dict[feature_name]['inputs']) - 1,
-                                    int(len(data_dict[feature_name]['inputs']) / 6)).astype(int)
+                                    int(len(data_dict[feature_name]['inputs']) / 4)).astype(int)
             xtick_label = [data_dict[feature_name]['inputs'][i] for i in xtick_loc]
             if len(''.join(list(map(str, xtick_label)))) > 30:
                 xtick_label = [str(data_dict[feature_name]['inputs'][i])[:4] for i in xtick_loc]
@@ -275,11 +275,11 @@ def global_visualize_wo_density(data_dict, main_effect_num=10**5, interaction_nu
             ax1.bar(np.arange(len(data_dict[feature_name]['inputs'])),
                         data_dict[feature_name]['outputs'])
             ax1.set_title(feature_name, fontsize=12)
-            if len(data_dict[feature_name]['inputs']) <= 12:
+            if len(data_dict[feature_name]['inputs']) <= 4:
                 xtick_loc = np.arange(len(data_dict[feature_name]['inputs']))
             else:
                 xtick_loc = np.arange(0, len(data_dict[feature_name]['inputs']) - 1,
-                                    int(len(data_dict[feature_name]['inputs']) / 6)).astype(int)
+                                    int(len(data_dict[feature_name]['inputs']) / 4)).astype(int)
             xtick_label = [data_dict[feature_name]['inputs'][i] for i in xtick_loc]
             if len(''.join(list(map(str, xtick_label)))) > 30:
                 xtick_label = [str(data_dict[feature_name]['inputs'][i])[:4] for i in xtick_loc]
