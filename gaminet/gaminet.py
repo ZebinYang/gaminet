@@ -1,4 +1,4 @@
-import os
+ import os
 import numpy as np
 import pandas as pd 
 import tensorflow as tf
@@ -281,10 +281,8 @@ class GAMINet(tf.keras.Model):
                                         np.array(pdf_grid, dtype=np.float32).reshape([1, -1]))
 
         last_improvement = 0
+        best_validation = np.inf
         train_size = tr_x.shape[0]
-        best_validation = self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False)
-        self.err_train_main_effect_training.append(self.evaluate(tr_x, tr_y, main_effect_training=False, interaction_training=False))
-        self.err_val_main_effect_training.append(self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False))
         for epoch in range(self.init_training_epochs):
             shuffle_index = np.arange(tr_x.shape[0])
             np.random.shuffle(shuffle_index)
@@ -318,6 +316,7 @@ class GAMINet(tf.keras.Model):
         sorted_index, componment_scales = self.get_main_effect_rank()        
         self.output_layer.main_effect_switcher.assign(tf.constant(np.zeros((self.input_num, 1)), dtype=tf.float32))
         best_loss = self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False) 
+        self.main_effect_val_loss.append(best_loss)
         for idx in range(self.input_num):
             selected_index = sorted_index[:(idx + 1)]
             main_effect_switcher = np.zeros((self.input_num, 1))
@@ -337,8 +336,6 @@ class GAMINet(tf.keras.Model):
     def fine_tune_main_effect(self, tr_x, tr_y, val_x, val_y):
         
         train_size = tr_x.shape[0]
-        self.err_train_main_effect_tuning.append(self.evaluate(tr_x, tr_y, main_effect_training=False, interaction_training=False))
-        self.err_val_main_effect_tuning.append(self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False))
         for epoch in range(self.tuning_epochs):
             shuffle_index = np.arange(tr_x.shape[0])
             np.random.shuffle(shuffle_index)
@@ -404,11 +401,9 @@ class GAMINet(tf.keras.Model):
                                                np.array(pdf_grid, dtype=np.float32).T)
 
         last_improvement = 0
+        best_validation = np.inf
         train_size = tr_x.shape[0]
         self.interaction_status = True 
-        best_validation = self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False)
-        self.err_train_interaction_training.append(self.evaluate(tr_x, tr_y, main_effect_training=False, interaction_training=False))
-        self.err_val_interaction_training.append(self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False))
         for epoch in range(self.interact_training_epochs):
             shuffle_index = np.arange(tr_x.shape[0])
             np.random.shuffle(shuffle_index)
@@ -442,6 +437,7 @@ class GAMINet(tf.keras.Model):
         sorted_index, componment_scales = self.get_interaction_rank()        
         self.output_layer.interaction_switcher.assign(tf.constant(np.zeros((self.interact_num, 1)), dtype=tf.float32))
         best_loss = self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False) 
+        self.interaction_val_loss.append(best_loss)
         for idx in range(self.interact_num_filtered) :
             selected_index = sorted_index[:(idx + 1)]
             interaction_switcher = np.zeros((self.interact_num, 1))
@@ -461,8 +457,6 @@ class GAMINet(tf.keras.Model):
     def fine_tune_interaction(self, tr_x, tr_y, val_x, val_y):
         
         train_size = tr_x.shape[0]
-        self.err_train_interaction_tuning.append(self.evaluate(tr_x, tr_y, main_effect_training=False, interaction_training=False))
-        self.err_val_interaction_tuning.append(self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False))
         for epoch in range(self.tuning_epochs):
             shuffle_index = np.arange(train_size)
             np.random.shuffle(shuffle_index)

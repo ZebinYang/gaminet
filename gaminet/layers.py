@@ -60,8 +60,8 @@ class NumerNet(tf.keras.layers.Layer):
         self.pdf_grid = None
         
         for nodes in self.subnet_arch:
-            self.layers.append(layers.Dense(nodes, activation=self.activation_func, kernel_initializer=tf.keras.initializers.GlorotNormal()))
-        self.output_layer = layers.Dense(1, activation=tf.identity, kernel_initializer=tf.keras.initializers.GlorotNormal())
+            self.layers.append(layers.Dense(nodes, activation=self.activation_func, kernel_initializer=tf.keras.initializers.Orthogonal()))
+        self.output_layer = layers.Dense(1, activation=tf.identity, kernel_initializer=tf.keras.initializers.Orthogonal())
         self.moving_mean = self.add_weight(name="mean"+str(self.subnet_id), shape=[1], initializer=tf.zeros_initializer(), trainable=False)
         self.moving_norm = self.add_weight(name="norm"+str(self.subnet_id), shape=[1], initializer=tf.ones_initializer(), trainable=False)
 
@@ -149,9 +149,9 @@ class Interactnetwork(tf.keras.layers.Layer):
 
         for nodes in self.interact_arch:
             self.layers.append(layers.Dense(nodes, activation=self.activation_func, 
-                                  kernel_initializer=tf.keras.initializers.GlorotNormal()))
+                                  kernel_initializer=tf.keras.initializers.Orthogonal()))
         self.output_layer = layers.Dense(1, activation=tf.identity,
-                              kernel_initializer=tf.keras.initializers.GlorotNormal())
+                              kernel_initializer=tf.keras.initializers.Orthogonal())
         self.interaction = None
 
     def onehot_encoding(self, inputs):
@@ -314,7 +314,7 @@ class OutputLayer(tf.keras.layers.Layer):
 
         self.main_effect_weights = self.add_weight(name="subnet_weights",
                                               shape=[self.input_num, 1],
-                                              initializer=tf.keras.initializers.GlorotNormal(),
+                                              initializer=tf.keras.initializers.Orthogonal(),
                                               trainable=True)
         self.main_effect_switcher = self.add_weight(name="subnet_switcher",
                                               shape=[self.input_num, 1],
@@ -323,7 +323,7 @@ class OutputLayer(tf.keras.layers.Layer):
         
         self.interaction_weights = self.add_weight(name="interaction_weights",
                                               shape=[self.interact_num, 1],
-                                              initializer=tf.keras.initializers.GlorotNormal(),
+                                              initializer=tf.keras.initializers.Orthogonal(),
                                               trainable=True)
         self.interaction_switcher = self.add_weight(name="interaction_switcher",
                                               shape=[self.interact_num, 1],
