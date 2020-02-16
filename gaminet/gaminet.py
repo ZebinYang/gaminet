@@ -462,7 +462,7 @@ class GAMINet(tf.keras.Model):
         if len(self.active_interaction_index) == 0:
             self.output_layer.interaction_output_bias.assign(tf.constant(np.zeros((1)), dtype=tf.float32))
             if self.verbose:
-                print('No interaction is selected, the model returns to GAM.)
+                print('No interaction is selected, the model returns to GAM.')
             return
 
         for epoch in range(self.tuning_epochs):
