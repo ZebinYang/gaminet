@@ -502,7 +502,7 @@ class GAMINet(tf.keras.Model):
         ## step 1: main effects
         self.estimate_density(tr_x)
         self.fit_main_effect(tr_x, tr_y, val_x, val_y)
-        self.prune_active_main_effect(val_x, val_y)
+        self.prune_main_effect(val_x, val_y)
         if len(self.active_main_effect_index) == 0:
             if self.verbose:
                 print("No main effect is selected, training stop.")
