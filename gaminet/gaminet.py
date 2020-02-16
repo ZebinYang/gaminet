@@ -456,13 +456,15 @@ class GAMINet(tf.keras.Model):
        
     def fine_tune_interaction(self, tr_x, tr_y, val_x, val_y):
         
-        if len(self.active_interaction_index) == 0:
-            self.output_layer.interaction_output_bias.assign(tf.constant(np.zeros((1)), dtype=tf.float32))
-            return
-
         train_size = tr_x.shape[0]
         self.err_train_interaction_tuning = []
         self.err_val_interaction_tuning = []
+        if len(self.active_interaction_index) == 0:
+            self.output_layer.interaction_output_bias.assign(tf.constant(np.zeros((1)), dtype=tf.float32))
+            if self.verbose:
+                print('No interaction is selected, the model returns to GAM.)
+            return
+
         for epoch in range(self.tuning_epochs):
             shuffle_index = np.arange(train_size)
             np.random.shuffle(shuffle_index)
