@@ -16,18 +16,18 @@ from .utils import global_visualize_wo_density
 class GAMINet(tf.keras.Model):
 
     def __init__(self, meta_info,
-                 subnet_arch=[10, 6],
+                 subnet_arch=[20, 10],
                  interact_num=10,
-                 interact_arch=[100, 60],
+                 interact_arch=[20, 10],
                  task_type='Regression',
                  activation_func=tf.tanh,
-                 main_grid_size=101,
-                 interact_grid_size=21,
+                 main_grid_size=41,
+                 interact_grid_size=41,
                  lr_bp=0.001,
-                 batch_size=1000,
-                 init_training_epochs=10000,
-                 interact_training_epochs=1000,
-                 tuning_epochs=500,
+                 batch_size=500,
+                 main_effect_epochs=2000,
+                 interaction_epochs=2000,
+                 tuning_epochs=50,
                  verbose=False,
                  val_ratio=0.2,
                  early_stop_thres=100,
@@ -52,8 +52,8 @@ class GAMINet(tf.keras.Model):
         self.lr_bp = lr_bp
         self.batch_size = batch_size
         self.tuning_epochs = tuning_epochs
-        self.init_training_epochs = init_training_epochs
-        self.interact_training_epochs = interact_training_epochs
+        self.main_effect_epochs = main_effect_epochs
+        self.interaction_epochs = interaction_epochs
 
         self.verbose = verbose
         self.val_ratio = val_ratio
@@ -283,7 +283,7 @@ class GAMINet(tf.keras.Model):
         last_improvement = 0
         best_validation = np.inf
         train_size = tr_x.shape[0]
-        for epoch in range(self.init_training_epochs):
+        for epoch in range(self.main_effect_epochs):
             shuffle_index = np.arange(tr_x.shape[0])
             np.random.shuffle(shuffle_index)
             tr_x = tr_x[shuffle_index]
@@ -404,7 +404,7 @@ class GAMINet(tf.keras.Model):
         best_validation = np.inf
         train_size = tr_x.shape[0]
         self.interaction_status = True 
-        for epoch in range(self.interact_training_epochs):
+        for epoch in range(self.interaction_epochs):
             shuffle_index = np.arange(tr_x.shape[0])
             np.random.shuffle(shuffle_index)
             tr_x = tr_x[shuffle_index]
