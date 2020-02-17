@@ -132,8 +132,6 @@ def global_visualize_density(data_dict, main_effect_num=10**5, interaction_num=1
             ax1.get_shared_x_axes().join(ax1, ax2)
             ax2.set_yticklabels([])
             fig.add_subplot(ax2)
-            if len(str(ax2.get_xticks())) > 80:
-                ax2.xaxis.set_tick_params(rotation=20)
 
         elif data_dict[feature_name]['type'] == 'categorical':
 
@@ -150,23 +148,14 @@ def global_visualize_density(data_dict, main_effect_num=10**5, interaction_num=1
                     data_dict[feature_name]['density']['scores'])
             ax1.get_shared_x_axes().join(ax1, ax2)
 
-            if len(data_dict[feature_name]['inputs']) <= 4:
-                xtick_loc = np.arange(len(data_dict[feature_name]['inputs']))
-            else:
-                xtick_loc = np.arange(0, len(data_dict[feature_name]['inputs']) - 1,
-                                    int(len(data_dict[feature_name]['inputs']) / 4)).astype(int)
-            xtick_label = [data_dict[feature_name]['inputs'][i] for i in xtick_loc]
-            if len(''.join(list(map(str, xtick_label)))) > 30:
-                xtick_label = [str(data_dict[feature_name]['inputs'][i])[:4] for i in xtick_loc]
-
-            ax2.set_xticks(xtick_loc)
-            ax2.set_xticklabels(xtick_label)
+            ax2.set_xticks(data_dict[feature_name]['input_ticks'])
+            ax2.set_xticklabels(data_dict[feature_name]['input_labels'])
             ax2.set_yticklabels([])
             fig.add_subplot(ax2)
-            if len(str(ax2.get_xticks())) > 80:
-                ax2.xaxis.set_tick_params(rotation=20)
-
+            
         idx = idx + 1
+        if len(str(ax2.get_xticks())) > 60:
+            ax2.xaxis.set_tick_params(rotation=20)
         ax1.set_title(feature_name + ' (' + str(np.round(100 * data_dict[feature_name]['importance'], 1)) + '%)', fontsize=12)
 
     for indice in active_interaction_index:
@@ -275,22 +264,13 @@ def global_visualize_wo_density(data_dict, main_effect_num=10**5, interaction_nu
             ax1.bar(np.arange(len(data_dict[feature_name]['inputs'])),
                         data_dict[feature_name]['outputs'])
             ax1.set_title(feature_name, fontsize=12)
-            if len(data_dict[feature_name]['inputs']) <= 4:
-                xtick_loc = np.arange(len(data_dict[feature_name]['inputs']))
-            else:
-                xtick_loc = np.arange(0, len(data_dict[feature_name]['inputs']) - 1,
-                                    int(len(data_dict[feature_name]['inputs']) / 4)).astype(int)
-            xtick_label = [data_dict[feature_name]['inputs'][i] for i in xtick_loc]
-            if len(''.join(list(map(str, xtick_label)))) > 30:
-                xtick_label = [str(data_dict[feature_name]['inputs'][i])[:4] for i in xtick_loc]
-
-            ax1.set_xticks(xtick_loc)
-            ax1.set_xticklabels(xtick_label)
+            ax2.set_xticks(data_dict[feature_name]['input_ticks'])
+            ax2.set_xticklabels(data_dict[feature_name]['input_labels'])
             fig.add_subplot(ax1)
-            if len(str(ax1.get_xticks())) > 80:
-                ax1.xaxis.set_tick_params(rotation=20)
-
+        
         idx = idx + 1
+        if len(str(ax1.get_xticks())) > 60:
+            ax1.xaxis.set_tick_params(rotation=20)
         ax1.set_title(feature_name + ' (' + str(np.round(100 * data_dict[feature_name]['importance'], 1)) + '%)', fontsize=12)
 
     for indice in active_interaction_index:
@@ -318,10 +298,11 @@ def global_visualize_wo_density(data_dict, main_effect_num=10**5, interaction_nu
 
         ax_main.set_title(feature_name + ' (' + str(np.round(100 * data_dict[feature_name]['importance'], 1)) + '%)', fontsize=12)
         fig.add_subplot(ax_main)
+        
+        idx = idx + 1
         if len(str(ax_main.get_xticks())) > 60:
                 ax_main.xaxis.set_tick_params(rotation=20)
         
-        idx = idx + 1
 
     save_path = folder + name
     if (max_ids > 0) & save_eps:

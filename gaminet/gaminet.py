@@ -573,26 +573,35 @@ class GAMINet(tf.keras.Model):
             subnet = self.maineffect_blocks.subnets[indice]
             if indice in self.numerical_index_list:
                 sx = self.meta_info[feature_name]['scaler']
-                subnets_inputs = np.linspace(0, 1, main_grid_size).reshape([-1, 1])
-                subnets_inputs_original = sx.inverse_transform(subnets_inputs)
-                subnets_outputs = (self.output_layer.main_effect_weights.numpy()[indice]
+                main_effect_inputs = np.linspace(0, 1, main_grid_size).reshape([-1, 1])
+                main_effect_inputs_original = sx.inverse_transform(subnets_inputs)
+                main_effect_outputs = (self.output_layer.main_effect_weights.numpy()[indice]
                             * self.output_layer.main_effect_switcher.numpy()[indice]
                             * subnet.__call__(tf.cast(tf.constant(subnets_inputs), tf.float32)).numpy())
                 data_dict[feature_name].update({'type':'continuous',
-                                         'importance':componment_scales[indice],
-                                         'inputs':subnets_inputs_original.ravel(),
-                                         'outputs':subnets_outputs.ravel()})
-                
+                                      'importance':componment_scales[indice],
+                                      'inputs':main_effect_inputs_original.ravel(),
+                                      'outputs':main_effect_outputs.ravel()})
+
             elif indice in self.categ_index_list:
-                subnets_inputs = np.arange(len(self.meta_info[feature_name]['values'])).reshape([-1, 1])
-                subnets_inputs_original = self.meta_info[feature_name]['values']
-                subnets_outputs = (self.output_layer.main_effect_weights.numpy()[indice]
+                main_effect_inputs_original = self.meta_info[feature_name]['values']
+                main_effect_inputs = np.arange(len(main_effect_inputs_original)).reshape([-1, 1])
+                main_effect_outputs = (self.output_layer.main_effect_weights.numpy()[indice]
                             * self.output_layer.main_effect_switcher.numpy()[indice]
                             * subnet.__call__(tf.cast(subnets_inputs, tf.float32)).numpy())
+                
+                main_effect_input_ticks = (main_effect_inputs.astype(int) if len(main_effect_inputs) < 7 else 
+                                  np.linspace(0.1 * len(main_effect_inputs), len(main_effect_inputs) * 0.9, 4).astype(int))
+                main_effect_input_labels = [main_effect_inputs_original[i] for i in main_effect_input_ticks]
+                if len(''.join(list(map(str, main_effect_input_labels)))) > 30:
+                    main_effect_input_labels = [str(main_effect_inputs_original[i])[:4] for i in main_effect_input_ticks]
+
                 data_dict[feature_name].update({'type':'categorical',
-                                         'importance':componment_scales[indice],
-                                         'inputs':subnets_inputs_original,
-                                         'outputs':subnets_outputs.ravel()})
+                                      'importance':componment_scales[indice],
+                                      'inputs':main_effect_inputs_original,
+                                      'outputs':main_effect_outputs.ravel(),
+                                      'input_ticks':main_effect_input_ticks,
+                                      'input_labels':main_effect_input_labels})
 
         for indice in range(self.interact_num_added):
             
@@ -606,13 +615,13 @@ class GAMINet(tf.keras.Model):
             axis_extent = []
             interact_input_list = []
             if feature_name1 in self.categ_variable_list:
-                interact_input1 = np.arange(len(self.meta_info[feature_name1]['values']), dtype=np.float32)
                 interact_input1_original = self.meta_info[feature_name1]['values']
-                interact_input1_ticks = (interact_input1.astype(int) if len(interact_input1) <= 4 else 
-                             np.arange(0, len(interact_input1) - 1, int(len(interact_input1) / 4)).astype(int))
-                interact_input1_labels = [self.meta_info[feature_name1]['values'][i] for i in interact_input1_ticks]
+                interact_input1 = np.arange(len(interact_input1_original), dtype=np.float32)
+                interact_input1_ticks = (interact_input1.astype(int) if len(interact_input1) < 7 else 
+                                 np.linspace(0.1 * len(interact_input1), len(interact_input1) * 0.9, 4).astype(int))
+                interact_input1_labels = [interact_input1_original[i] for i in interact_input1_ticks]
                 if len(''.join(list(map(str, interact_input1_labels)))) > 30:
-                    interact_input1_labels = [str(self.meta_info[feature_name1]['values'][i])[:4] for i in interact_input1_ticks]
+                    interact_input1_labels = [str(interact_input1_original[i])[:4] for i in interact_input1_ticks]
                 interact_input_list.append(interact_input1)
                 axis_extent.extend([-0.5, len(interact_input1_original) - 0.5])
             else:
@@ -624,13 +633,13 @@ class GAMINet(tf.keras.Model):
                 interact_input_list.append(interact_input1)
                 axis_extent.extend([interact_input1_original.min(), interact_input1_original.max()])
             if feature_name2 in self.categ_variable_list:
-                interact_input2 = np.arange(len(self.meta_info[feature_name2]['values']), dtype=np.float32)
                 interact_input2_original = self.meta_info[feature_name2]['values']
-                interact_input2_ticks = (interact_input2.astype(int) if len(interact_input2) <= 4 else 
-                             np.arange(0, len(interact_input2) - 1, int(len(interact_input2) / 4)).astype(int))
-                interact_input2_labels = [self.meta_info[feature_name2]['values'][i] for i in interact_input2_ticks]
+                interact_input2 = np.arange(len(interact_input2_original), dtype=np.float32)
+                interact_input2_ticks = (interact_input2.astype(int) if len(interact_input2) < 7 else 
+                                 np.linspace(0.1 * len(interact_input2), len(interact_input2) * 0.9, 4).astype(int))
+                interact_input2_labels = [interact_input2_original[i] for i in interact_input2_ticks]
                 if len(''.join(list(map(str, interact_input2_labels)))) > 30:
-                    interact_input2_labels = [str(self.meta_info[feature_name2]['values'][i])[:4] for i in interact_input2_ticks]
+                    interact_input2_labels = [str(interact_input2_original[i])[:4] for i in interact_input2_ticks]
                 interact_input_list.append(interact_input2)
                 axis_extent.extend([-0.5, len(interact_input2_original) - 0.5])
             else:
