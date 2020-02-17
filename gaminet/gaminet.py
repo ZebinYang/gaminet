@@ -28,6 +28,7 @@ class GAMINet(tf.keras.Model):
                  main_effect_epochs=2000,
                  interaction_epochs=2000,
                  tuning_epochs=50,
+                 loss_threshold=0.01,
                  verbose=False,
                  val_ratio=0.2,
                  early_stop_thres=100,
@@ -48,6 +49,7 @@ class GAMINet(tf.keras.Model):
         self.interact_num = min(interact_num, self.max_interact_num)
         self.interact_num_added = 0
         self.interaction_list = []
+        self.loss_threshold = loss_threshold
         
         self.lr_bp = lr_bp
         self.batch_size = batch_size
@@ -311,7 +313,6 @@ class GAMINet(tf.keras.Model):
 
     def prune_main_effect(self, val_x, val_y):
 
-        best_selected_index = []
         self.main_effect_val_loss = []
         sorted_index, componment_scales = self.get_main_effect_rank()        
         self.output_layer.main_effect_switcher.assign(tf.constant(np.zeros((self.input_num, 1)), dtype=tf.float32))
@@ -328,7 +329,7 @@ class GAMINet(tf.keras.Model):
                 best_selected_index = selected_index
                 best_loss = val_loss
 
-        self.active_main_effect_index = best_selected_index
+        self.active_main_effect_index = np.where((best_loss / np.min(best_loss) - 1) < self.loss_threshold)[0][0]
         main_effect_switcher = np.zeros((self.input_num, 1))
         main_effect_switcher[self.active_main_effect_index] = 1
         self.output_layer.main_effect_switcher.assign(tf.constant(main_effect_switcher, dtype=tf.float32))
@@ -432,7 +433,6 @@ class GAMINet(tf.keras.Model):
 
     def prune_interaction(self, val_x, val_y):
         
-        best_selected_index = []
         self.interaction_val_loss = []
         sorted_index, componment_scales = self.get_interaction_rank()        
         self.output_layer.interaction_switcher.assign(tf.constant(np.zeros((self.interact_num, 1)), dtype=tf.float32))
@@ -446,10 +446,9 @@ class GAMINet(tf.keras.Model):
             val_loss = self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False)
             self.interaction_val_loss.append(val_loss)
             if best_loss > val_loss:
-                best_selected_index = selected_index
                 best_loss = val_loss
 
-        self.active_interaction_index = best_selected_index
+        self.active_interaction_index = np.where((best_loss / np.min(best_loss) - 1) < self.loss_threshold)[0][0]
         interaction_switcher = np.zeros((self.interact_num, 1))
         interaction_switcher[self.active_interaction_index] = 1
         self.output_layer.interaction_switcher.assign(tf.constant(interaction_switcher, dtype=tf.float32))
