@@ -590,7 +590,7 @@ class GAMINet(tf.keras.Model):
                             * self.output_layer.main_effect_switcher.numpy()[indice]
                             * subnet.__call__(tf.cast(subnets_inputs, tf.float32)).numpy())
                 
-                main_effect_input_ticks = (main_effect_inputs.astype(int) if len(main_effect_inputs) < 7 else 
+                main_effect_input_ticks = (main_effect_inputs.astype(int) if len(main_effect_inputs) <= 6 else 
                                   np.linspace(0.1 * len(main_effect_inputs), len(main_effect_inputs) * 0.9, 4).astype(int))
                 main_effect_input_labels = [main_effect_inputs_original[i] for i in main_effect_input_ticks]
                 if len(''.join(list(map(str, main_effect_input_labels)))) > 30:
@@ -617,7 +617,7 @@ class GAMINet(tf.keras.Model):
             if feature_name1 in self.categ_variable_list:
                 interact_input1_original = self.meta_info[feature_name1]['values']
                 interact_input1 = np.arange(len(interact_input1_original), dtype=np.float32)
-                interact_input1_ticks = (interact_input1.astype(int) if len(interact_input1) < 7 else 
+                interact_input1_ticks = (interact_input1.astype(int) if len(interact_input1) <= 6 else 
                                  np.linspace(0.1 * len(interact_input1), len(interact_input1) * 0.9, 4).astype(int))
                 interact_input1_labels = [interact_input1_original[i] for i in interact_input1_ticks]
                 if len(''.join(list(map(str, interact_input1_labels)))) > 30:
@@ -635,7 +635,7 @@ class GAMINet(tf.keras.Model):
             if feature_name2 in self.categ_variable_list:
                 interact_input2_original = self.meta_info[feature_name2]['values']
                 interact_input2 = np.arange(len(interact_input2_original), dtype=np.float32)
-                interact_input2_ticks = (interact_input2.astype(int) if len(interact_input2) < 7 else 
+                interact_input2_ticks = (interact_input2.astype(int) if len(interact_input2) <= 6 else 
                                  np.linspace(0.1 * len(interact_input2), len(interact_input2) * 0.9, 4).astype(int))
                 interact_input2_labels = [interact_input2_original[i] for i in interact_input2_ticks]
                 if len(''.join(list(map(str, interact_input2_labels)))) > 30:
