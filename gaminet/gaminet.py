@@ -574,10 +574,10 @@ class GAMINet(tf.keras.Model):
             if indice in self.numerical_index_list:
                 sx = self.meta_info[feature_name]['scaler']
                 main_effect_inputs = np.linspace(0, 1, main_grid_size).reshape([-1, 1])
-                main_effect_inputs_original = sx.inverse_transform(subnets_inputs)
+                main_effect_inputs_original = sx.inverse_transform(main_effect_inputs)
                 main_effect_outputs = (self.output_layer.main_effect_weights.numpy()[indice]
                             * self.output_layer.main_effect_switcher.numpy()[indice]
-                            * subnet.__call__(tf.cast(tf.constant(subnets_inputs), tf.float32)).numpy())
+                            * subnet.__call__(tf.cast(tf.constant(main_effect_inputs), tf.float32)).numpy())
                 data_dict[feature_name].update({'type':'continuous',
                                       'importance':componment_scales[indice],
                                       'inputs':main_effect_inputs_original.ravel(),
@@ -588,10 +588,10 @@ class GAMINet(tf.keras.Model):
                 main_effect_inputs = np.arange(len(main_effect_inputs_original)).reshape([-1, 1])
                 main_effect_outputs = (self.output_layer.main_effect_weights.numpy()[indice]
                             * self.output_layer.main_effect_switcher.numpy()[indice]
-                            * subnet.__call__(tf.cast(subnets_inputs, tf.float32)).numpy())
+                            * subnet.__call__(tf.cast(main_effect_inputs, tf.float32)).numpy())
                 
-                main_effect_input_ticks = (main_effect_inputs.astype(int) if len(main_effect_inputs) <= 6 else 
-                                  np.linspace(0.1 * len(main_effect_inputs), len(main_effect_inputs) * 0.9, 4).astype(int))
+                main_effect_input_ticks = (main_effect_inputs.ravel().astype(int) if len(main_effect_inputs_original) <= 6 else 
+                              np.linspace(0.1 * len(main_effect_inputs_original), len(main_effect_inputs_original) * 0.9, 4).astype(int))
                 main_effect_input_labels = [main_effect_inputs_original[i] for i in main_effect_input_ticks]
                 if len(''.join(list(map(str, main_effect_input_labels)))) > 30:
                     main_effect_input_labels = [str(main_effect_inputs_original[i])[:4] for i in main_effect_input_ticks]
