@@ -9,8 +9,6 @@ from sklearn.model_selection import train_test_split
 
 from .layers import *
 from .utils import get_interaction_list
-from .utils import global_visualize_density
-from .utils import global_visualize_wo_density
 
 
 class GAMINet(tf.keras.Model):
