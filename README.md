@@ -17,7 +17,7 @@ You can install the package by the following console command:
 ```shell
 pip install git+https://github.com/zebinyang/gaminet.git
 ```
-        
+
 ### Manual Installation
 
 If git is not available, you can manually install the package by downloading the source codes and then compiling it by hand:
@@ -143,8 +143,10 @@ Visualization
 ```python 
 data_dict = gaminet.global_explain(save_dict=False, folder=simu_dir, name='demo_gaminet_simu1_global')
 global_visualize_wo_density(data_dict)
-feature_importance(data_dict)
 ```
+ ![global_visu_demo](https://github.com/ZebinYang/seqmml/blob/master/examples/s1_model.png)
+
+
 References
 ----------
 Yang, Zebin, Aijun Zhang, and Agus Sudjianto. "GAMI-Net: An Explainable Neural Network based on Generalized Additive Models with Structured Interactions." 2020.
