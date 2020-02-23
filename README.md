@@ -2,25 +2,18 @@
 
 ## Installation 
 
-### Prerequisite
-
 The following environments are required:
 
 - Python 3.7 (anaconda is preferable)
 - tensorflow 2.0
 
 
-### Github Installation
-
-You can install the package by the following console command:
-
+Github Installation
 ```shell
 pip install git+https://github.com/zebinyang/gaminet.git
 ```
 
-### Manual Installation
-
-If git is not available, you can manually install the package by downloading the source codes and then compiling it by hand:
+Manual Installation
 
 - Download the source codes from https://github.com/ZebinYang/gaminet.git.
 
@@ -163,14 +156,14 @@ Feature Importance
 ```python 
 feature_importance_visualize(data_dict, save_png=True, folder=simu_dir, name='s1_feature')
 ```
-![feature_visu_demo](https://github.com/ZebinYang/gaminet/blob/master/examples/results/s1_feature.png){:height="24px" width="48px"}
+![feature_visu_demo](https://github.com/ZebinYang/gaminet/blob/master/examples/results/s1_feature.png | width=48)
 
 Local Visualization
 ```python 
 data_dict_local = model.local_explain(train_x[[0]], train_y[[0]], save_dict=False)
 local_visualize(data_dict_local, save_png=True, folder=simu_dir, name='s1_local')
 ```
-![local_visu_demo](https://github.com/ZebinYang/gaminet/blob/master/examples/results/s1_local.png)
+![local_visu_demo](https://github.com/ZebinYang/gaminet/blob/master/examples/results/s1_local.png | width=48)
 
 
 References
