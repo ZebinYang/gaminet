@@ -1,5 +1,4 @@
-# GAMIxNN
-# Enhanced Explainable-Neural-Networks
+#  Generalized additive model with pairwise interactions (GAMI-Net)
 
 ## Installation 
 
@@ -16,14 +15,14 @@ The following environments are required:
 You can install the package by the following console command:
 
 ```shell
-pip install git+https://github.com/zebinyang/exnn.git
+pip install git+https://github.com/zebinyang/gaminet.git
 ```
         
 ### Manual Installation
 
 If git is not available, you can manually install the package by downloading the source codes and then compiling it by hand:
 
-- Download the source codes from https://github.com/ZebinYang/exnn.git.
+- Download the source codes from https://github.com/ZebinYang/gaminet.git.
 
 - unzip and switch to the root folder.
 
