@@ -83,7 +83,7 @@ class GAMINet(tf.keras.Model):
                 self.numerical_index_list.append(indice)
                 self.numerical_variable_list.append(feature_name)
             self.variables_names.append(feature_name)
-            self.data_dict.update({feature_name:{}})
+            
         # build
         self.maineffect_blocks = MainEffectBlock(meta_info=self.meta_info,
                                  numerical_index_list=list(self.numerical_index_list),
@@ -252,6 +252,7 @@ class GAMINet(tf.keras.Model):
         
         self.density = []
         n_samples = x.shape[0]
+        self.data_dict_density = {}
         for indice in range(self.input_num):
             feature_name = list(self.variables_names)[indice]
             if indice in self.numerical_index_list:
@@ -263,7 +264,7 @@ class GAMINet(tf.keras.Model):
                 density = np.zeros((len(self.meta_info[feature_name]['values'])))
                 density[unique.astype(int)] = counts / n_samples
                 self.data_dict_density[feature_name].update({'density':{'names':np.arange(len(self.meta_info[feature_name]['values'])),
-                                                'scores':density}})
+                                                     'scores':density}})
     
     def fit_main_effect(self, tr_x, tr_y, val_x, val_y):
         
