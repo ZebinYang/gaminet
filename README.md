@@ -41,7 +41,6 @@ Import library
 import os
 import numpy as np
 import tensorflow as tf
-from matplotlib import pyplot as plt
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
 
@@ -84,10 +83,10 @@ def data_generator1(datanum, random_state=0):
         y = 10 * np.exp(term1 + term2)
         return  y
 
-    y = -3 + (8 * (x1 - 0.5) ** 2
-           + 0.1 * np.exp(-8 * x2 + 4)
-           + 3 * np.sin(2 * np.pi * x3 * x4)
-           + cliff(x5, x6)).reshape([-1,1]) + 1 * np.random.normal(0, 1, [datanum, 1])
+    y = (8 * (x1 - 0.5) ** 2
+        + 0.1 * np.exp(-8 * x2 + 4)
+        + 3 * np.sin(2 * np.pi * x3 * x4)
+        + cliff(x5, x6)).reshape([-1,1]) + 1 * np.random.normal(0, 1, [datanum, 1])
 
     task_type = "Regression"
     meta_info = {"X1":{"type":'continuous'},
@@ -141,14 +140,23 @@ gaminet_stat = np.hstack([np.round(get_metric(tr_y, pred_train),5),
 print(gaminet_stat)
 ```
 
-Global Visualization
+Training Logs
 ```python 
 simu_dir = "./results/"
 if not os.path.exists(simu_dir):
     os.makedirs(simu_dir)
 
+data_dict_logs = model.summary_logs(save_dict=False)
+plot_trajectory(data_dict_logs, folder=simu_dir, name="s1_traj_plot", log_scale=True, save_png=True, save_eps=False)
+plot_regularization(data_dict_logs, folder=simu_dir, name="s1_regu_plot", log_scale=True, save_png=True, save_eps=False)
+```
+![global_visu_demo](https://github.com/ZebinYang/gaminet/blob/master/examples/results/s1_regu_plot.png)
+![global_visu_demo](https://github.com/ZebinYang/gaminet/blob/master/examples/results/s1_traj_plot.png)
+
+Global Visualization
+```python 
 data_dict = model.global_explain(save_dict=False)
-global_visualize_wo_density(data_dict, save_png=True, folder=simu_dir, name='s1_global')
+global_visualize_density(data_dict, save_png=True, folder=simu_dir, name='s1_global')
 ```
 ![global_visu_demo](https://github.com/ZebinYang/gaminet/blob/master/examples/results/s1_global.png)
 
@@ -160,19 +168,10 @@ feature_importance_visualize(data_dict, save_png=True, folder=simu_dir, name='s1
 
 Local Visualization
 ```python 
-data_dict = gaminet.global_explain(save_dict=False, folder=simu_dir, name='demo_gaminet_simu1_global')
-global_visualize_wo_density(data_dict) # global_visualize_density(data_dict) will provide the density plot
+data_dict_local = model.local_explain(train_x[[0]], train_y[[0]], save_dict=False)
+local_visualize(data_dict_local, save_png=True, folder=simu_dir, name='s1_local')
 ```
 ![global_visu_demo](https://github.com/ZebinYang/gaminet/blob/master/examples/results/s1_local.png)
-
-Training Logs
-```python 
-data_dict_logs = model.summary_logs(save_dict=False)
-plot_trajectory(data_dict_logs, folder=simu_dir, name="s1_traj_plot", log_scale=True, save_png=True, save_eps=False)
-plot_regularization(data_dict_logs, folder=simu_dir, name="s1_regu_plot", log_scale=True, save_png=True, save_eps=False)
-```
-![global_visu_demo](https://github.com/ZebinYang/gaminet/blob/master/examples/results/s1_regu_plot.png)
-![global_visu_demo](https://github.com/ZebinYang/gaminet/blob/master/examples/results/s1_traj_plot.png)
 
 
 References
