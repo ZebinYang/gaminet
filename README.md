@@ -1,4 +1,5 @@
-#  GAMI-Net: Generalized additive model with pairwise interactions
+#  GAMI-Net
+Generalized additive model with pairwise interactions
 
 ## Installation 
 
