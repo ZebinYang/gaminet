@@ -150,28 +150,11 @@ def plot_trajectory(data_dict_logs, log_scale=True, save_eps=False, save_png=Fal
     offset1x = (0.15 - len(t1) / len(t1 + t2 + t3 + t4)) * 300
     offset2x = (0.5 - len(t1 + t2) / len(t1 + t2 + t3 + t4)) * 300
     offset3x = (0.85 - len(t1 + t2 + t3) / len(t1 + t2 + t3 + t4)) * 300
-    
-    offset1y = 65 if t1[-1] < 0.8 * np.max(t1 + t2 + t3 + t4) else -65
-    offset2y = 65 if t2[-1] < 0.8 * np.max(t1 + t2 + t3 + t4) else -65
-    offset3y = 65 if t3[-1] < 0.8 * np.max(t1 + t2 + t3 + t4) else -65
 
     fig = plt.figure(figsize=(14, 4))
     ax1 = plt.subplot(1, 2, 1)
     ax1.plot(np.arange(1, len(t1 + t2) + 1, 1), t1 + t2, color="r")
     ax1.plot(np.arange(len(t1 + t2) + 1, len(t1 + t2 + t3 + t4) + 1, 1), t3 + t4, color="b")
-    if len(t2) > 0:
-        ax1.annotate("Prune \n Main Effects", ((len(t1) + 1), t1[-1]), xycoords="data",
-                 xytext=(offset1x, offset1y), textcoords="offset pixels", arrowprops=dict(facecolor="black", shrink=0.1), fontsize=10,
-                 horizontalalignment="center", verticalalignment="top")
-    if len(t3) > 0:
-        ax1.annotate("Add \n Interactions", ((len(t1 + t2) + 1), t2[-1]), xycoords="data",
-                     xytext=(offset2x, offset2y), textcoords="offset pixels", arrowprops=dict(facecolor="black", shrink=0.1), fontsize=10,
-                     horizontalalignment="center", verticalalignment="top")
-    if len(t4) > 0:
-        ax1.annotate("Prune \n Interactions", ((len(t1 + t2 + t3) + 1), t3[-1]), xycoords="data",
-            xytext=(offset3x, offset3y), textcoords="offset pixels", arrowprops=dict(facecolor="black", shrink=0.1), fontsize=10,
-                horizontalalignment="center", verticalalignment="top")
-    ax1.legend(["Stage 1: Training Main Effects", "Stage 2: Training Interactions"])
     if log_scale:
         ax1.set_yscale("log")
         ax1.set_yticks((10 ** np.linspace(np.log10(np.nanmin(t1 + t2 + t3 + t4)), np.log10(np.nanmax(t1 + t2 + t3 + t4)), 5)).round(5))
@@ -179,33 +162,44 @@ def plot_trajectory(data_dict_logs, log_scale=True, save_eps=False, save_png=Fal
         ax1.get_yaxis().set_minor_formatter(matplotlib.ticker.NullFormatter())
         ax1.set_xlabel("Number of Epochs", fontsize=12)
         ax1.set_ylabel("Training Loss (Log Scale)", fontsize=12)
+        hp1 = (np.log10(t1[-1]) - np.log10(np.min(t1 + t2 + t3 + t4)) 
+            / (np.log10(np.max(t1 + t2 + t3 + t4)) - np.log10(np.min(t1 + t2 + t3 + t4))))
+        hp2 = ((np.log10((t1 + t2)[-1]) - np.log10(np.min(t1 + t2 + t3 + t4))) 
+            / (np.log10(np.max(t1 + t2 + t3 + t4)) - np.log10(np.min(t1 + t2 + t3 + t4))))
+        hp2 = ((np.log10((t1 + t2 + t3)[-1]) - np.log10(np.min(t1 + t2 + t3 + t4))) 
+            / (np.log10(np.max(t1 + t2 + t3 + t4)) - np.log10(np.min(t1 + t2 + t3 + t4))))
     else:
         ax1.set_yticks((np.linspace(np.nanmin(t1 + t2), np.nanmax(t1 + t2), 5)).round(5))
         ax1.get_yaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
         ax1.get_yaxis().set_minor_formatter(matplotlib.ticker.NullFormatter())
         ax1.set_xlabel("Number of Epochs", fontsize=12)
         ax1.set_ylabel("Training Loss", fontsize=12)
+        hp1 = t1[-1] / np.max(t1 + t2 + t3 + t4)
+        hp2 = (t1 + t2)[-1] / np.max(t1 + t2 + t3 + t4)
+        hp3 = (t1 + t2 + t3)[-1] / np.max(t1 + t2 + t3 + t4)
+        
+    offset1y = 65 if hp1 < 0.8 else -65
+    offset2y = 65 if hp2 < 0.8 else -65
+    offset3y = 65 if hp3 < 0.8 else -65
 
-    offset1y = 65 if v1[-1] < 0.8 * np.max(v1 + v2 + v3 + v4) else -65
-    offset2y = 65 if v2[-1] < 0.8 * np.max(v1 + v2 + v3 + v4) else -65
-    offset3y = 65 if v3[-1] < 0.8 * np.max(v1 + v2 + v3 + v4) else -65
+    if len(t2) > 0:
+        ax1.annotate("Prune \n Main Effects", ((len(t1) + 1), t1[-1]), xycoords="data",
+                 xytext=(offset1x, offset1y), textcoords="offset pixels", arrowprops=dict(facecolor="black", shrink=0.1), fontsize=10,
+                 horizontalalignment="center", verticalalignment="top")
+    if len(t3) > 0:
+        ax1.annotate("Add \n Interactions", ((len(t1 + t2) + 1), (t1 + t2)[-1]), xycoords="data",
+                 xytext=(offset2x, offset2y), textcoords="offset pixels", arrowprops=dict(facecolor="black", shrink=0.1), fontsize=10,
+                 horizontalalignment="center", verticalalignment="top")
+    if len(t4) > 0:
+        ax1.annotate("Prune \n Interactions", ((len(t1 + t2 + t3) + 1), (t1 + t2 + t3)[-1]), xycoords="data",
+                xytext=(offset3x, offset3y), textcoords="offset pixels", arrowprops=dict(facecolor="black", shrink=0.1), fontsize=10,
+                horizontalalignment="center", verticalalignment="top")
+    ax1.legend(["Stage 1: Training Main Effects", "Stage 2: Training Interactions"])
 
     ax2 = plt.subplot(1, 2, 2)
     ax2.plot(np.arange(1, len(v1) + 1, 1), v1, color="r")
     ax2.plot(np.arange(1, len(v1 + v2) + 1, 1), v1 + v2, color="r")
     ax2.plot(np.arange(len(v1 + v2) + 1, len(v1 + v2 + v3 + v4) + 1, 1), v3 + v4, color="b")
-    if len(v2) > 0:
-        ax2.annotate("Prune \n Main Effects", ((len(v1) + 1), v1[-1]), xycoords="data",
-            xytext=(offset1x, offset1y), textcoords="offset pixels", arrowprops=dict(facecolor="black", shrink=0.1), fontsize=10,
-            horizontalalignment="center", verticalalignment="top")
-    if len(v3) > 0:
-        ax2.annotate("Add \n Interactions", ((len(v1 + v2) + 1), v2[-1]), xycoords="data",
-            xytext=(offset2x, offset2y), textcoords="offset pixels", arrowprops=dict(facecolor="black", shrink=0.1), fontsize=10,
-            horizontalalignment="center", verticalalignment="top")
-    if len(v4) > 0:
-        ax2.annotate("Prune \n Interactions", ((len(v1 + v2 + v3) + 1), v3[-1]), xycoords="data",
-            xytext=(offset3x, offset3y), textcoords="offset pixels", arrowprops=dict(facecolor="black", shrink=0.1), fontsize=10,
-                horizontalalignment="center", verticalalignment="top")
     ax2.legend(["Stage 1: Training Main Effects", "Stage 2: Training Interactions"])
     if log_scale:
         ax2.set_yscale("log")
@@ -214,12 +208,37 @@ def plot_trajectory(data_dict_logs, log_scale=True, save_eps=False, save_png=Fal
         ax2.get_yaxis().set_minor_formatter(matplotlib.ticker.NullFormatter())
         ax2.set_xlabel("Number of Epochs", fontsize=12)
         ax2.set_ylabel("Validation Loss (Log Scale)", fontsize=12)
+        hp1 = (np.log10(v1[-1]) - np.log10(np.min(v1 + v2 + v3 + v4)) 
+            / (np.log10(np.max(v1 + v2 + v3 + v4)) - np.log10(np.min(v1 + v2 + v3 + v4))))
+        hp2 = ((np.log10((v1 + v2)[-1]) - np.log10(np.min(v1 + v2 + v3 + v4))) 
+            / (np.log10(np.max(v1 + v2 + v3 + v4)) - np.log10(np.min(v1 + v2 + v3 + v4))))
+        hp2 = ((np.log10((v1 + v2 + v3)[-1]) - np.log10(np.min(v1 + v2 + v3 + v4))) 
+            / (np.log10(np.max(v1 + v2 + v3 + v4)) - np.log10(np.min(v1 + v2 + v3 + v4))))
     else:
         ax2.set_yticks((np.linspace(np.nanmin(v1 + v2 + v3 + v4), np.nanmax(v1 + v2 + v3 + v4), 5)).round(5))
         ax2.get_yaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
         ax2.get_yaxis().set_minor_formatter(matplotlib.ticker.NullFormatter())
         ax2.set_xlabel("Number of Epochs", fontsize=12)
         ax2.set_ylabel("Validation Loss", fontsize=12)
+        hp1 = v1[-1] / np.max(v1 + v2 + v3 + v4)
+        hp2 = (v1 + v2)[-1] / np.max(v1 + v2 + v3 + v4)
+        hp3 = (v1 + v2 + v3)[-1] / np.max(v1 + v2 + v3 + v4)
+        
+    offset1y = 65 if hp1 < 0.8 else -65
+    offset2y = 65 if hp2 < 0.8 else -65
+    offset3y = 65 if hp3 < 0.8 else -65
+    if len(v2) > 0:
+        ax2.annotate("Prune \n Main Effects", ((len(v1) + 1), v1[-1]), xycoords="data",
+                xytext=(offset1x, offset1y), textcoords="offset pixels", arrowprops=dict(facecolor="black", shrink=0.1), fontsize=10,
+                horizontalalignment="center", verticalalignment="top")
+    if len(v3) > 0:
+        ax2.annotate("Add \n Interactions", ((len(v1 + v2) + 1), (v1 + v2)[-1]), xycoords="data",
+                xytext=(offset2x, offset2y), textcoords="offset pixels", arrowprops=dict(facecolor="black", shrink=0.1), fontsize=10,
+                horizontalalignment="center", verticalalignment="top")
+    if len(v4) > 0:
+        ax2.annotate("Prune \n Interactions", ((len(v1 + v2 + v3) + 1), (v1 + v2 + v3)[-1]), xycoords="data",
+                xytext=(offset3x, offset3y), textcoords="offset pixels", arrowprops=dict(facecolor="black", shrink=0.1), fontsize=10,
+                horizontalalignment="center", verticalalignment="top")
     plt.show()
     
     save_path = folder + name
