@@ -3,7 +3,10 @@ import numpy as np
 import pandas as pd 
 from contextlib import closing
 from itertools import combinations
+
+import matplotlib
 from matplotlib import pyplot as plt
+from matplotlib.ticker import MaxNLocator
 from matplotlib import gridspec as gridspec
 
 from sklearn.model_selection import train_test_split 
