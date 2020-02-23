@@ -1,4 +1,4 @@
-#  Generalized additive model with pairwise interactions (GAMI-Net)
+#  GAMI-Net: Generalized additive model with pairwise interactions
 
 ## Installation 
 
@@ -47,7 +47,6 @@ from sklearn.model_selection import train_test_split
 from gaminet import GAMINet
 from gaminet.utils import local_visualize
 from gaminet.utils import global_visualize_density
-from gaminet.utils import global_visualize_wo_density
 from gaminet.utils import feature_importance_visualize
 from gaminet.utils import plot_trajectory
 from gaminet.utils import plot_regularization
@@ -150,8 +149,8 @@ data_dict_logs = model.summary_logs(save_dict=False)
 plot_trajectory(data_dict_logs, folder=simu_dir, name="s1_traj_plot", log_scale=True, save_png=True, save_eps=False)
 plot_regularization(data_dict_logs, folder=simu_dir, name="s1_regu_plot", log_scale=True, save_png=True, save_eps=False)
 ```
-![global_visu_demo](https://github.com/ZebinYang/gaminet/blob/master/examples/results/s1_regu_plot.png)
-![global_visu_demo](https://github.com/ZebinYang/gaminet/blob/master/examples/results/s1_traj_plot.png)
+![traj_visu_demo](https://github.com/ZebinYang/gaminet/blob/master/examples/results/s1_traj_plot.png)
+![regu_visu_demo](https://github.com/ZebinYang/gaminet/blob/master/examples/results/s1_regu_plot.png)
 
 Global Visualization
 ```python 
@@ -164,14 +163,14 @@ Feature Importance
 ```python 
 feature_importance_visualize(data_dict, save_png=True, folder=simu_dir, name='s1_feature')
 ```
-![global_visu_demo](https://github.com/ZebinYang/gaminet/blob/master/examples/results/s1_feature.png)
+![feature_visu_demo](https://github.com/ZebinYang/gaminet/blob/master/examples/results/s1_feature.png){:height="24px" width="48px"}
 
 Local Visualization
 ```python 
 data_dict_local = model.local_explain(train_x[[0]], train_y[[0]], save_dict=False)
 local_visualize(data_dict_local, save_png=True, folder=simu_dir, name='s1_local')
 ```
-![global_visu_demo](https://github.com/ZebinYang/gaminet/blob/master/examples/results/s1_local.png)
+![local_visu_demo](https://github.com/ZebinYang/gaminet/blob/master/examples/results/s1_local.png)
 
 
 References
