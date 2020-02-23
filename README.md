@@ -144,7 +144,7 @@ Visualization
 data_dict = gaminet.global_explain(save_dict=False, folder=simu_dir, name='demo_gaminet_simu1_global')
 global_visualize_wo_density(data_dict)
 ```
- ![global_visu_demo](https://github.com/ZebinYang/seqmml/blob/master/examples/s1_model.png)
+ ![global_visu_demo](https://github.com/ZebinYang/gaminet/blob/master/examples/s1_model.png)
 
 
 References
