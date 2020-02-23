@@ -606,7 +606,7 @@ class GAMINet(tf.keras.Model):
             save_path = folder + name
             np.save("%s.npy" % save_path, data_dict_log)
             
-        return data_dict_global
+        return data_dict_log
 
     def global_explain(self, main_grid_size=None, interact_grid_size=None, save_dict=False, folder="./", name="global_explain"):
 
