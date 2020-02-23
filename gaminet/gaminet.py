@@ -258,13 +258,13 @@ class GAMINet(tf.keras.Model):
             if indice in self.numerical_index_list:
                 sx = self.meta_info[feature_name]['scaler']
                 density, bins = np.histogram(sx.inverse_transform(x[:,[indice]]), bins=10, density=True)
-                self.data_dict_density[feature_name].update({'density':{'names':bins,'scores':density}})
+                self.data_dict_density.update({feature_name:{'density':{'names':bins,'scores':density}}})
             elif indice in self.categ_index_list:
                 unique, counts = np.unique(x[:, indice], return_counts=True)
                 density = np.zeros((len(self.meta_info[feature_name]['values'])))
                 density[unique.astype(int)] = counts / n_samples
-                self.data_dict_density[feature_name].update({'density':{'names':np.arange(len(self.meta_info[feature_name]['values'])),
-                                                     'scores':density}})
+                self.data_dict_density.update({feature_name:{'density':{'names':np.arange(len(self.meta_info[feature_name]['values'])),
+                                                     'scores':density}}})
     
     def fit_main_effect(self, tr_x, tr_y, val_x, val_y):
         
