@@ -162,7 +162,7 @@ def plot_trajectory(data_dict_logs, log_scale=True, save_eps=False, save_png=Fal
         ax1.get_yaxis().set_minor_formatter(matplotlib.ticker.NullFormatter())
         ax1.set_xlabel("Number of Epochs", fontsize=12)
         ax1.set_ylabel("Training Loss (Log Scale)", fontsize=12)
-        hp1 = (np.log10(t1[-1]) - np.log10(np.min(t1 + t2 + t3 + t4)) 
+        hp1 = ((np.log10(t1[-1]) - np.log10(np.min(t1 + t2 + t3 + t4))) 
             / (np.log10(np.max(t1 + t2 + t3 + t4)) - np.log10(np.min(t1 + t2 + t3 + t4))))
         hp2 = ((np.log10((t1 + t2)[-1]) - np.log10(np.min(t1 + t2 + t3 + t4))) 
             / (np.log10(np.max(t1 + t2 + t3 + t4)) - np.log10(np.min(t1 + t2 + t3 + t4))))
@@ -174,13 +174,13 @@ def plot_trajectory(data_dict_logs, log_scale=True, save_eps=False, save_png=Fal
         ax1.get_yaxis().set_minor_formatter(matplotlib.ticker.NullFormatter())
         ax1.set_xlabel("Number of Epochs", fontsize=12)
         ax1.set_ylabel("Training Loss", fontsize=12)
-        hp1 = t1[-1] / np.max(t1 + t2 + t3 + t4)
-        hp2 = (t1 + t2)[-1] / np.max(t1 + t2 + t3 + t4)
-        hp3 = (t1 + t2 + t3)[-1] / np.max(t1 + t2 + t3 + t4)
+        hp1 = (t1[-1] - np.min(t1 + t2 + t3 + t4)) / (np.max(t1 + t2 + t3 + t4) - np.min(t1 + t2 + t3 + t4))
+        hp2 = ((t1 + t2)[-1] - np.min(t1 + t2 + t3 + t4)) / (np.max(t1 + t2 + t3 + t4) - np.min(t1 + t2 + t3 + t4))
+        hp3 = ((t1 + t2 + t3)[-1] - np.min(t1 + t2 + t3 + t4)) / (np.max(t1 + t2 + t3 + t4) - np.min(t1 + t2 + t3 + t4))
         
-    offset1y = 65 if hp1 < 0.8 else -65
-    offset2y = 65 if hp2 < 0.8 else -65
-    offset3y = 65 if hp3 < 0.8 else -65
+    offset1y = 65 if hp1 < 0.6 else -65
+    offset2y = 65 if hp2 < 0.6 else -65
+    offset3y = 65 if hp3 < 0.6 else -65
 
     if len(t2) > 0:
         ax1.annotate("Prune \n Main Effects", ((len(t1) + 1), t1[-1]), xycoords="data",
@@ -208,7 +208,7 @@ def plot_trajectory(data_dict_logs, log_scale=True, save_eps=False, save_png=Fal
         ax2.get_yaxis().set_minor_formatter(matplotlib.ticker.NullFormatter())
         ax2.set_xlabel("Number of Epochs", fontsize=12)
         ax2.set_ylabel("Validation Loss (Log Scale)", fontsize=12)
-        hp1 = (np.log10(v1[-1]) - np.log10(np.min(v1 + v2 + v3 + v4)) 
+        hp1 = ((np.log10(v1[-1]) - np.log10(np.min(v1 + v2 + v3 + v4)))
             / (np.log10(np.max(v1 + v2 + v3 + v4)) - np.log10(np.min(v1 + v2 + v3 + v4))))
         hp2 = ((np.log10((v1 + v2)[-1]) - np.log10(np.min(v1 + v2 + v3 + v4))) 
             / (np.log10(np.max(v1 + v2 + v3 + v4)) - np.log10(np.min(v1 + v2 + v3 + v4))))
@@ -220,13 +220,13 @@ def plot_trajectory(data_dict_logs, log_scale=True, save_eps=False, save_png=Fal
         ax2.get_yaxis().set_minor_formatter(matplotlib.ticker.NullFormatter())
         ax2.set_xlabel("Number of Epochs", fontsize=12)
         ax2.set_ylabel("Validation Loss", fontsize=12)
-        hp1 = v1[-1] / np.max(v1 + v2 + v3 + v4)
-        hp2 = (v1 + v2)[-1] / np.max(v1 + v2 + v3 + v4)
-        hp3 = (v1 + v2 + v3)[-1] / np.max(v1 + v2 + v3 + v4)
+        hp1 = (v1[-1] - np.min(v1 + v2 + v3 + v4)) / (np.max(v1 + v2 + v3 + v4) - np.min(v1 + v2 + v3 + v4))
+        hp2 = ((v1 + v2)[-1] - np.min(v1 + v2 + v3 + v4)) / (np.max(v1 + v2 + v3 + v4) - np.min(v1 + v2 + v3 + v4))
+        hp3 = ((v1 + v2 + v3)[-1] - np.min(v1 + v2 + v3 + v4)) / (np.max(v1 + v2 + v3 + v4) - np.min(v1 + v2 + v3 + v4))
         
-    offset1y = 65 if hp1 < 0.8 else -65
-    offset2y = 65 if hp2 < 0.8 else -65
-    offset3y = 65 if hp3 < 0.8 else -65
+    offset1y = 65 if hp1 < 0.6 else -65
+    offset2y = 65 if hp2 < 0.6 else -65
+    offset3y = 65 if hp3 < 0.6 else -65
     if len(v2) > 0:
         ax2.annotate("Prune \n Main Effects", ((len(v1) + 1), v1[-1]), xycoords="data",
                 xytext=(offset1x, offset1y), textcoords="offset pixels", arrowprops=dict(facecolor="black", shrink=0.1), fontsize=10,
