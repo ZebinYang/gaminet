@@ -230,7 +230,7 @@ def plot_trajectory(data_dict_logs, log_scale=True, save_eps=False, save_png=Fal
     if save_png:
         fig.savefig("%s.png" % save_path, bbox_inches="tight", dpi=100)
 
-def feature_importance_visualize(data_dict_global, folder="./results/", name="demo", save_png=True, save_eps=True):
+def feature_importance_visualize(data_dict_global, folder="./results/", name="demo", save_png=False, save_eps=False):
 
     all_ir = []
     all_names = []
