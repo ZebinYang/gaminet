@@ -1,2 +1,4 @@
 examples/results/*
+examples/.ipynb_checkpoints/*
 scripts/*
+.ipynb_checkpoints/*
