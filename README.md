@@ -15,7 +15,7 @@ pip install git+https://github.com/zebinyang/gaminet.git
 
 Manual Installation
 
-- Download the source codes from https://github.com/ZebinYang/gaminet.git.
+- Download the source codes from https://github.com/ZebinYang/gaminet.git
 
 - unzip and switch to the root folder.
 
@@ -156,14 +156,14 @@ Feature Importance
 ```python 
 feature_importance_visualize(data_dict, save_png=True, folder=simu_dir, name='s1_feature')
 ```
-<img src="https://github.com/ZebinYang/gaminet/blob/master/examples/results/s1_feature.png" width="48">
+<img src="https://github.com/ZebinYang/gaminet/blob/master/examples/results/s1_feature.png" width="480">
 
 Local Visualization
 ```python 
 data_dict_local = model.local_explain(train_x[[0]], train_y[[0]], save_dict=False)
 local_visualize(data_dict_local, save_png=True, folder=simu_dir, name='s1_local')
 ```
-<img src="https://github.com/ZebinYang/gaminet/blob/master/examples/results/s1_local.png" width="48">
+<img src="https://github.com/ZebinYang/gaminet/blob/master/examples/results/s1_local.png" width="480">
 
 References
 ----------
