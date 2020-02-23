@@ -551,39 +551,6 @@ class GAMINet(tf.keras.Model):
         if self.verbose:
             print("#" * 20 + "GAMI-Net training finished." + "#" * 20)
     
-    def local_explain(self, x, y=None, save_dict=False, folder="./", name="local_explain"):
-        
-        predicted = self.predict(x)
-        intercept = self.output_layer.main_effect_output_bias.numpy() + self.output_layer.interaction_output_bias.numpy()
-
-        subnet_output = self.maineffect_blocks.__call__(tf.cast(tf.constant(x), tf.float32)).numpy()
-        if self.interact_num > 0:
-            interact_output = self.interact_blocks.__call__(tf.cast(tf.constant(x), tf.float32)).numpy()
-        else:
-            interact_output = np.array([])
-        active_main_effect_index, active_interaction_index, beta, gamma, componment_scales = self.get_all_active_rank()
-        scores = np.hstack([intercept[0], (np.hstack([subnet_output.ravel(), interact_output.ravel()]) 
-                                           * np.hstack([beta.ravel(), gamma.ravel()]).ravel()).ravel()])
-        active_indice = 1 + np.hstack([-1, active_main_effect_index, self.input_num + active_interaction_index])
-        effect_names = np.hstack(["Intercept", 
-                          np.array(self.variables_names),
-                          [self.variables_names[self.interaction_list[i][0]] + " x " 
-                          + self.variables_names[self.interaction_list[i][1]] for i in range(len(self.interaction_list))]])
-        
-        data_dict_local = {"active_indice": active_indice.astype(int),
-                 "scores": scores,
-                 "effect_names": effect_names,
-                 "predicted": predicted, 
-                 "actual": y}
-        
-        if save_dict:
-            if not os.path.exists(folder):
-                os.makedirs(folder)
-            save_path = folder + name
-            np.save("%s.npy" % save_path, data_dict_local)
-
-        return data_dict_local
-    
     def summary_logs(self, save_dict=False, folder="./", name="summary_logs"):
     
         data_dict_log = {}
@@ -728,3 +695,41 @@ class GAMINet(tf.keras.Model):
             np.save("%s.npy" % save_path, data_dict_global)
             
         return data_dict_global
+        
+    def local_explain(self, x, y=None, save_dict=False, folder="./", name="local_explain"):
+        
+        predicted = self.predict(x)
+        intercept = self.output_layer.main_effect_output_bias.numpy() + self.output_layer.interaction_output_bias.numpy()
+
+        main_effect_output = self.maineffect_blocks.__call__(tf.cast(tf.constant(x), tf.float32)).numpy().ravel()
+        if self.interact_num > 0:
+            interaction_output = self.interact_blocks.__call__(tf.cast(tf.constant(x), tf.float32)).numpy().ravel()
+        else:
+            interaction_output = np.array([])
+
+        main_effect_weights = ((self.output_layer.main_effect_weights.numpy()) * self.output_layer.main_effect_switcher.numpy()).ravel()
+        interaction_weights = ((self.output_layer.interaction_weights.numpy()[:self.interact_num_added])
+                              * self.output_layer.interaction_switcher.numpy()[:self.interact_num_added]).ravel()
+        interaction_weights = np.hstack([interaction_weights, np.zeros((self.interact_num - self.interact_num_added))]) 
+
+        scores = np.hstack([intercept[0], np.hstack([main_effect_weights, interaction_weights]) 
+                                          * np.hstack([main_effect_output, interaction_output])])
+        active_indice = 1 + np.hstack([-1, active_main_effect_index, self.input_num + active_interaction_index])
+        effect_names = np.hstack(["Intercept", 
+                          np.array(self.variables_names),
+                          [self.variables_names[self.interaction_list[i][0]] + " x " 
+                          + self.variables_names[self.interaction_list[i][1]] for i in range(len(self.interaction_list))]])
+        
+        data_dict_local = {"active_indice": active_indice.astype(int),
+                     "scores": scores,
+                     "effect_names": effect_names,
+                     "predicted": predicted, 
+                     "actual": y}
+        
+        if save_dict:
+            if not os.path.exists(folder):
+                os.makedirs(folder)
+            save_path = folder + name
+            np.save("%s.npy" % save_path, data_dict_local)
+
+        return data_dict_local
