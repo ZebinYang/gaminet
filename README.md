@@ -156,15 +156,14 @@ Feature Importance
 ```python 
 feature_importance_visualize(data_dict, save_png=True, folder=simu_dir, name='s1_feature')
 ```
-![feature_visu_demo](https://github.com/ZebinYang/gaminet/blob/master/examples/results/s1_feature.png){:height="24px" width="24px"}
+<img src="https://github.com/ZebinYang/gaminet/blob/master/examples/results/s1_feature.png" width="48">
 
 Local Visualization
 ```python 
 data_dict_local = model.local_explain(train_x[[0]], train_y[[0]], save_dict=False)
 local_visualize(data_dict_local, save_png=True, folder=simu_dir, name='s1_local')
 ```
-![local_visu_demo](https://github.com/ZebinYang/gaminet/blob/master/examples/results/s1_local.png){:height="24px" width="24px"}
-
+<img src="https://github.com/ZebinYang/gaminet/blob/master/examples/results/s1_local.png" width="48">
 
 References
 ----------
