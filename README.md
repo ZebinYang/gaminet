@@ -106,16 +106,16 @@ def data_generator1(datanum, random_state=0):
     train_x, test_x, train_y, test_y = train_test_split(x, y, test_size=0.2, random_state=random_state)
     return train_x, test_x, train_y, test_y, task_type, meta_info, metric_wrapper(rmse, sy)
 
-train_x, test_x, train_y, test_y, task_type, meta_info, get_metric = data_generator1(datanum=5000, random_state=0)
+train_x, test_x, train_y, test_y, task_type, meta_info, get_metric = data_generator1(5000, 0)
 ```
 
 Run GAMI-Net
 ```python
-model = GAMINet(meta_info=meta_info, interact_num=20, interact_arch=[20, 10],
-            subnet_arch=[20, 10], task_type=task_type, activation_func=tf.tanh, main_grid_size=41, interact_grid_size=41,
-            batch_size=min(500, int(0.2*train_x.shape[0])), lr_bp=0.001, main_effect_epochs=2000,
-            interaction_epochs=2000, tuning_epochs=50, loss_threshold=0.01,
-            verbose=True, val_ratio=0.2, early_stop_thres=100)
+model = GAMINet(meta_info=meta_info, interact_num=20, interact_arch=[20, 10], subnet_arch=[20, 10],
+                task_type=task_type, activation_func=tf.tanh, main_grid_size=41, interact_grid_size=41,
+                batch_size=500, lr_bp=0.001, main_effect_epochs=2000,
+                interaction_epochs=2000, tuning_epochs=50, loss_threshold=0.01,
+                verbose=True, val_ratio=0.2, early_stop_thres=100)
 
 model.fit(train_x, train_y)
 
@@ -139,8 +139,8 @@ if not os.path.exists(simu_dir):
     os.makedirs(simu_dir)
 
 data_dict_logs = model.summary_logs(save_dict=False)
-plot_trajectory(data_dict_logs, folder=simu_dir, name="s1_traj_plot", log_scale=True, save_png=True, save_eps=False)
-plot_regularization(data_dict_logs, folder=simu_dir, name="s1_regu_plot", log_scale=True, save_png=True, save_eps=False)
+plot_trajectory(data_dict_logs, folder=simu_dir, name="s1_traj_plot", log_scale=True, save_png=True)
+plot_regularization(data_dict_logs, folder=simu_dir, name="s1_regu_plot", log_scale=True, save_png=True)
 ```
 ![traj_visu_demo](https://github.com/ZebinYang/gaminet/blob/master/examples/results/s1_traj_plot.png)
 ![regu_visu_demo](https://github.com/ZebinYang/gaminet/blob/master/examples/results/s1_regu_plot.png)
@@ -156,14 +156,14 @@ Feature Importance
 ```python 
 feature_importance_visualize(data_dict, save_png=True, folder=simu_dir, name='s1_feature')
 ```
-![feature_visu_demo](https://github.com/ZebinYang/gaminet/blob/master/examples/results/s1_feature.png | width=48)
+![feature_visu_demo](https://github.com/ZebinYang/gaminet/blob/master/examples/results/s1_feature.png){:height="24px" width="24px"}
 
 Local Visualization
 ```python 
 data_dict_local = model.local_explain(train_x[[0]], train_y[[0]], save_dict=False)
 local_visualize(data_dict_local, save_png=True, folder=simu_dir, name='s1_local')
 ```
-![local_visu_demo](https://github.com/ZebinYang/gaminet/blob/master/examples/results/s1_local.png | width=48)
+![local_visu_demo](https://github.com/ZebinYang/gaminet/blob/master/examples/results/s1_local.png){:height="24px" width="24px"}
 
 
 References
