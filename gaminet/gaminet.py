@@ -236,17 +236,9 @@ class GAMINet(tf.keras.Model):
         componment_coefs = np.vstack([beta, gamma])
         if np.sum(np.abs(componment_coefs)) > 10**(-10):
             componment_scales = (np.abs(componment_coefs) / np.sum(np.abs(componment_coefs))).reshape([-1])
-            sorted_index = np.argsort(componment_scales)[::-1]
-            active_index = sorted_index[componment_scales[sorted_index].cumsum() < (1 - 10**(-10))]
-            active_main_effect_index = active_index[active_index < beta.shape[0]]
-            active_interaction_index = active_index[active_index >= beta.shape[0]] - beta.shape[0]
         else:
             componment_scales = [0 for i in range(self.input_num + self.interact_num_added)]
-            sorted_index = np.array([])
-            active_index = np.array([])
-            active_main_effect_index = np.array([])
-            active_interaction_index = np.array([])
-        return active_main_effect_index, active_interaction_index, beta, gamma, componment_scales
+        return componment_scales
 
     def estimate_density(self, x):
         
@@ -585,7 +577,7 @@ class GAMINet(tf.keras.Model):
             interact_grid_size = self.interact_grid_size      
 
         data_dict_global = self.data_dict_density
-        _, _, _, _, componment_scales = self.get_all_active_rank()
+        componment_scales = self.get_all_active_rank()
         for indice in range(self.input_num):
             feature_name = list(self.variables_names)[indice]
             subnet = self.maineffect_blocks.subnets[indice]
@@ -714,7 +706,7 @@ class GAMINet(tf.keras.Model):
 
         scores = np.hstack([intercept[0], np.hstack([main_effect_weights, interaction_weights]) 
                                           * np.hstack([main_effect_output, interaction_output])])
-        active_indice = 1 + np.hstack([-1, active_main_effect_index, self.input_num + active_interaction_index])
+        active_indice = 1 + np.hstack([-1, self.active_main_effect_index, self.input_num + self.active_interaction_index])
         effect_names = np.hstack(["Intercept", 
                           np.array(self.variables_names),
                           [self.variables_names[self.interaction_list[i][0]] + " x " 
