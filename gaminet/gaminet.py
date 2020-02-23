@@ -592,7 +592,7 @@ class GAMINet(tf.keras.Model):
                             'err_train_interaction_training':self.err_train_interaction_training,
                             'err_val_interaction_training':self.err_val_interaction_training,
                             'err_train_interaction_tuning':self.err_train_interaction_tuning,
-                            'err_val_interaction_tuning'self.:err_val_interaction_tuning,
+                            'err_val_interaction_tuning':self.:err_val_interaction_tuning,
                             'interaction_list':self.interaction_list,
                             'active_main_effect_index':self.active_main_effect_index,
                             'active_interaction_index':self.active_interaction_index,
