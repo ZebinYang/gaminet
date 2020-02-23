@@ -501,29 +501,53 @@ class GAMINet(tf.keras.Model):
         self.main_effect_val_loss = []
         self.interaction_val_loss = []
         
-        ## step 1: main effects
         self.estimate_density(tr_x)
+        if self.verbose:
+            print("#" * 20 + "GAMI-Net training start." + "#" * 20)
+        ## step 1: main effects
+        if self.verbose:
+            print("Stage 1: main effect training start.")
         self.fit_main_effect(tr_x, tr_y, val_x, val_y)
+        if self.verbose:
+            print("Stage 1: main effect training stop.")
         self.prune_main_effect(val_x, val_y)
         if len(self.active_main_effect_index) == 0:
             if self.verbose:
                 print("No main effect is selected, training stop.")
             return 
-        self.fine_tune_main_effect(tr_x, tr_y, val_x, val_y)
+        elif len(self.active_main_effect_index) < self.input_num:
+            if self.verbose:
+                print(str(self.input_num - len(self.active_main_effect_index)) + " main effects are pruned, start tuning.")
+            self.fine_tune_main_effect(tr_x, tr_y, val_x, val_y)
+        else:
+            if self.verbose:
+                print("No main effect is pruned, the tuning step is skipped.")
+
         ## step2: interaction
         if self.interact_num == 0:
             if self.verbose:
                 print("Max interaction is specified to zero, training stop.")
             return 
+        if self.verbose:
+            print("Stage 2: interaction training start.")
         self.add_interaction(tr_x, tr_y, val_x, val_y)
         self.fit_interaction(tr_x, tr_y, val_x, val_y)
+        if self.verbose:
+            print("Stage 2: interaction training stop.")
         self.prune_interaction(val_x, val_y)
         if len(self.active_interaction_index) == 0:
             if self.verbose:
                 print('No interaction is selected, the model returns to GAM.')
             self.output_layer.interaction_output_bias.assign(tf.constant(np.zeros((1)), dtype=tf.float32))
-            return
-        self.fine_tune_interaction(tr_x, tr_y, val_x, val_y)
+        elif len(self.active_interaction_index) < len(self.interaction_list):
+            if self.verbose:
+                print(str(len(self.interaction_list) - len(self.active_interaction_index)) + " interactions are pruned, start tuning.")
+            self.fine_tune_interaction(tr_x, tr_y, val_x, val_y)
+        else:
+            if self.verbose:
+                print("No main interaction is pruned, the tuning step is skipped.")
+        if self.verbose:
+            print("#" * 20 + "GAMI-Net training finished." + "#" * 20)
     
     def local_explain(self, x, y=None, save_dict=False, folder='./', name='local_explain'):
         
