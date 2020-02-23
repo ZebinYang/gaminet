@@ -166,7 +166,7 @@ def plot_trajectory(data_dict_logs, log_scale=True, save_eps=False, save_png=Fal
             / (np.log10(np.max(t1 + t2 + t3 + t4)) - np.log10(np.min(t1 + t2 + t3 + t4))))
         hp2 = ((np.log10((t1 + t2)[-1]) - np.log10(np.min(t1 + t2 + t3 + t4))) 
             / (np.log10(np.max(t1 + t2 + t3 + t4)) - np.log10(np.min(t1 + t2 + t3 + t4))))
-        hp2 = ((np.log10((t1 + t2 + t3)[-1]) - np.log10(np.min(t1 + t2 + t3 + t4))) 
+        hp3 = ((np.log10((t1 + t2 + t3)[-1]) - np.log10(np.min(t1 + t2 + t3 + t4))) 
             / (np.log10(np.max(t1 + t2 + t3 + t4)) - np.log10(np.min(t1 + t2 + t3 + t4))))
     else:
         ax1.set_yticks((np.linspace(np.nanmin(t1 + t2), np.nanmax(t1 + t2), 5)).round(5))
@@ -212,7 +212,7 @@ def plot_trajectory(data_dict_logs, log_scale=True, save_eps=False, save_png=Fal
             / (np.log10(np.max(v1 + v2 + v3 + v4)) - np.log10(np.min(v1 + v2 + v3 + v4))))
         hp2 = ((np.log10((v1 + v2)[-1]) - np.log10(np.min(v1 + v2 + v3 + v4))) 
             / (np.log10(np.max(v1 + v2 + v3 + v4)) - np.log10(np.min(v1 + v2 + v3 + v4))))
-        hp2 = ((np.log10((v1 + v2 + v3)[-1]) - np.log10(np.min(v1 + v2 + v3 + v4))) 
+        hp3 = ((np.log10((v1 + v2 + v3)[-1]) - np.log10(np.min(v1 + v2 + v3 + v4))) 
             / (np.log10(np.max(v1 + v2 + v3 + v4)) - np.log10(np.min(v1 + v2 + v3 + v4))))
     else:
         ax2.set_yticks((np.linspace(np.nanmin(v1 + v2 + v3 + v4), np.nanmax(v1 + v2 + v3 + v4), 5)).round(5))
