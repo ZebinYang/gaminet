@@ -587,19 +587,19 @@ class GAMINet(tf.keras.Model):
     def summary_logs(self, save_dict=False, folder="./", name="summary_logs"):
     
         data_dict_log = {}
-        data_dict_log.update({"logs":{"err_train_main_effect_training":self.err_train_main_effect_training,
-                            "err_val_main_effect_training":self.err_val_main_effect_training,
-                            "err_train_main_effect_tuning":self.err_train_main_effect_tuning,
-                            "err_val_main_effect_tuning":self.err_val_main_effect_tuning,
-                            "err_train_interaction_training":self.err_train_interaction_training,
-                            "err_val_interaction_training":self.err_val_interaction_training,
-                            "err_train_interaction_tuning":self.err_train_interaction_tuning,
-                            "err_val_interaction_tuning":self.err_val_interaction_tuning,
-                            "interaction_list":self.interaction_list,
-                            "active_main_effect_index":self.active_main_effect_index,
-                            "active_interaction_index":self.active_interaction_index,
-                            "main_effect_val_loss":self.main_effect_val_loss,
-                            "interaction_val_loss":self.interaction_val_loss}})
+        data_dict_log.update({"err_train_main_effect_training":self.err_train_main_effect_training,
+                       "err_val_main_effect_training":self.err_val_main_effect_training,
+                       "err_train_main_effect_tuning":self.err_train_main_effect_tuning,
+                       "err_val_main_effect_tuning":self.err_val_main_effect_tuning,
+                       "err_train_interaction_training":self.err_train_interaction_training,
+                       "err_val_interaction_training":self.err_val_interaction_training,
+                       "err_train_interaction_tuning":self.err_train_interaction_tuning,
+                       "err_val_interaction_tuning":self.err_val_interaction_tuning,
+                       "interaction_list":self.interaction_list,
+                       "active_main_effect_index":self.active_main_effect_index,
+                       "active_interaction_index":self.active_interaction_index,
+                       "main_effect_val_loss":self.main_effect_val_loss,
+                       "interaction_val_loss":self.interaction_val_loss})
         if save_dict:
             if not os.path.exists(folder):
                 os.makedirs(folder)
