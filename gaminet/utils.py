@@ -199,7 +199,6 @@ def plot_trajectory(data_dict_logs, log_scale=True, save_eps=False, save_png=Fal
     ax2.plot(np.arange(1, len(v1) + 1, 1), v1, color="r")
     ax2.plot(np.arange(1, len(v1 + v2) + 1, 1), v1 + v2, color="r")
     ax2.plot(np.arange(len(v1 + v2) + 1, len(v1 + v2 + v3 + v4) + 1, 1), v3 + v4, color="b")
-    ax2.legend(["Stage 1: Training Main Effects", "Stage 2: Training Interactions"])
     if log_scale:
         ax2.set_yscale("log")
         ax2.set_yticks((10 ** np.linspace(np.log10(np.nanmin(v1 + v2 + v3 + v4)), np.log10(np.nanmax(v1 + v2 + v3 + v4)), 5)).round(5))
@@ -238,6 +237,7 @@ def plot_trajectory(data_dict_logs, log_scale=True, save_eps=False, save_png=Fal
         ax2.annotate("Prune \n Interactions", ((len(v1 + v2 + v3) + 1), (v1 + v2 + v3)[-1]), xycoords="data",
                 xytext=(offset3x, offset3y), textcoords="offset pixels", arrowprops=dict(facecolor="black", shrink=0.1), fontsize=10,
                 horizontalalignment="center", verticalalignment="top")
+    ax2.legend(["Stage 1: Training Main Effects", "Stage 2: Training Interactions"])
     plt.show()
     
     save_path = folder + name
