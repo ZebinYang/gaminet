@@ -196,7 +196,6 @@ def plot_trajectory(data_dict_logs, log_scale=True, save_eps=False, save_png=Fal
     ax1.legend(["Stage 1: Training Main Effects", "Stage 2: Training Interactions"])
 
     ax2 = plt.subplot(1, 2, 2)
-    ax2.plot(np.arange(1, len(v1) + 1, 1), v1, color="r")
     ax2.plot(np.arange(1, len(v1 + v2) + 1, 1), v1 + v2, color="r")
     ax2.plot(np.arange(len(v1 + v2) + 1, len(v1 + v2 + v3 + v4) + 1, 1), v3 + v4, color="b")
     if log_scale:
