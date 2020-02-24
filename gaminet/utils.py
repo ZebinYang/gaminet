@@ -27,7 +27,6 @@ def get_interaction_list(tr_x, val_x, tr_y, val_y, pred_tr, pred_val, meta_info,
         model_type = "classification"
         pred_tr = np.minimum(np.maximum(pred_tr, 0.0000001), 0.9999999)
         pred_val = np.minimum(np.maximum(pred_val, 0.0000001), 0.9999999)
-        np.log(pred_tr / (1 - pred_tr)).max()
         pred_tr = np.log(pred_tr / (1 - pred_tr)) 
         pred_val = np.log(pred_val / (1 - pred_val)) 
         
