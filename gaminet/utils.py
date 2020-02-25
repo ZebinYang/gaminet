@@ -384,8 +384,8 @@ def global_visualize_density(data_dict_global, main_effect_num=10**5, interactio
         if data_dict_global[feature_name]["ytype"] == "categorical":
             xint = np.arange(len(data_dict_global[feature_name2]["density"]["names"]))
             ax_left.barh(xint, data_dict_global[feature_name2]["density"]["scores"])
-            ax_left.set_xticks(data_dict_global[feature_name]["input2_ticks"])
-            ax_left.set_xticklabels(data_dict_global[feature_name]["input2_labels"])
+            ax_left.set_yticks(data_dict_global[feature_name]["input2_ticks"])
+            ax_left.set_yticklabels(data_dict_global[feature_name]["input2_labels"])
         else:
             xint = ((np.array(data_dict_global[feature_name2]["density"]["names"][1:]) 
                   + np.array(data_dict_global[feature_name2]["density"]["names"][:-1])) / 2).reshape([-1])
@@ -452,8 +452,8 @@ def global_visualize_wo_density(data_dict_global, main_effect_num=10**5, interac
             ax1.bar(np.arange(len(data_dict_global[feature_name]["inputs"])),
                         data_dict_global[feature_name]["outputs"])
             ax1.set_title(feature_name, fontsize=12)
-            ax2.set_xticks(data_dict_global[feature_name]["input_ticks"])
-            ax2.set_xticklabels(data_dict_global[feature_name]["input_labels"])
+            ax1.set_xticks(data_dict_global[feature_name]["input_ticks"])
+            ax1.set_xticklabels(data_dict_global[feature_name]["input_labels"])
             fig.add_subplot(ax1)
         
         idx = idx + 1
