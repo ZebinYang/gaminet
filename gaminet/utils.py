@@ -7,7 +7,7 @@ from itertools import combinations
 import matplotlib
 from matplotlib import pyplot as plt
 from matplotlib.ticker import MaxNLocator
-from matplotlib import gridspec as gridspec
+from matplotlib import gridspec
 
 from sklearn.model_selection import train_test_split 
 
