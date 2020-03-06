@@ -380,7 +380,7 @@ def global_visualize_density(data_dict_global, main_effect_num=10**5, interactio
         if len(str(ax_bottom.get_xticks())) > 60:
             ax_bottom.xaxis.set_tick_params(rotation=20)
 
-        ax_left = plt.Subplot(fig, inner [0])
+        ax_left = plt.Subplot(fig, inner[0])
         if data_dict_global[feature_name]["ytype"] == "categorical":
             xint = np.arange(len(data_dict_global[feature_name2]["density"]["names"]))
             ax_left.barh(xint, data_dict_global[feature_name2]["density"]["scores"])
