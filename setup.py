@@ -8,6 +8,6 @@ setup(name='gaminet',
       author_email='yangzb2010@hku.hk',
       license='GPL',
       packages=['gaminet'],
-      install_requires=[
-          'matplotlib>=2.2.2','tensorflow>=2.0.0', 'numpy>=1.15.2', 'interpret'],
+      install_requires=['matplotlib>=2.2.2','tensorflow>=2.0.0', 'numpy>=1.15.2',     
+                  'interpret @ git+https://github.com/ZebinYang/interpret.git'],
       zip_safe=False)
