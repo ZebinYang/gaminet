@@ -5,9 +5,9 @@ from contextlib import closing
 from itertools import combinations
 
 import matplotlib
+from matplotlib import gridspec
 from matplotlib import pyplot as plt
 from matplotlib.ticker import MaxNLocator
-from matplotlib import gridspec
 
 from sklearn.model_selection import train_test_split 
 
@@ -85,7 +85,7 @@ def plot_regularization(data_dict_logs, log_scale=True, save_eps=False, save_png
         ax1.plot(np.arange(0, len(main_loss), 1), main_loss)
         ax1.axvline(np.argmin(main_loss), linestyle="dotted", color="red")
         ax1.axvline(len(active_main_effect_index), linestyle="dotted", color="red")
-        ax1.plot(np.argmin(main_loss), main_loss[np.argmin(main_loss)], "*", markersize=12, color="red")
+        ax1.plot(np.argmin(main_loss), np.min(main_loss), "*", markersize=12, color="red")
         ax1.plot(len(active_main_effect_index), main_loss[len(active_main_effect_index)], "o", markersize=8, color="red")
         ax1.set_xlabel("Number of Main Effects", fontsize=12)
         ax1.set_ylabel("Validation Loss (Log Scale)", fontsize=12)
@@ -110,7 +110,7 @@ def plot_regularization(data_dict_logs, log_scale=True, save_eps=False, save_png
         ax2.plot(np.arange(0, len(inter_loss), 1), inter_loss)
         ax2.axvline(np.argmin(inter_loss), linestyle="dotted", color="red")
         ax2.axvline(len(active_interaction_index), linestyle="dotted", color="red")
-        ax2.plot(np.argmin(inter_loss), inter_loss[np.argmin(inter_loss)], "*", markersize=12, color="red")
+        ax2.plot(np.argmin(inter_loss), np.min(inter_loss), "*", markersize=12, color="red")
         ax2.plot(len(active_interaction_index), inter_loss[len(active_interaction_index)], "o", markersize=8, color="red")
         ax2.set_xlabel("Number of Interactions", fontsize=12)
         ax2.set_ylabel("Validation Loss (Log Scale)", fontsize=12)
@@ -301,7 +301,7 @@ def global_visualize_density(data_dict_global, main_effect_num=10**5, interactio
 
     idx = 0
     fig = plt.figure(figsize=(6 * cols_per_row, 4.6 * int(np.ceil(max_ids / cols_per_row))))
-    outer = gridspec.GridSpec(int(np.ceil(max_ids/cols_per_row)), cols_per_row, wspace=0.25, hspace=0.35)
+    outer = gridspec.GridSpec(int(np.ceil(max_ids / cols_per_row)), cols_per_row, wspace=0.25, hspace=0.35)
     for indice in active_univariate_index:
 
         feature_name = list(data_dict_global.keys())[indice]

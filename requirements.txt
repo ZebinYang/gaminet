@@ -9,6 +9,9 @@ pandas
 ## visualization ##
 matplotlib>=2.2.2
 
+## network platform
 tensorflow>=2.0.0
 
-interpret
+## external tools
+scikit-learn>0.20.1
+git+https://github.com/ZebinYang/interpret.git
