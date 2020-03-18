@@ -96,13 +96,11 @@ def plot_regularization(data_dict_logs, log_scale=True, save_eps=False, save_png
             ax1.set_yticks((10 ** np.linspace(np.log10(np.nanmin(main_loss)), np.log10(np.nanmax(main_loss)), 5)).round(5))
             ax1.get_yaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
             ax1.get_yaxis().set_minor_formatter(matplotlib.ticker.NullFormatter())
-            ax1.set_xlabel("Number of Epochs", fontsize=12)
             ax1.set_ylabel("Training Loss (Log Scale)", fontsize=12)
         else:
             ax1.set_yticks((np.linspace(np.nanmin(main_loss), np.nanmax(main_loss), 5)).round(5))
             ax1.get_yaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
             ax1.get_yaxis().set_minor_formatter(matplotlib.ticker.NullFormatter())
-            ax1.set_xlabel("Number of Epochs", fontsize=12)
             ax1.set_ylabel("Training Loss", fontsize=12)
 
     if len(inter_loss) > 0:
@@ -121,13 +119,11 @@ def plot_regularization(data_dict_logs, log_scale=True, save_eps=False, save_png
             ax2.set_yticks((10 ** np.linspace(np.log10(np.nanmin(inter_loss)), np.log10(np.nanmax(inter_loss)), 5)).round(5))
             ax2.get_yaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
             ax2.get_yaxis().set_minor_formatter(matplotlib.ticker.NullFormatter())
-            ax2.set_xlabel("Number of Epochs", fontsize=12)
             ax2.set_ylabel("Validation Loss (Log Scale)", fontsize=12)
         else:
             ax2.set_yticks((np.linspace(np.nanmin(inter_loss), np.nanmax(inter_loss), 5)).round(5))
             ax2.get_yaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
             ax2.get_yaxis().set_minor_formatter(matplotlib.ticker.NullFormatter())
-            ax2.set_xlabel("Number of Epochs", fontsize=12)
             ax2.set_ylabel("Validation Loss", fontsize=12)
     plt.show()
 
