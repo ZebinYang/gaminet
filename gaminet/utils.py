@@ -17,7 +17,8 @@ from interpret.glassbox.ebm.internal import NativeEBM
 from interpret.glassbox.ebm.ebm import EBMPreprocessor
 
 
-def get_interaction_list(tr_x, val_x, tr_y, val_y, pred_tr, pred_val, meta_info, active_main_effect_index, task_type="Regression"):
+def get_interaction_list(tr_x, val_x, tr_y, val_y, pred_tr, pred_val, feature_list, feature_type_list, 
+                 active_main_effect_index, task_type="Regression"):
 
     if task_type == "Regression":
         num_classes_ = -1
@@ -32,8 +33,7 @@ def get_interaction_list(tr_x, val_x, tr_y, val_y, pred_tr, pred_val, meta_info,
         
     train_num = tr_x.shape[0]
     x = np.vstack([tr_x, val_x])
-    schema_ = autogen_schema(pd.DataFrame(x), feature_names=list(meta_info.keys())[:-1], 
-                             feature_types=[item["type"] for key, item in meta_info.items()][:-1])
+    schema_ = autogen_schema(pd.DataFrame(x), feature_names=feature_list, feature_types=feature_type_list)
     preprocessor_ = EBMPreprocessor(schema=schema_)
     preprocessor_.fit(x)
     xt = preprocessor_.transform(x)
@@ -313,8 +313,9 @@ def global_visualize_density(data_dict_global, main_effect_num=10**5, interactio
             xint = ((np.array(data_dict_global[feature_name]["density"]["names"][1:]) 
                             + np.array(data_dict_global[feature_name]["density"]["names"][:-1])) / 2).reshape([-1, 1]).reshape([-1])
             ax2.bar(xint, data_dict_global[feature_name]["density"]["scores"], width=xint[1] - xint[0])
-            ax1.get_shared_x_axes().join(ax1, ax2)
+            ax2.get_shared_x_axes().join(ax1, ax2)
             ax2.set_yticklabels([])
+            ax2.autoscale()
             fig.add_subplot(ax2)
 
         elif data_dict_global[feature_name]["type"] == "categorical":
@@ -330,8 +331,8 @@ def global_visualize_density(data_dict_global, main_effect_num=10**5, interactio
             ax2 = plt.Subplot(fig, inner[1])
             ax2.bar(np.arange(len(data_dict_global[feature_name]["density"]["names"])),
                     data_dict_global[feature_name]["density"]["scores"])
-            ax1.get_shared_x_axes().join(ax1, ax2)
-
+            ax2.get_shared_x_axes().join(ax1, ax2)
+            ax2.autoscale()
             ax2.set_xticks(data_dict_global[feature_name]["input_ticks"])
             ax2.set_xticklabels(data_dict_global[feature_name]["input_labels"])
             ax2.set_yticklabels([])
@@ -372,6 +373,7 @@ def global_visualize_density(data_dict_global, main_effect_num=10**5, interactio
         ax_bottom.set_yticklabels([])
         ax_bottom.set_xlim([axis_extent[0], axis_extent[1]])
         ax_bottom.get_shared_x_axes().join(ax_bottom, ax_main)
+        ax_bottom.autoscale()
         fig.add_subplot(ax_bottom)
         if len(str(ax_bottom.get_xticks())) > 60:
             ax_bottom.xaxis.set_tick_params(rotation=20)
@@ -389,6 +391,7 @@ def global_visualize_density(data_dict_global, main_effect_num=10**5, interactio
         ax_left.set_xticklabels([])
         ax_left.set_ylim([axis_extent[2], axis_extent[3]])
         ax_left.get_shared_y_axes().join(ax_left, ax_main)
+        ax_left.autoscale()
         fig.add_subplot(ax_left)
 
         ax_colorbar = plt.Subplot(fig, inner[2])
