@@ -204,7 +204,6 @@ class Interactnetwork(tf.keras.layers.Layer):
         self.output_original = self.output_layer(x)
 
         if training:
-
             input_grid = self.input_grid
             input_grid = tf.stack(self.onehot_encoding(input_grid), 1)
             for dense_layer in self.layers:

@@ -112,6 +112,7 @@ train_x, test_x, train_y, test_y, task_type, meta_info, get_metric = data_genera
 
 Run GAMI-Net
 ```python
+## Note the current GAMINet API requires input features being normalized within 0 to 1. 
 model = GAMINet(meta_info=meta_info, interact_num=20, interact_arch=[20, 10], subnet_arch=[20, 10],
                 task_type=task_type, activation_func=tf.tanh, main_grid_size=41, interact_grid_size=41,
                 batch_size=500, lr_bp=0.001, main_effect_epochs=2000,
