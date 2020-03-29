@@ -256,7 +256,7 @@ class GAMINet(tf.keras.Model):
         n_samples = x.shape[0]
         self.data_dict_density = {}
         for indice in range(self.input_num):
-            feature_name = list(self.variables_names)[indice]
+            feature_name = self.feature_list_[indice]
             if indice in self.nfeature_index_list_:
                 sx = self.nfeature_scaler_[feature_name]
                 density, bins = np.histogram(sx.inverse_transform(x[:,[indice]]), bins=10, density=True)
@@ -590,7 +590,7 @@ class GAMINet(tf.keras.Model):
         data_dict_global = self.data_dict_density
         componment_scales = self.get_all_active_rank()
         for indice in range(self.input_num):
-            feature_name = list(self.feature_list_)[indice]
+            feature_name = self.feature_list_[indice]
             subnet = self.maineffect_blocks.subnets[indice]
             if indice in self.nfeature_index_list_:
                 sx = self.nfeature_scaler[feature_name]
