@@ -85,14 +85,14 @@ class GAMINet(tf.keras.Model):
                 self.nfeature_scaler_.update({feature_name:meta_info[feature_name]["scaler"]})
             self.feature_list_.append(feature_name)
         
+        # build
+        self.interaction_list = []
+        self.interact_num_added = 0
+        self.interaction_status = False
         self.input_num = self.nfeature_num_ + self.cfeature_num_
         self.max_interact_num = int(round(self.input_num * (self.input_num - 1) / 2))
         self.interact_num = min(interact_num, self.max_interact_num)
-        self.interact_num_added = 0
-        self.interaction_list = []
 
-        # build
-        self.interaction_status = False
         self.maineffect_blocks = MainEffectBlock(feature_list=self.feature_list_,
                                  dummy_values=self.dummy_values_,
                                  nfeature_index_list=self.nfeature_index_list_,
