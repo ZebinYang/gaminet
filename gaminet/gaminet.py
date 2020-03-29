@@ -107,8 +107,7 @@ class GAMINet(tf.keras.Model):
                                 interact_arch=self.interact_arch,
                                 activation_func=self.activation_func,
                                 grid_size=self.interact_grid_size)
-        self.output_layer = OutputLayer(input_num=self.input_num,
-                                interact_num=self.interact_num)
+        self.output_layer = OutputLayer(input_num=self.input_num, interact_num=self.interact_num)
 
         self.optimizer = tf.keras.optimizers.Adam(learning_rate=self.lr_bp)
         if self.task_type == "Regression":
@@ -593,7 +592,7 @@ class GAMINet(tf.keras.Model):
             feature_name = self.feature_list_[indice]
             subnet = self.maineffect_blocks.subnets[indice]
             if indice in self.nfeature_index_list_:
-                sx = self.nfeature_scaler[feature_name]
+                sx = self.nfeature_scaler_[feature_name]
                 main_effect_inputs = np.linspace(0, 1, main_grid_size).reshape([-1, 1])
                 main_effect_inputs_original = sx.inverse_transform(main_effect_inputs)
                 main_effect_outputs = (self.output_layer.main_effect_weights.numpy()[indice]
@@ -646,7 +645,7 @@ class GAMINet(tf.keras.Model):
                 interact_input_list.append(interact_input1)
                 axis_extent.extend([-0.5, len(interact_input1_original) - 0.5])
             else:
-                sx1 = self.nfeature_scaler[feature_name1]
+                sx1 = self.nfeature_scaler_[feature_name1]
                 interact_input1 = np.array(np.linspace(0, 1, interact_grid_size), dtype=np.float32)
                 interact_input1_original = sx1.inverse_transform(interact_input1.reshape([-1, 1])).ravel()
                 interact_input1_ticks = []
@@ -664,7 +663,7 @@ class GAMINet(tf.keras.Model):
                 interact_input_list.append(interact_input2)
                 axis_extent.extend([-0.5, len(interact_input2_original) - 0.5])
             else:
-                sx2 = self.nfeature_scaler[feature_name2]
+                sx2 = self.nfeature_scaler_[feature_name2]
                 interact_input2 = np.array(np.linspace(0, 1, interact_grid_size), dtype=np.float32)
                 interact_input2_original = sx2.inverse_transform(interact_input2.reshape([-1, 1])).ravel()
                 interact_input2_ticks = []
