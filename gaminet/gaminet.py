@@ -41,10 +41,6 @@ class GAMINet(tf.keras.Model):
         self.interact_grid_size = interact_grid_size
         self.activation_func = activation_func
         self.interact_arch = interact_arch
-        self.max_interact_num = int(round(self.input_num * (self.input_num - 1) / 2))
-        self.interact_num = min(interact_num, self.max_interact_num)
-        self.interact_num_added = 0
-        self.interaction_list = []
         self.loss_threshold = loss_threshold
         
         self.lr_bp = lr_bp
@@ -88,7 +84,12 @@ class GAMINet(tf.keras.Model):
                 self.feature_type_list_.append("continuous")
                 self.nfeature_scaler_.update({feature_name:meta_info[feature_name]["scaler"]})
             self.feature_list_.append(feature_name)
+        
         self.input_num = self.nfeature_num_ + self.cfeature_num_
+        self.max_interact_num = int(round(self.input_num * (self.input_num - 1) / 2))
+        self.interact_num = min(interact_num, self.max_interact_num)
+        self.interact_num_added = 0
+        self.interaction_list = []
 
         # build
         self.interaction_status = False
