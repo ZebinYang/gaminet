@@ -315,7 +315,7 @@ class GAMINet(tf.keras.Model):
         self.main_effect_val_loss = []
         sorted_index, componment_scales = self.get_main_effect_rank()        
         self.output_layer.main_effect_switcher.assign(tf.constant(np.zeros((self.input_num, 1)), dtype=tf.float32))
-        self.main_effect_val_loss.append(self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False) )
+        self.main_effect_val_loss.append(self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False))
         for idx in range(self.input_num):
             selected_index = sorted_index[:(idx + 1)]
             main_effect_switcher = np.zeros((self.input_num, 1))

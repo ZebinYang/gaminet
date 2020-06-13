@@ -128,11 +128,13 @@ def plot_regularization(data_dict_logs, log_scale=True, save_eps=False, save_png
     plt.show()
 
     save_path = folder + name
-    if not os.path.exists(folder):
-        os.makedirs(folder)
     if save_eps:
+        if not os.path.exists(folder):
+            os.makedirs(folder)
         fig.savefig("%s.eps" % save_path, bbox_inches="tight", dpi=100)
     if save_png:
+        if not os.path.exists(folder):
+            os.makedirs(folder)
         fig.savefig("%s.png" % save_path, bbox_inches="tight", dpi=100)
 
 def plot_trajectory(data_dict_logs, log_scale=True, save_eps=False, save_png=False, folder="./results/", name="trajectory_plot"):
@@ -236,11 +238,13 @@ def plot_trajectory(data_dict_logs, log_scale=True, save_eps=False, save_png=Fal
     plt.show()
     
     save_path = folder + name
-    if not os.path.exists(folder):
-        os.makedirs(folder)
     if save_eps:
+        if not os.path.exists(folder):
+            os.makedirs(folder)
         fig.savefig("%s.eps" % save_path, bbox_inches="tight", dpi=100)
     if save_png:
+        if not os.path.exists(folder):
+            os.makedirs(folder)
         fig.savefig("%s.png" % save_path, bbox_inches="tight", dpi=100)
 
 def feature_importance_visualize(data_dict_global, folder="./results/", name="demo", save_png=False, save_eps=False):
@@ -269,11 +273,11 @@ def feature_importance_visualize(data_dict_global, folder="./results/", name="de
         plt.title("Feature Importance")
 
         save_path = folder + name
-        if (max_ids > 0) & save_eps:
+        if save_eps:
             if not os.path.exists(folder):
                 os.makedirs(folder)
             fig.savefig("%s.eps" % save_path, bbox_inches="tight", dpi=100)
-        if (max_ids > 0) & save_png:
+        if save_png:
             if not os.path.exists(folder):
                 os.makedirs(folder)
             fig.savefig("%s.png" % save_path, bbox_inches="tight", dpi=100)
@@ -402,15 +406,16 @@ def global_visualize_density(data_dict_global, main_effect_num=10**5, interactio
         fig.add_subplot(ax_colorbar)
         idx = idx + 1
 
-    save_path = folder + name
-    if (max_ids > 0) & save_eps:
-        if not os.path.exists(folder):
-            os.makedirs(folder)
-        fig.savefig("%s.eps" % save_path, bbox_inches="tight", dpi=100)
-    if (max_ids > 0) & save_png:
-        if not os.path.exists(folder):
-            os.makedirs(folder)
-        fig.savefig("%s.png" % save_path, bbox_inches="tight", dpi=100)
+    if max_ids > 0:
+        save_path = folder + name
+        if save_eps:
+            if not os.path.exists(folder):
+                os.makedirs(folder)
+            fig.savefig("%s.eps" % save_path, bbox_inches="tight", dpi=100)
+        if save_png:
+            if not os.path.exists(folder):
+                os.makedirs(folder)
+            fig.savefig("%s.png" % save_path, bbox_inches="tight", dpi=100)
 
 
 def global_visualize_wo_density(data_dict_global, main_effect_num=10**5, interaction_num=10**5, cols_per_row=4,
@@ -490,16 +495,16 @@ def global_visualize_wo_density(data_dict_global, main_effect_num=10**5, interac
         if len(str(ax_main.get_xticks())) > 60:
                 ax_main.xaxis.set_tick_params(rotation=20)
         
-
-    save_path = folder + name
-    if (max_ids > 0) & save_eps:
-        if not os.path.exists(folder):
-            os.makedirs(folder)
-        fig.savefig("%s.eps" % save_path, bbox_inches="tight", dpi=100)
-    if (max_ids > 0) & save_png:
-        if not os.path.exists(folder):
-            os.makedirs(folder)
-        fig.savefig("%s.png" % save_path, bbox_inches="tight", dpi=100)
+    if max_ids > 0:
+        save_path = folder + name
+        if save_eps:
+            if not os.path.exists(folder):
+                os.makedirs(folder)
+            fig.savefig("%s.eps" % save_path, bbox_inches="tight", dpi=100)
+        if save_png:
+            if not os.path.exists(folder):
+                os.makedirs(folder)
+            fig.savefig("%s.png" % save_path, bbox_inches="tight", dpi=100)
 
 def local_visualize(data_dict_local, folder="./results/", name="demo", save_png=False, save_eps=False):
 
@@ -514,12 +519,13 @@ def local_visualize(data_dict_local, folder="./results/", name="demo", save_png=
         title = "Predicted: %0.4f"% (data_dict_local["predicted"])
     plt.title(title, fontsize=12)
 
-    save_path = folder + name
-    if (max_ids > 0) & save_eps:
-        if not os.path.exists(folder):
-            os.makedirs(folder)
-        fig.savefig("%s.eps" % save_path, bbox_inches="tight", dpi=100)
-    if (max_ids > 0) & save_png:
-        if not os.path.exists(folder):
-            os.makedirs(folder)
-        fig.savefig("%s.png" % save_path, bbox_inches="tight", dpi=100)
+    if max_ids > 0:
+        save_path = folder + name
+        if save_eps:
+            if not os.path.exists(folder):
+                os.makedirs(folder)
+            fig.savefig("%s.eps" % save_path, bbox_inches="tight", dpi=100)
+        if save_png:
+            if not os.path.exists(folder):
+                os.makedirs(folder)
+            fig.savefig("%s.png" % save_path, bbox_inches="tight", dpi=100)
