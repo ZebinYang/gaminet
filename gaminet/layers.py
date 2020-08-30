@@ -62,6 +62,9 @@ class NumerNet(tf.keras.layers.Layer):
         for nodes in self.subnet_arch:
             self.layers.append(layers.Dense(nodes, activation=self.activation_func, kernel_initializer=tf.keras.initializers.Orthogonal()))
         self.output_layer = layers.Dense(1, activation=tf.identity, kernel_initializer=tf.keras.initializers.Orthogonal())
+        
+        self.min_value = self.add_weight(name="min"+str(self.subnet_id), shape=[1], initializer=tf.zeros_initializer(), trainable=False)
+        self.max_value = self.add_weight(name="max"+str(self.subnet_id), shape=[1], initializer=tf.ones_initializer(), trainable=False)
         self.moving_mean = self.add_weight(name="mean"+str(self.subnet_id), shape=[1], initializer=tf.zeros_initializer(), trainable=False)
         self.moving_norm = self.add_weight(name="norm"+str(self.subnet_id), shape=[1], initializer=tf.ones_initializer(), trainable=False)
 
@@ -72,14 +75,10 @@ class NumerNet(tf.keras.layers.Layer):
         
     def call(self, inputs, training=False):
         
-        x = inputs
-        for dense_layer in self.layers:
-            x = dense_layer(x)
-        self.output_original = self.output_layer(x)
-
         if training:
-
-            input_grid = self.input_grid
+            self.min_value.assign(tf.minimum(self.min_value, tf.reduce_min(x)))
+            self.max_value.assign(tf.maximum(self.max_value, tf.reduce_max(x)))
+            input_grid = tf.clip_by_value(self.input_grid, self.min_value, self.max_value)
             for dense_layer in self.layers:
                 input_grid = dense_layer(input_grid)
             self.output_grid = self.output_layer(input_grid)
@@ -94,6 +93,10 @@ class NumerNet(tf.keras.layers.Layer):
             self.subnet_mean = self.moving_mean
             self.subnet_norm = self.moving_norm
 
+        x = tf.clip_by_value(inputs, self.min_value, self.max_value)
+        for dense_layer in self.layers:
+            x = dense_layer(x)
+        self.output_original = self.output_layer(x)
         output = self.output_original - self.subnet_mean
         return output
 

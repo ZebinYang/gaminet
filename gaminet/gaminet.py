@@ -84,7 +84,7 @@ class GAMINet(tf.keras.Model):
                 self.feature_type_list_.append("continuous")
                 self.nfeature_scaler_.update({feature_name:meta_info[feature_name]["scaler"]})
             self.feature_list_.append(feature_name)
-        
+
         # build
         self.interaction_list = []
         self.interact_num_added = 0
@@ -170,11 +170,10 @@ class GAMINet(tf.keras.Model):
                                   interaction_training=interaction_training).numpy()
 
     @tf.function
-    def train_main_effect(self, inputs, labels, main_effect_training=True, interaction_training=False):
+    def train_main_effect(self, inputs, labels):
 
         with tf.GradientTape() as tape:
-            pred = self.__call__(inputs, main_effect_training=main_effect_training,
-                          interaction_training=interaction_training)
+            pred = self.__call__(inputs, main_effect_training=True, interaction_training=False)
             total_loss = self.loss_fn(labels, pred)
 
         train_weights = self.maineffect_blocks.weights
@@ -189,11 +188,10 @@ class GAMINet(tf.keras.Model):
         self.optimizer.apply_gradients(zip(grads, train_weights_list))
 
     @tf.function
-    def train_interaction(self, inputs, labels, main_effect_training=False, interaction_training=True):
+    def train_interaction(self, inputs, labels):
 
         with tf.GradientTape() as tape:
-            pred = self.__call__(inputs, main_effect_training=main_effect_training,
-                          interaction_training=interaction_training)
+            pred = self.__call__(inputs, main_effect_training=False, interaction_training=True)
             total_loss = self.loss_fn(labels, pred)
 
         train_weights = self.interact_blocks.weights
@@ -263,7 +261,7 @@ class GAMINet(tf.keras.Model):
             elif indice in self.cfeature_index_list_:
                 unique, counts = np.unique(x[:, indice], return_counts=True)
                 density = np.zeros((len(self.dummy_values_[feature_name])))
-                density[unique.astype(int)] = counts / n_samples
+                density[unique.round().astype(int)] = counts / n_samples
                 self.data_dict_density.update({feature_name:{"density":{"names":np.arange(len(self.dummy_values_[feature_name])),
                                                      "scores":density}}})
     
