@@ -63,8 +63,8 @@ class NumerNet(tf.keras.layers.Layer):
             self.layers.append(layers.Dense(nodes, activation=self.activation_func, kernel_initializer=tf.keras.initializers.Orthogonal()))
         self.output_layer = layers.Dense(1, activation=tf.identity, kernel_initializer=tf.keras.initializers.Orthogonal())
         
-        self.min_value = self.add_weight(name="min"+str(self.subnet_id), shape=[1], initializer=tf.zeros_initializer(), trainable=False)
-        self.max_value = self.add_weight(name="max"+str(self.subnet_id), shape=[1], initializer=tf.ones_initializer(), trainable=False)
+        self.min_value = self.add_weight(name="min"+str(self.subnet_id), shape=[1], initializer=tf.ones_initializer(), trainable=False)
+        self.max_value = self.add_weight(name="max"+str(self.subnet_id), shape=[1], initializer=tf.zeros_initializer(), trainable=False)
         self.moving_mean = self.add_weight(name="mean"+str(self.subnet_id), shape=[1], initializer=tf.zeros_initializer(), trainable=False)
         self.moving_norm = self.add_weight(name="norm"+str(self.subnet_id), shape=[1], initializer=tf.ones_initializer(), trainable=False)
 
@@ -76,8 +76,8 @@ class NumerNet(tf.keras.layers.Layer):
     def call(self, inputs, training=False):
         
         if training:
-            self.min_value.assign(tf.minimum(self.min_value, tf.reduce_min(x)))
-            self.max_value.assign(tf.maximum(self.max_value, tf.reduce_max(x)))
+            self.min_value.assign(tf.minimum(self.min_value, tf.reduce_min(inputs)))
+            self.max_value.assign(tf.maximum(self.max_value, tf.reduce_max(inputs)))
             input_grid = tf.clip_by_value(self.input_grid, self.min_value, self.max_value)
             for dense_layer in self.layers:
                 input_grid = dense_layer(input_grid)
