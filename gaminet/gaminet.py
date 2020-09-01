@@ -183,7 +183,7 @@ class GAMINet(tf.keras.Model):
 
         with tf.GradientTape() as tape:
             pred = self.__call__(inputs, main_effect_training=True, interaction_training=False)
-            total_loss = self.loss_fn(labels, pred) + self.clarity_loss
+            total_loss = self.loss_fn(labels, pred)
 
         train_weights = self.maineffect_blocks.weights
         train_weights.append(self.output_layer.main_effect_weights)
@@ -201,7 +201,7 @@ class GAMINet(tf.keras.Model):
 
         with tf.GradientTape() as tape:
             pred = self.__call__(inputs, main_effect_training=False, interaction_training=True)
-            total_loss = self.loss_fn(labels, pred)
+            total_loss = self.loss_fn(labels, pred) + self.clarity_loss
 
         train_weights = self.interact_blocks.weights
         train_weights.append(self.output_layer.interaction_weights)
