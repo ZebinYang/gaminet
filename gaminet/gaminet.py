@@ -129,7 +129,7 @@ class GAMINet(tf.keras.Model):
                 a1 = tf.multiply(tf.gather(self.maineffect_outputs, [k1], axis=1), tf.gather(main_weights, [k1], axis=0))
                 a2 = tf.multiply(tf.gather(self.maineffect_outputs, [k2], axis=1), tf.gather(main_weights, [k2], axis=0))
                 b = tf.multiply(tf.gather(self.interact_outputs, [i], axis=1), tf.gather(interaction_weights, [i], axis=0))
-                clarity_loss += tf.multiply(a1, b) + tf.multiply(a2, b)
+                clarity_loss += tf.abs(tf.multiply(a1, b)) + tf.abs(tf.multiply(a2, b))
             self.clarity_loss = tf.reduce_mean(clarity_loss)
         else:
             self.interact_outputs = tf.zeros([inputs.shape[0], self.interact_num])
@@ -201,7 +201,7 @@ class GAMINet(tf.keras.Model):
 
         with tf.GradientTape() as tape:
             pred = self.__call__(inputs, main_effect_training=False, interaction_training=True)
-            total_loss = self.loss_fn(labels, pred) + self.clarity_loss
+            total_loss = self.loss_fn(labels, pred) + 0.001 * self.clarity_loss
 
         train_weights = self.interact_blocks.weights
         train_weights.append(self.output_layer.interaction_weights)
