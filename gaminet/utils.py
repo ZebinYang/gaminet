@@ -146,8 +146,8 @@ def plot_trajectory(data_dict_logs, log_scale=True, save_eps=False, save_png=Fal
               data_dict_logs["err_val_interaction_training"],
               data_dict_logs["err_val_tuning"]]
     
-    offset1x = (0.5 - len(t1) / len(t1 + t2)) * 300
-    offset2x = (0.85 - len(t1 + t2) / len(t1 + t2 + t3)) * 300
+    offsetx = (0.5 - len(t1) / len(t1 + t2)) * 300
+    offsety = 65 if hp1 < 0.6 else -65
 
     fig = plt.figure(figsize=(14, 4))
     ax1 = plt.subplot(1, 2, 1)
@@ -174,17 +174,10 @@ def plot_trajectory(data_dict_logs, log_scale=True, save_eps=False, save_png=Fal
         hp1 = ((t1)[-1] - np.min(t1 + t2 + t3)) / (np.max(t1 + t2 + t3) - np.min(t1 + t2 + t3))
         hp2 = ((t1 + t2)[-1] - np.min(t1 + t2 + t3)) / (np.max(t1 + t2 + t3) - np.min(t1 + t2 + t3))
         
-    offset1y = 65 if hp1 < 0.6 else -65
-    offset2y = 65 if hp2 < 0.6 else -65
-
     if len(t2) > 0:
         ax1.annotate("Add \n Interactions", ((len(t1) + 1), (t1)[-1]), xycoords="data",
                  xytext=(offset1x, offset1y), textcoords="offset pixels", arrowprops=dict(facecolor="black", shrink=0.1), fontsize=10,
                  horizontalalignment="center", verticalalignment="top")
-    if len(t3) > 0:
-        ax1.annotate("Prune \n Interactions", ((len(t1 + t2) + 1), (t1 + t2)[-1]), xycoords="data",
-                xytext=(offset2x, offset2y), textcoords="offset pixels", arrowprops=dict(facecolor="black", shrink=0.1), fontsize=10,
-                horizontalalignment="center", verticalalignment="top")
     ax1.legend(["Stage 1: Training Main Effects", "Stage 2: Training Interactions", "Stage 3: Fine Tunning"])
 
     ax2 = plt.subplot(1, 2, 2)
@@ -211,16 +204,10 @@ def plot_trajectory(data_dict_logs, log_scale=True, save_eps=False, save_png=Fal
         hp1 = ((v1)[-1] - np.min(v1 + v2 + v3)) / (np.max(v1 + v2 + v3) - np.min(v1 + v2 + v3))
         hp2 = ((v1 + v2)[-1] - np.min(v1 + v2 + v3)) / (np.max(v1 + v2 + v3) - np.min(v1 + v2 + v3))
         
-    offset1y = 65 if hp1 < 0.6 else -65
-    offset2y = 65 if hp2 < 0.6 else -65
     if len(v2) > 0:
         ax2.annotate("Add \n Interactions", ((len(v1) + 1), (v1)[-1]), xycoords="data",
                  xytext=(offset1x, offset1y), textcoords="offset pixels", arrowprops=dict(facecolor="black", shrink=0.1), fontsize=10,
                  horizontalalignment="center", verticalalignment="top")
-    if len(v3) > 0:
-        ax2.annotate("Prune \n Interactions", ((len(v1 + v2) + 1), (v1 + v2)[-1]), xycoords="data",
-                xytext=(offset2x, offset2y), textcoords="offset pixels", arrowprops=dict(facecolor="black", shrink=0.1), fontsize=10,
-                horizontalalignment="center", verticalalignment="top")
     ax2.legend(["Stage 1: Training Main Effects", "Stage 2: Training Interactions", "Stage 3: Fine Tunning"])
     plt.show()
     
