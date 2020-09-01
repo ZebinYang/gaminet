@@ -146,7 +146,7 @@ def plot_trajectory(data_dict_logs, log_scale=True, save_eps=False, save_png=Fal
               data_dict_logs["err_val_interaction_training"],
               data_dict_logs["err_val_tuning"]]
     
-    offsetx = (0.5 - len(t1) / len(t1 + t2)) * 300
+    offsetx = (0.2 + len(t1) / len(t1 + t2 + t3)) * 300
     offsety = 65 if hp1 < 0.6 else -65
 
     fig = plt.figure(figsize=(14, 4))
