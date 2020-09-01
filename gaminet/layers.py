@@ -1,4 +1,3 @@
-import numpy as np
 import tensorflow as tf
 from tensorflow.keras import layers
 
@@ -19,25 +18,14 @@ class CategNet(tf.keras.layers.Layer):
         self.moving_norm = self.add_weight(name="norm"+str(self.cagetnet_id), shape=[1], 
                                            initializer=tf.ones_initializer(),trainable=False)
 
-    def set_pdf(self, input_grid, pdf_grid):
-        
-        self.input_grid = input_grid
-        self.pdf_grid = pdf_grid
-
     def call(self, inputs, training=False):
 
         dummy = tf.one_hot(indices=tf.cast(inputs[:,0], tf.int32), depth=self.category_num)
         self.output_original = tf.matmul(dummy, self.categ_bias)
 
         if training:
-                
-            input_grid_dummy = tf.one_hot(indices=self.input_grid, depth=self.category_num)
-            self.output_grid = tf.matmul(input_grid_dummy, self.categ_bias)
-
-            self.subnet_mean = tf.reshape(tf.matmul(self.pdf_grid, tf.reshape(self.output_grid, [-1, 1])), [1])
-            self.subnet_norm = tf.sqrt(tf.matmul(self.pdf_grid, tf.reshape(tf.square(self.output_grid - self.subnet_mean), [-1, 1])))
-            self.subnet_norm = tf.reshape(tf.maximum(self.subnet_norm, 1e-10), [1])
-
+            self.subnet_mean = tf.reduce_mean(self.output_original, 0)
+            self.subnet_norm = tf.maximum(tf.math.reduce_std(self.output_original, 0), 1e-10)
             self.moving_mean.assign(self.subnet_mean)
             self.moving_norm.assign(self.subnet_norm)
         else:
@@ -50,14 +38,12 @@ class CategNet(tf.keras.layers.Layer):
 
 class NumerNet(tf.keras.layers.Layer):
 
-    def __init__(self, subnet_arch=[20, 10], activation_func=tf.tanh, grid_size=41, subnet_id=0):
+    def __init__(self, subnet_arch=[20, 10], activation_func=tf.tanh, subnet_id=0):
         super(NumerNet, self).__init__()
         self.layers = []
         self.subnet_arch = subnet_arch
         self.activation_func = activation_func
         self.subnet_id = subnet_id
-        self.grid_size = grid_size
-        self.pdf_grid = None
         
         for nodes in self.subnet_arch:
             self.layers.append(layers.Dense(nodes, activation=self.activation_func, kernel_initializer=tf.keras.initializers.Orthogonal()))
@@ -67,36 +53,27 @@ class NumerNet(tf.keras.layers.Layer):
         self.max_value = self.add_weight(name="max"+str(self.subnet_id), shape=[1], initializer=tf.zeros_initializer(), trainable=False)
         self.moving_mean = self.add_weight(name="mean"+str(self.subnet_id), shape=[1], initializer=tf.zeros_initializer(), trainable=False)
         self.moving_norm = self.add_weight(name="norm"+str(self.subnet_id), shape=[1], initializer=tf.ones_initializer(), trainable=False)
-
-    def set_pdf(self, input_grid, pdf_grid):
-
-        self.input_grid = input_grid
-        self.pdf_grid = pdf_grid
         
     def call(self, inputs, training=False):
         
         if training:
             self.min_value.assign(tf.minimum(self.min_value, tf.reduce_min(inputs)))
             self.max_value.assign(tf.maximum(self.max_value, tf.reduce_max(inputs)))
-            input_grid = tf.clip_by_value(self.input_grid, self.min_value, self.max_value)
-            for dense_layer in self.layers:
-                input_grid = dense_layer(input_grid)
-            self.output_grid = self.output_layer(input_grid)
-
-            self.subnet_mean = tf.reshape(tf.matmul(self.pdf_grid, tf.reshape(self.output_grid, [-1, 1])), [1])
-            self.subnet_norm = tf.sqrt(tf.matmul(self.pdf_grid, tf.reshape(tf.square(self.output_grid - self.subnet_mean), [-1, 1])))
-            self.subnet_norm = tf.reshape(tf.maximum(self.subnet_norm, 1e-10), [1])
-
-            self.moving_mean.assign(self.subnet_mean)
-            self.moving_norm.assign(self.subnet_norm)
-        else:
-            self.subnet_mean = self.moving_mean
-            self.subnet_norm = self.moving_norm
 
         x = tf.clip_by_value(inputs, self.min_value, self.max_value)
         for dense_layer in self.layers:
             x = dense_layer(x)
         self.output_original = self.output_layer(x)
+        
+        if training:
+            self.subnet_mean = tf.reduce_mean(self.output_original, 0)
+            self.subnet_norm = tf.maximum(tf.math.reduce_std(self.output_original, 0), 1e-10)
+            self.moving_mean.assign(self.subnet_mean)
+            self.moving_norm.assign(self.subnet_norm)
+        else:
+            self.subnet_mean = self.moving_mean
+            self.subnet_norm = self.moving_norm
+        
         output = self.output_original - self.subnet_mean
         return output
 
@@ -104,10 +81,9 @@ class NumerNet(tf.keras.layers.Layer):
 class MainEffectBlock(tf.keras.layers.Layer):
 
     def __init__(self, feature_list, nfeature_index_list, cfeature_index_list, dummy_values,
-                 subnet_arch=[20, 10], activation_func=tf.tanh, grid_size=101):
+                 subnet_arch=[20, 10], activation_func=tf.tanh):
         super(MainEffectBlock, self).__init__()
 
-        self.grid_size = grid_size
         self.subnet_arch = subnet_arch
         self.activation_func = activation_func
         
@@ -120,7 +96,7 @@ class MainEffectBlock(tf.keras.layers.Layer):
         self.subnets = []
         for i in range(self.subnet_num):
             if i in self.nfeature_index_list:
-                self.subnets.append(NumerNet(self.subnet_arch, self.activation_func, self.grid_size, subnet_id=i))
+                self.subnets.append(NumerNet(self.subnet_arch, self.activation_func, subnet_id=i))
             elif i in self.cfeature_index_list:
                 feature_name = self.feature_list[i]
                 self.subnets.append(CategNet(category_num=len(self.dummy_values[feature_name]), cagetnet_id=i))
@@ -140,7 +116,7 @@ class MainEffectBlock(tf.keras.layers.Layer):
 class Interactnetwork(tf.keras.layers.Layer):
 
     def __init__(self, feature_list, cfeature_index_list, dummy_values, interact_arch=[20, 10],
-                 activation_func=tf.tanh, grid_size=41, interact_id=0):
+                 activation_func=tf.tanh, interact_id=0):
         super(Interactnetwork, self).__init__()
         
         self.feature_list = feature_list
@@ -148,56 +124,41 @@ class Interactnetwork(tf.keras.layers.Layer):
         self.cfeature_index_list = cfeature_index_list
 
         self.layers = []
-        self.grid_size = grid_size
         self.interact_arch = interact_arch
         self.activation_func = activation_func
         self.interact_id = interact_id
+        self.interaction = None
 
         for nodes in self.interact_arch:
             self.layers.append(layers.Dense(nodes, activation=self.activation_func, 
                                   kernel_initializer=tf.keras.initializers.Orthogonal()))
         self.output_layer = layers.Dense(1, activation=tf.identity,
                               kernel_initializer=tf.keras.initializers.Orthogonal())
-        self.interaction = None
+        self.moving_mean = self.add_weight(name="mean_"+str(self.interact_id), 
+                                shape=[1], initializer=tf.zeros_initializer(), trainable=False)
+        self.moving_norm = self.add_weight(name="norm_"+str(self.interact_id),
+                                shape=[1], initializer=tf.ones_initializer(), trainable=False)
+
+    def set_interaction(self, interaction):
+
+        self.interaction = interaction
 
     def onehot_encoding(self, inputs):
 
         interact_input_list = []
         if self.interaction[0] in self.cfeature_index_list:
-            interact_input1 = tf.one_hot(indices=tf.cast(inputs[:,0], tf.int32), depth=self.length1)
+            interact_input1 = tf.one_hot(indices=tf.cast(inputs[:,0], tf.int32), 
+                               depth=len(self.dummy_values[self.feature_list[self.interaction[0]]]))
             interact_input_list.extend(tf.unstack(interact_input1, axis=-1))
         else:
             interact_input_list.append(inputs[:, 0])
         if self.interaction[1] in self.cfeature_index_list:
-            interact_input2 = tf.one_hot(indices=tf.cast(inputs[:,1], tf.int32), depth=self.length2)
+            interact_input2 = tf.one_hot(indices=tf.cast(inputs[:,1], tf.int32), 
+                               depth=len(self.dummy_values[self.feature_list[self.interaction[1]]]))
             interact_input_list.extend(tf.unstack(interact_input2, axis=-1))
         else:
             interact_input_list.append(inputs[:, 1])
         return interact_input_list
-        
-    def set_interaction(self, interaction):
-
-        self.interaction = interaction
-        if self.interaction is not None:
-            
-            self.length1 = len(self.dummy_values[self.feature_list[self.interaction[0]]]) \
-                        if self.interaction[0] in self.cfeature_index_list else self.grid_size
-            self.length2 = len(self.dummy_values[self.feature_list[self.interaction[1]]]) \
-                        if self.interaction[1] in self.cfeature_index_list else self.grid_size
-
-            self.moving_mean1 = self.add_weight(name="mean1_"+str(self.interact_id), 
-                        shape=[self.length1], initializer=tf.zeros_initializer(), trainable=False)
-            self.moving_mean2 = self.add_weight(name="mean2_"+str(self.interact_id), 
-                        shape=[self.length2], initializer=tf.zeros_initializer(), trainable=False)
-            self.moving_mean = self.add_weight(name="mean_"+str(self.interact_id), 
-                                    shape=[1], initializer=tf.zeros_initializer(), trainable=False)
-            self.moving_norm = self.add_weight(name="norm_"+str(self.interact_id),
-                                    shape=[1], initializer=tf.ones_initializer(), trainable=False)
-
-    def set_pdf(self, input_grid, pdf_grid):
-
-        self.input_grid = input_grid
-        self.pdf_grid = pdf_grid
 
     def call(self, inputs, training=False):
         
@@ -207,54 +168,22 @@ class Interactnetwork(tf.keras.layers.Layer):
         self.output_original = self.output_layer(x)
 
         if training:
-            input_grid = self.input_grid
-            input_grid = tf.stack(self.onehot_encoding(input_grid), 1)
-            for dense_layer in self.layers:
-                input_grid = dense_layer(input_grid)
-            self.output_grid = self.output_layer(input_grid)
-            self.output_grid = tf.reshape(self.output_grid, [self.length2, self.length1])
-
-            self.weighted_output_grid = tf.math.multiply(self.output_grid, self.pdf_grid)
-            self.subnet_mean1 = tf.reduce_sum(self.weighted_output_grid, 0) / tf.maximum(tf.reduce_sum(self.pdf_grid, 0), 1e-10)
-            self.subnet_mean2 = tf.reduce_sum(self.weighted_output_grid, 1) / tf.maximum(tf.reduce_sum(self.pdf_grid, 1), 1e-10)
-            self.subnet_mean = tf.reshape(tf.reduce_sum(self.weighted_output_grid) / tf.maximum(tf.reduce_sum(self.pdf_grid), 1e-10), [1])
-            self.output_grid_normalized = self.output_grid - self.subnet_mean1 - tf.reshape(self.subnet_mean2, [-1, 1]) + self.subnet_mean
-
-            self.subnet_norm = tf.sqrt(tf.reduce_sum(tf.math.multiply(self.pdf_grid, tf.square(self.output_grid_normalized))))
-            self.subnet_norm = tf.reshape(tf.maximum(self.subnet_norm, 1e-10), [1])
-
-            self.moving_mean1.assign(self.subnet_mean1)
-            self.moving_mean2.assign(self.subnet_mean2)
+            self.subnet_mean = tf.reduce_mean(self.output_original, 0)
+            self.subnet_norm = tf.maximum(tf.math.reduce_std(self.output_original, 0), 1e-10)
             self.moving_mean.assign(self.subnet_mean)
             self.moving_norm.assign(self.subnet_norm)
         else:
-            self.subnet_mean1 = self.moving_mean1
-            self.subnet_mean2 = self.moving_mean2
             self.subnet_mean = self.moving_mean
             self.subnet_norm = self.moving_norm
             
-        if self.interaction[0] in self.cfeature_index_list:
-            value1 = tf.gather(self.subnet_mean1, tf.cast(inputs[:, 0], tf.int32), axis=0)
-        else:
-            ratio1 = tf.cast(tf.math.mod((inputs[:, 0] + 0) / (1 / (self.length1 - 1)), 1), tf.float32)
-            loclow1 = tf.cast((tf.math.floor(((inputs[:, 0] + 0) / (1 / (self.length1 - 1))))), tf.int32)
-            lochigh1 = tf.minimum(tf.cast((tf.math.ceil(((inputs[:, 0] + 0) / (1 / (self.length1 - 1))))), tf.int32), self.length1 - 1)
-            value1 = (1 - ratio1) * tf.gather(self.subnet_mean1, loclow1, axis=0) + ratio1 * tf.gather(self.subnet_mean1, lochigh1, axis=0)
-        if self.interaction[1] in self.cfeature_index_list:
-            value2 = tf.gather(self.subnet_mean2, tf.cast(inputs[:, 1], tf.int32), axis=0)
-        else:
-            ratio2 = tf.cast(tf.math.mod((inputs[:, 1] + 0) / (1 / (self.length2 - 1)), 1), tf.float32)
-            loclow2 = tf.cast((tf.math.floor(((inputs[:, 1] + 0) / (1 / (self.length2 - 1))))), tf.int32)
-            lochigh2 = tf.minimum(tf.cast((tf.math.ceil(((inputs[:, 1] + 0) / (1 / (self.length2 - 1))))), tf.int32), self.length2 - 1)
-            value2 = (1 - ratio2) * tf.gather(self.subnet_mean2, loclow2, axis=0) + ratio2 * tf.gather(self.subnet_mean2, lochigh2, axis=0)
-        output = (self.output_original - tf.reshape(value1, [-1, 1]) - tf.reshape(value2, [-1, 1]) + self.subnet_mean)           
+        output = self.output_original      
         return output
 
 
 class InteractionBlock(tf.keras.layers.Layer):
 
     def __init__(self, interact_num, feature_list, cfeature_index_list, dummy_values, 
-                 interact_arch=[20, 10], activation_func=tf.tanh, grid_size=41):
+                 interact_arch=[20, 10], activation_func=tf.tanh):
 
         super(InteractionBlock, self).__init__()
                 
@@ -266,7 +195,6 @@ class InteractionBlock(tf.keras.layers.Layer):
         self.interact_num_filtered = 0
         self.interact_arch = interact_arch
         self.activation_func = activation_func
-        self.grid_size = grid_size
         
         self.interacts = []
         self.interaction_list = []
@@ -276,7 +204,6 @@ class InteractionBlock(tf.keras.layers.Layer):
                                       self.dummy_values,
                                       self.interact_arch,
                                       self.activation_func,
-                                      self.grid_size,
                                       interact_id=i))
 
     def set_interaction_list(self, interaction_list):

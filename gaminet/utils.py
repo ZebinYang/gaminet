@@ -139,102 +139,89 @@ def plot_regularization(data_dict_logs, log_scale=True, save_eps=False, save_png
 
 def plot_trajectory(data_dict_logs, log_scale=True, save_eps=False, save_png=False, folder="./results/", name="trajectory_plot"):
 
-    t1, t2, t3, t4 = [data_dict_logs["err_train_main_effect_training"], data_dict_logs["err_train_main_effect_tuning"],
-                data_dict_logs["err_train_interaction_training"], data_dict_logs["err_train_interaction_tuning"]]
-    v1, v2, v3, v4 = [data_dict_logs["err_val_main_effect_training"], data_dict_logs["err_val_main_effect_tuning"], 
-                data_dict_logs["err_val_interaction_training"], data_dict_logs["err_val_interaction_tuning"]]
+    t1, t2, t3 = [data_dict_logs["err_train_main_effect_training"],
+              data_dict_logs["err_train_interaction_training"],
+              data_dict_logs["err_train_tuning"]]
+    v1, v2, v3 = [data_dict_logs["err_val_main_effect_training"],
+              data_dict_logs["err_val_interaction_training"],
+              data_dict_logs["err_val_tuning"]]
     
-    offset1x = (0.15 - len(t1) / len(t1 + t2 + t3 + t4)) * 300
-    offset2x = (0.5 - len(t1 + t2) / len(t1 + t2 + t3 + t4)) * 300
-    offset3x = (0.85 - len(t1 + t2 + t3) / len(t1 + t2 + t3 + t4)) * 300
+    offset1x = (0.5 - len(t1) / len(t1 + t2)) * 300
+    offset2x = (0.85 - len(t1 + t2) / len(t1 + t2 + t3)) * 300
 
     fig = plt.figure(figsize=(14, 4))
     ax1 = plt.subplot(1, 2, 1)
-    ax1.plot(np.arange(1, len(t1 + t2) + 1, 1), t1 + t2, color="r")
-    ax1.plot(np.arange(len(t1 + t2) + 1, len(t1 + t2 + t3 + t4) + 1, 1), t3 + t4, color="b")
+    ax1.plot(np.arange(1, len(t1) + 1, 1), t1, color="r")
+    ax1.plot(np.arange(len(t1) + 1, len(t1 + t2) + 1, 1), t2, color="b")
+    ax1.plot(np.arange(len(t1 + t2) + 1, len(t1 + t2 + t3) + 1, 1), t3, color="y")
     if log_scale:
         ax1.set_yscale("log")
-        ax1.set_yticks((10 ** np.linspace(np.log10(np.nanmin(t1 + t2 + t3 + t4)), np.log10(np.nanmax(t1 + t2 + t3 + t4)), 5)).round(5))
+        ax1.set_yticks((10 ** np.linspace(np.log10(np.nanmin(t1 + t2 + t3)), np.log10(np.nanmax(t1 + t2 + t3)), 5)).round(5))
         ax1.get_yaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
         ax1.get_yaxis().set_minor_formatter(matplotlib.ticker.NullFormatter())
         ax1.set_xlabel("Number of Epochs", fontsize=12)
         ax1.set_ylabel("Training Loss (Log Scale)", fontsize=12)
-        hp1 = ((np.log10(t1[-1]) - np.log10(np.min(t1 + t2 + t3 + t4))) 
-            / (np.log10(np.max(t1 + t2 + t3 + t4)) - np.log10(np.min(t1 + t2 + t3 + t4))))
-        hp2 = ((np.log10((t1 + t2)[-1]) - np.log10(np.min(t1 + t2 + t3 + t4))) 
-            / (np.log10(np.max(t1 + t2 + t3 + t4)) - np.log10(np.min(t1 + t2 + t3 + t4))))
-        hp3 = ((np.log10((t1 + t2 + t3)[-1]) - np.log10(np.min(t1 + t2 + t3 + t4))) 
-            / (np.log10(np.max(t1 + t2 + t3 + t4)) - np.log10(np.min(t1 + t2 + t3 + t4))))
+        hp1 = ((np.log10((t1)[-1]) - np.log10(np.min(t1 + t2 + t3))) 
+            / (np.log10(np.max(t1 + t2 + t3)) - np.log10(np.min(t1 + t2 + t3))))
+        hp2 = ((np.log10((t1 + t2)[-1]) - np.log10(np.min(t1 + t2 + t3))) 
+            / (np.log10(np.max(t1 + t2 + t3)) - np.log10(np.min(t1 + t2 + t3))))
     else:
         ax1.set_yticks((np.linspace(np.nanmin(t1 + t2), np.nanmax(t1 + t2), 5)).round(5))
         ax1.get_yaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
         ax1.get_yaxis().set_minor_formatter(matplotlib.ticker.NullFormatter())
         ax1.set_xlabel("Number of Epochs", fontsize=12)
         ax1.set_ylabel("Training Loss", fontsize=12)
-        hp1 = (t1[-1] - np.min(t1 + t2 + t3 + t4)) / (np.max(t1 + t2 + t3 + t4) - np.min(t1 + t2 + t3 + t4))
-        hp2 = ((t1 + t2)[-1] - np.min(t1 + t2 + t3 + t4)) / (np.max(t1 + t2 + t3 + t4) - np.min(t1 + t2 + t3 + t4))
-        hp3 = ((t1 + t2 + t3)[-1] - np.min(t1 + t2 + t3 + t4)) / (np.max(t1 + t2 + t3 + t4) - np.min(t1 + t2 + t3 + t4))
+        hp1 = ((t1)[-1] - np.min(t1 + t2 + t3)) / (np.max(t1 + t2 + t3) - np.min(t1 + t2 + t3))
+        hp2 = ((t1 + t2)[-1] - np.min(t1 + t2 + t3)) / (np.max(t1 + t2 + t3) - np.min(t1 + t2 + t3))
         
     offset1y = 65 if hp1 < 0.6 else -65
     offset2y = 65 if hp2 < 0.6 else -65
-    offset3y = 65 if hp3 < 0.6 else -65
 
     if len(t2) > 0:
-        ax1.annotate("Prune \n Main Effects", ((len(t1) + 1), t1[-1]), xycoords="data",
+        ax1.annotate("Add \n Interactions", ((len(t1) + 1), (t1)[-1]), xycoords="data",
                  xytext=(offset1x, offset1y), textcoords="offset pixels", arrowprops=dict(facecolor="black", shrink=0.1), fontsize=10,
                  horizontalalignment="center", verticalalignment="top")
     if len(t3) > 0:
-        ax1.annotate("Add \n Interactions", ((len(t1 + t2) + 1), (t1 + t2)[-1]), xycoords="data",
-                 xytext=(offset2x, offset2y), textcoords="offset pixels", arrowprops=dict(facecolor="black", shrink=0.1), fontsize=10,
-                 horizontalalignment="center", verticalalignment="top")
-    if len(t4) > 0:
-        ax1.annotate("Prune \n Interactions", ((len(t1 + t2 + t3) + 1), (t1 + t2 + t3)[-1]), xycoords="data",
-                xytext=(offset3x, offset3y), textcoords="offset pixels", arrowprops=dict(facecolor="black", shrink=0.1), fontsize=10,
+        ax1.annotate("Prune \n Interactions", ((len(t1 + t2) + 1), (t1 + t2)[-1]), xycoords="data",
+                xytext=(offset2x, offset2y), textcoords="offset pixels", arrowprops=dict(facecolor="black", shrink=0.1), fontsize=10,
                 horizontalalignment="center", verticalalignment="top")
-    ax1.legend(["Stage 1: Training Main Effects", "Stage 2: Training Interactions"])
+    ax1.legend(["Stage 1: Training Main Effects", "Stage 2: Training Interactions", "Stage 3: Fine Tunning"])
 
     ax2 = plt.subplot(1, 2, 2)
-    ax2.plot(np.arange(1, len(v1 + v2) + 1, 1), v1 + v2, color="r")
-    ax2.plot(np.arange(len(v1 + v2) + 1, len(v1 + v2 + v3 + v4) + 1, 1), v3 + v4, color="b")
+    ax2.plot(np.arange(1, len(v1) + 1, 1), v1, color="r")
+    ax2.plot(np.arange(len(v1) + 1, len(v1 + v2) + 1, 1), v2, color="b")
+    ax2.plot(np.arange(len(v1 + v2) + 1, len(v1 + v2 + v3) + 1, 1), v3, color="y")
     if log_scale:
         ax2.set_yscale("log")
-        ax2.set_yticks((10 ** np.linspace(np.log10(np.nanmin(v1 + v2 + v3 + v4)), np.log10(np.nanmax(v1 + v2 + v3 + v4)), 5)).round(5))
+        ax2.set_yticks((10 ** np.linspace(np.log10(np.nanmin(v1 + v2 + v3)), np.log10(np.nanmax(v1 + v2 + v3)), 5)).round(5))
         ax2.get_yaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
         ax2.get_yaxis().set_minor_formatter(matplotlib.ticker.NullFormatter())
         ax2.set_xlabel("Number of Epochs", fontsize=12)
         ax2.set_ylabel("Validation Loss (Log Scale)", fontsize=12)
-        hp1 = ((np.log10(v1[-1]) - np.log10(np.min(v1 + v2 + v3 + v4)))
-            / (np.log10(np.max(v1 + v2 + v3 + v4)) - np.log10(np.min(v1 + v2 + v3 + v4))))
-        hp2 = ((np.log10((v1 + v2)[-1]) - np.log10(np.min(v1 + v2 + v3 + v4))) 
-            / (np.log10(np.max(v1 + v2 + v3 + v4)) - np.log10(np.min(v1 + v2 + v3 + v4))))
-        hp3 = ((np.log10((v1 + v2 + v3)[-1]) - np.log10(np.min(v1 + v2 + v3 + v4))) 
-            / (np.log10(np.max(v1 + v2 + v3 + v4)) - np.log10(np.min(v1 + v2 + v3 + v4))))
+        hp1 = ((np.log10((v1)[-1]) - np.log10(np.min(v1 + v2 + v3))) 
+            / (np.log10(np.max(v1 + v2 + v3)) - np.log10(np.min(v1 + v2 + v3))))
+        hp2 = ((np.log10((v1 + v2)[-1]) - np.log10(np.min(v1 + v2 + v3))) 
+            / (np.log10(np.max(v1 + v2 + v3)) - np.log10(np.min(v1 + v2 + v3))))
     else:
-        ax2.set_yticks((np.linspace(np.nanmin(v1 + v2 + v3 + v4), np.nanmax(v1 + v2 + v3 + v4), 5)).round(5))
+        ax2.set_yticks((np.linspace(np.nanmin(v1 + v2 + v3), np.nanmax(v1 + v2 + v3), 5)).round(5))
         ax2.get_yaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
         ax2.get_yaxis().set_minor_formatter(matplotlib.ticker.NullFormatter())
         ax2.set_xlabel("Number of Epochs", fontsize=12)
         ax2.set_ylabel("Validation Loss", fontsize=12)
-        hp1 = (v1[-1] - np.min(v1 + v2 + v3 + v4)) / (np.max(v1 + v2 + v3 + v4) - np.min(v1 + v2 + v3 + v4))
-        hp2 = ((v1 + v2)[-1] - np.min(v1 + v2 + v3 + v4)) / (np.max(v1 + v2 + v3 + v4) - np.min(v1 + v2 + v3 + v4))
-        hp3 = ((v1 + v2 + v3)[-1] - np.min(v1 + v2 + v3 + v4)) / (np.max(v1 + v2 + v3 + v4) - np.min(v1 + v2 + v3 + v4))
+        hp1 = ((v1)[-1] - np.min(v1 + v2 + v3)) / (np.max(v1 + v2 + v3) - np.min(v1 + v2 + v3))
+        hp2 = ((v1 + v2)[-1] - np.min(v1 + v2 + v3)) / (np.max(v1 + v2 + v3) - np.min(v1 + v2 + v3))
         
     offset1y = 65 if hp1 < 0.6 else -65
     offset2y = 65 if hp2 < 0.6 else -65
-    offset3y = 65 if hp3 < 0.6 else -65
     if len(v2) > 0:
-        ax2.annotate("Prune \n Main Effects", ((len(v1) + 1), v1[-1]), xycoords="data",
-                xytext=(offset1x, offset1y), textcoords="offset pixels", arrowprops=dict(facecolor="black", shrink=0.1), fontsize=10,
-                horizontalalignment="center", verticalalignment="top")
+        ax2.annotate("Add \n Interactions", ((len(v1) + 1), (v1)[-1]), xycoords="data",
+                 xytext=(offset1x, offset1y), textcoords="offset pixels", arrowprops=dict(facecolor="black", shrink=0.1), fontsize=10,
+                 horizontalalignment="center", verticalalignment="top")
     if len(v3) > 0:
-        ax2.annotate("Add \n Interactions", ((len(v1 + v2) + 1), (v1 + v2)[-1]), xycoords="data",
+        ax2.annotate("Prune \n Interactions", ((len(v1 + v2) + 1), (v1 + v2)[-1]), xycoords="data",
                 xytext=(offset2x, offset2y), textcoords="offset pixels", arrowprops=dict(facecolor="black", shrink=0.1), fontsize=10,
                 horizontalalignment="center", verticalalignment="top")
-    if len(v4) > 0:
-        ax2.annotate("Prune \n Interactions", ((len(v1 + v2 + v3) + 1), (v1 + v2 + v3)[-1]), xycoords="data",
-                xytext=(offset3x, offset3y), textcoords="offset pixels", arrowprops=dict(facecolor="black", shrink=0.1), fontsize=10,
-                horizontalalignment="center", verticalalignment="top")
-    ax2.legend(["Stage 1: Training Main Effects", "Stage 2: Training Interactions"])
+    ax2.legend(["Stage 1: Training Main Effects", "Stage 2: Training Interactions", "Stage 3: Fine Tunning"])
     plt.show()
     
     save_path = folder + name
@@ -258,18 +245,14 @@ def feature_importance_visualize(data_dict_global, folder="./results/", name="de
             
     max_ids = len(all_names)
     if max_ids > 0:
-        fig = plt.figure(figsize=(7, 0.4 + 0.6 * max_ids))
+        fig = plt.figure(figsize=(0.4 + 0.6 * max_ids, 4))
         ax = plt.axes()
-        rects = ax.barh(np.arange(len(all_ir)), [ir for ir,_ in sorted(zip(all_ir, all_names))])
-        ax.set_yticks(np.arange(len(all_ir)))
-        ax.set_yticklabels([name for _,name in sorted(zip(all_ir, all_names))])
-        for rect in rects:
-            _, height = rect.get_xy()
-            ax.text(rect.get_x() + rect.get_width() + 0.005, height + 0.3,
-                    "%0.3f" % (rect.get_width()))
-        plt.ylabel("Feature Name", fontsize=12)
-        plt.xlim(0, np.max(all_ir) + 0.05)
-        plt.ylim(-1, len(all_names))
+        rects = ax.bar(np.arange(len(all_ir)), [ir for ir,_ in sorted(zip(all_ir, all_names))][::-1])
+        ax.set_xticks(np.arange(len(all_ir)))
+        ax.set_xticklabels([name for _,name in sorted(zip(all_ir, all_names))][::-1], rotation=45)
+        plt.xlabel("Feature Name", fontsize=12)
+        plt.ylim(0, np.max(all_ir) + 0.05)
+        plt.xlim(-1, len(all_names))
         plt.title("Feature Importance")
 
         save_path = folder + name
@@ -509,9 +492,10 @@ def global_visualize_wo_density(data_dict_global, main_effect_num=10**5, interac
 def local_visualize(data_dict_local, folder="./results/", name="demo", save_png=False, save_eps=False):
 
     max_ids = len(data_dict_local["active_indice"])
-    fig = plt.figure(figsize=(6, round((len(data_dict_local["active_indice"]) + 1) * 0.45)))
-    plt.barh(np.arange(len(data_dict_local["active_indice"])), data_dict_local["scores"][data_dict_local["active_indice"]][::-1])
-    plt.yticks(np.arange(len(data_dict_local["active_indice"])), data_dict_local["effect_names"][data_dict_local["active_indice"]][::-1])
+    fig = plt.figure(figsize=(round((len(data_dict_local["active_indice"]) + 1) * 0.6), 4))
+    plt.bar(np.arange(len(data_dict_local["active_indice"])), data_dict_local["scores"][data_dict_local["active_indice"]])
+    plt.xticks(np.arange(len(data_dict_local["active_indice"])),
+            data_dict_local["effect_names"][data_dict_local["active_indice"]], rotation=45)
 
     if "actual" in data_dict_local.keys():
         title = "Predicted: %0.4f | Actual: %0.4f" % (data_dict_local["predicted"], data_dict_local["actual"])  
