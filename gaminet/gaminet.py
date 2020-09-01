@@ -122,13 +122,22 @@ class GAMINet(tf.keras.Model):
         self.maineffect_outputs = self.maineffect_blocks(inputs, training=main_effect_training)
         if self.interaction_status:
             self.interact_outputs = self.interact_blocks(inputs, training=interaction_training)
+            clarity_loss = 0
+            for i, (k1, k2) in enumerate(self.interaction_list):
+                main_weights = tf.multiply(self.output_layer.main_effect_switcher, self.output_layer.main_effect_weights)
+                interaction_weights = tf.multiply(self.output_layer.interaction_switcher, self.output_layer.interaction_weights)
+                a1 = tf.multiply(tf.gather(self.maineffect_outputs, [k1], axis=1), tf.gather(main_weights, [k1], axis=0))
+                a2 = tf.multiply(tf.gather(self.maineffect_outputs, [k2], axis=1), tf.gather(main_weights, [k2], axis=0))
+                b = tf.multiply(tf.gather(self.interact_outputs, [i], axis=1), tf.gather(interaction_weights, [i], axis=0))
+                clarity_loss += tf.multiply(a1, b) + tf.multiply(a2, b)
+            self.clarity_loss = tf.reduce_mean(clarity_loss)
         else:
             self.interact_outputs = tf.zeros([inputs.shape[0], self.interact_num])
 
         concat_list = [self.maineffect_outputs]
         if self.interact_num > 0:
             concat_list.append(self.interact_outputs)
-
+            
         if self.task_type == "Regression":
             output = self.output_layer(tf.concat(concat_list, 1))
         elif self.task_type == "Classification":
@@ -174,7 +183,7 @@ class GAMINet(tf.keras.Model):
 
         with tf.GradientTape() as tape:
             pred = self.__call__(inputs, main_effect_training=True, interaction_training=False)
-            total_loss = self.loss_fn(labels, pred)
+            total_loss = self.loss_fn(labels, pred) + self.clarity_loss
 
         train_weights = self.maineffect_blocks.weights
         train_weights.append(self.output_layer.main_effect_weights)
