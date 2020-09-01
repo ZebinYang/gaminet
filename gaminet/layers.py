@@ -4,7 +4,7 @@ from tensorflow.keras import layers
     
 class CategNet(tf.keras.layers.Layer):
 
-    def __init__(self, category_num, cagetnet_id=0):
+    def __init__(self, category_num, cagetnet_id):
         super(CategNet, self).__init__()
         self.category_num = category_num
         self.cagetnet_id = cagetnet_id
@@ -38,7 +38,7 @@ class CategNet(tf.keras.layers.Layer):
 
 class NumerNet(tf.keras.layers.Layer):
 
-    def __init__(self, subnet_arch=[20, 10], activation_func=tf.tanh, subnet_id=0):
+    def __init__(self, subnet_arch, activation_func, subnet_id):
         super(NumerNet, self).__init__()
         self.layers = []
         self.subnet_arch = subnet_arch
@@ -81,7 +81,7 @@ class NumerNet(tf.keras.layers.Layer):
 class MainEffectBlock(tf.keras.layers.Layer):
 
     def __init__(self, feature_list, nfeature_index_list, cfeature_index_list, dummy_values,
-                 subnet_arch=[20, 10], activation_func=tf.tanh):
+                 subnet_arch, activation_func):
         super(MainEffectBlock, self).__init__()
 
         self.subnet_arch = subnet_arch
@@ -115,8 +115,8 @@ class MainEffectBlock(tf.keras.layers.Layer):
 
 class Interactnetwork(tf.keras.layers.Layer):
 
-    def __init__(self, feature_list, cfeature_index_list, dummy_values, interact_arch=[20, 10],
-                 activation_func=tf.tanh, interact_id=0):
+    def __init__(self, feature_list, cfeature_index_list, dummy_values, interact_arch,
+                 activation_func, interact_id):
         super(Interactnetwork, self).__init__()
         
         self.feature_list = feature_list
@@ -176,14 +176,14 @@ class Interactnetwork(tf.keras.layers.Layer):
             self.subnet_mean = self.moving_mean
             self.subnet_norm = self.moving_norm
             
-        output = self.output_original      
+        output = self.output_original - self.subnet_mean    
         return output
 
 
 class InteractionBlock(tf.keras.layers.Layer):
 
     def __init__(self, interact_num, feature_list, cfeature_index_list, dummy_values, 
-                 interact_arch=[20, 10], activation_func=tf.tanh):
+                 interact_arch, activation_func):
 
         super(InteractionBlock, self).__init__()
                 
