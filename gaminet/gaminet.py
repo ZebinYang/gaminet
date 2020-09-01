@@ -11,42 +11,45 @@ from .utils import get_interaction_list
 class GAMINet(tf.keras.Model):
 
     def __init__(self, meta_info,
-                 subnet_arch=[40] * 5,
                  interact_num=20,
+                 subnet_arch=[40] * 5,
                  interact_arch=[40] * 5,
-                 task_type="Regression",
-                 activation_func=tf.nn.relu,
-                 reg_clarity=0.1,
                  lr_bp=0.001,
                  batch_size=200,
+                 task_type="Regression",
+                 activation_func=tf.nn.relu,
                  main_effect_epochs=2000,
                  interaction_epochs=2000,
                  tuning_epochs=500,
-                 loss_threshold=0.01,
-                 verbose=False,
-                 val_ratio=0.2,
                  early_stop_thres=100,
+                 heredity=True,
+                 reg_clarity=0.1,
+                 loss_threshold=0.01,
+                 val_ratio=0.2,
+                 verbose=False,
                  random_state=0):
 
         super(GAMINet, self).__init__()
-        # Parameter initiation
         
-        self.task_type = task_type
+        self.meta_info = meta_info
         self.subnet_arch = subnet_arch
-        self.reg_clarity = reg_clarity
         self.interact_arch = interact_arch
-        self.loss_threshold = loss_threshold
-        self.activation_func = activation_func
 
         self.lr_bp = lr_bp
         self.batch_size = batch_size
+        self.task_type = task_type
+        self.activation_func = activation_func
         self.tuning_epochs = tuning_epochs
         self.main_effect_epochs = main_effect_epochs
         self.interaction_epochs = interaction_epochs
+        self.early_stop_thres = early_stop_thres
+
+        self.heredity = heredity
+        self.reg_clarity = reg_clarity
+        self.loss_threshold = loss_threshold
 
         self.verbose = verbose
         self.val_ratio = val_ratio
-        self.early_stop_thres = early_stop_thres
         self.random_state = random_state
         
         np.random.seed(random_state)
@@ -336,12 +339,20 @@ class GAMINet(tf.keras.Model):
         
         tr_pred = self.__call__(tf.cast(tr_x, tf.float32), main_effect_training=False, interaction_training=False).numpy().astype(np.float64)
         val_pred = self.__call__(tf.cast(val_x, tf.float32), main_effect_training=False, interaction_training=False).numpy().astype(np.float64)
-        interaction_list_all = get_interaction_list(tr_x, val_x, tr_y.ravel(), val_y.ravel(),
+        if self.heredity
+            interaction_list_all = get_interaction_list(tr_x, val_x, tr_y.ravel(), val_y.ravel(),
                                       tr_pred.ravel(), val_pred.ravel(),
                                       self.feature_list_,
                                       self.feature_type_list_,
                                       task_type=self.task_type,
                                       active_main_effect_index=self.active_main_effect_index)
+        else:
+            interaction_list_all = get_interaction_list(tr_x, val_x, tr_y.ravel(), val_y.ravel(),
+                          tr_pred.ravel(), val_pred.ravel(),
+                          self.feature_list_,
+                          self.feature_type_list_,
+                          task_type=self.task_type,
+                          active_main_effect_index=np.arange(self.input_num))
 
         self.interaction_list = interaction_list_all[:self.interact_num]
         self.interact_num_added = len(self.interaction_list)
