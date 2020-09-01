@@ -335,6 +335,27 @@ class GAMINet(tf.keras.Model):
         main_effect_switcher[self.active_main_effect_index] = 1
         self.output_layer.main_effect_switcher.assign(tf.constant(main_effect_switcher, dtype=tf.float32))
 
+    def fine_tune_main_effects(self, tr_x, tr_y, val_x, val_y):
+        
+        train_size = tr_x.shape[0]
+        for epoch in range(self.tuning_epochs):
+            shuffle_index = np.arange(train_size)
+            np.random.shuffle(shuffle_index)
+            tr_x = tr_x[shuffle_index]
+            tr_y = tr_y[shuffle_index]
+
+            for iterations in range(train_size // self.batch_size):
+                offset = (iterations * self.batch_size) % train_size
+                batch_xx = tr_x[offset:(offset + self.batch_size), :]
+                batch_yy = tr_y[offset:(offset + self.batch_size)]
+                self.train_main_effect(tf.cast(batch_xx, tf.float32), batch_yy)
+
+            self.err_train_main_effect_training.append(self.evaluate(tr_x, tr_y, main_effect_training=False, interaction_training=False))
+            self.err_val_main_effect_training.append(self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False))
+            if self.verbose & (epoch % 1 == 0):
+                print("Main effects tuning epoch: %d, train loss: %0.5f, val loss: %0.5f" %
+                      (epoch + 1, self.err_train_main_effect_training[-1], self.err_val_main_effect_training[-1]))
+                
     def add_interaction(self, tr_x, tr_y, val_x, val_y):
         
         tr_pred = self.__call__(tf.cast(tr_x, tf.float32), main_effect_training=False, interaction_training=False).numpy().astype(np.float64)
@@ -482,7 +503,9 @@ class GAMINet(tf.keras.Model):
             if self.verbose:
                 print("#" * 10 + "No main effect is selected, training stop." + "#" * 10)
             return
-
+        else:
+            self.fine_tune_main_effects(tr_x, tr_y, val_x, val_y)
+            
         ## step2: interaction
         if self.interact_num == 0:
             if self.verbose:
@@ -502,7 +525,7 @@ class GAMINet(tf.keras.Model):
             self.output_layer.interaction_output_bias.assign(tf.constant(np.zeros((1)), dtype=tf.float32))
         
         self.evaluate(tr_x, tr_y, main_effect_training=True, interaction_training=True) 
-        ## step3: tunning
+        ## step3: tuning
         if self.verbose:
             print("#" * 10 + "Stage 3: fine tuning start." + "#" * 10)
         self.fine_tune(tr_x, tr_y, val_x, val_y)

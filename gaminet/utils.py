@@ -167,7 +167,7 @@ def plot_trajectory(data_dict_logs, log_scale=True, save_eps=False, save_png=Fal
         ax1.set_xlabel("Number of Epochs", fontsize=12)
         ax1.set_ylabel("Training Loss", fontsize=12)
         hp = ((t1)[-1] - np.min(t1 + t2 + t3)) / (np.max(t1 + t2 + t3) - np.min(t1 + t2 + t3))
-        
+
     offsetx = (0.2 + len(t1) / len(t1 + t2 + t3)) * 300
     offsety = 65 if hp < 0.6 else -65
 
