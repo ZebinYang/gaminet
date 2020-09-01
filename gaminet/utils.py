@@ -145,9 +145,6 @@ def plot_trajectory(data_dict_logs, log_scale=True, save_eps=False, save_png=Fal
     v1, v2, v3 = [data_dict_logs["err_val_main_effect_training"],
               data_dict_logs["err_val_interaction_training"],
               data_dict_logs["err_val_tuning"]]
-    
-    offsetx = (0.2 + len(t1) / len(t1 + t2 + t3)) * 300
-    offsety = 65 if hp1 < 0.6 else -65
 
     fig = plt.figure(figsize=(14, 4))
     ax1 = plt.subplot(1, 2, 1)
@@ -161,9 +158,7 @@ def plot_trajectory(data_dict_logs, log_scale=True, save_eps=False, save_png=Fal
         ax1.get_yaxis().set_minor_formatter(matplotlib.ticker.NullFormatter())
         ax1.set_xlabel("Number of Epochs", fontsize=12)
         ax1.set_ylabel("Training Loss (Log Scale)", fontsize=12)
-        hp1 = ((np.log10((t1)[-1]) - np.log10(np.min(t1 + t2 + t3))) 
-            / (np.log10(np.max(t1 + t2 + t3)) - np.log10(np.min(t1 + t2 + t3))))
-        hp2 = ((np.log10((t1 + t2)[-1]) - np.log10(np.min(t1 + t2 + t3))) 
+        hp = ((np.log10((t1)[-1]) - np.log10(np.min(t1 + t2 + t3))) 
             / (np.log10(np.max(t1 + t2 + t3)) - np.log10(np.min(t1 + t2 + t3))))
     else:
         ax1.set_yticks((np.linspace(np.nanmin(t1 + t2), np.nanmax(t1 + t2), 5)).round(5))
@@ -171,12 +166,14 @@ def plot_trajectory(data_dict_logs, log_scale=True, save_eps=False, save_png=Fal
         ax1.get_yaxis().set_minor_formatter(matplotlib.ticker.NullFormatter())
         ax1.set_xlabel("Number of Epochs", fontsize=12)
         ax1.set_ylabel("Training Loss", fontsize=12)
-        hp1 = ((t1)[-1] - np.min(t1 + t2 + t3)) / (np.max(t1 + t2 + t3) - np.min(t1 + t2 + t3))
-        hp2 = ((t1 + t2)[-1] - np.min(t1 + t2 + t3)) / (np.max(t1 + t2 + t3) - np.min(t1 + t2 + t3))
+        hp = ((t1)[-1] - np.min(t1 + t2 + t3)) / (np.max(t1 + t2 + t3) - np.min(t1 + t2 + t3))
         
+    offsetx = (0.2 + len(t1) / len(t1 + t2 + t3)) * 300
+    offsety = 65 if hp < 0.6 else -65
+
     if len(t2) > 0:
         ax1.annotate("Add \n Interactions", ((len(t1) + 1), (t1)[-1]), xycoords="data",
-                 xytext=(offset1x, offset1y), textcoords="offset pixels", arrowprops=dict(facecolor="black", shrink=0.1), fontsize=10,
+                 xytext=(offsetx, offsety), textcoords="offset pixels", arrowprops=dict(facecolor="black", shrink=0.1), fontsize=10,
                  horizontalalignment="center", verticalalignment="top")
     ax1.legend(["Stage 1: Training Main Effects", "Stage 2: Training Interactions", "Stage 3: Fine Tunning"])
 
@@ -191,22 +188,16 @@ def plot_trajectory(data_dict_logs, log_scale=True, save_eps=False, save_png=Fal
         ax2.get_yaxis().set_minor_formatter(matplotlib.ticker.NullFormatter())
         ax2.set_xlabel("Number of Epochs", fontsize=12)
         ax2.set_ylabel("Validation Loss (Log Scale)", fontsize=12)
-        hp1 = ((np.log10((v1)[-1]) - np.log10(np.min(v1 + v2 + v3))) 
-            / (np.log10(np.max(v1 + v2 + v3)) - np.log10(np.min(v1 + v2 + v3))))
-        hp2 = ((np.log10((v1 + v2)[-1]) - np.log10(np.min(v1 + v2 + v3))) 
-            / (np.log10(np.max(v1 + v2 + v3)) - np.log10(np.min(v1 + v2 + v3))))
     else:
         ax2.set_yticks((np.linspace(np.nanmin(v1 + v2 + v3), np.nanmax(v1 + v2 + v3), 5)).round(5))
         ax2.get_yaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
         ax2.get_yaxis().set_minor_formatter(matplotlib.ticker.NullFormatter())
         ax2.set_xlabel("Number of Epochs", fontsize=12)
         ax2.set_ylabel("Validation Loss", fontsize=12)
-        hp1 = ((v1)[-1] - np.min(v1 + v2 + v3)) / (np.max(v1 + v2 + v3) - np.min(v1 + v2 + v3))
-        hp2 = ((v1 + v2)[-1] - np.min(v1 + v2 + v3)) / (np.max(v1 + v2 + v3) - np.min(v1 + v2 + v3))
         
     if len(v2) > 0:
         ax2.annotate("Add \n Interactions", ((len(v1) + 1), (v1)[-1]), xycoords="data",
-                 xytext=(offset1x, offset1y), textcoords="offset pixels", arrowprops=dict(facecolor="black", shrink=0.1), fontsize=10,
+                 xytext=(offsetx, offsety), textcoords="offset pixels", arrowprops=dict(facecolor="black", shrink=0.1), fontsize=10,
                  horizontalalignment="center", verticalalignment="top")
     ax2.legend(["Stage 1: Training Main Effects", "Stage 2: Training Interactions", "Stage 3: Fine Tunning"])
     plt.show()
