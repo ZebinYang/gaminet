@@ -503,8 +503,7 @@ class GAMINet(tf.keras.Model):
             if self.verbose:
                 print("#" * 10 + "No main effect is selected, training stop." + "#" * 10)
             return
-        else:
-            self.fine_tune_main_effects(tr_x, tr_y, val_x, val_y)
+        self.fine_tune_main_effects(tr_x, tr_y, val_x, val_y)
             
         ## step2: interaction
         if self.interact_num == 0:
