@@ -216,9 +216,8 @@ class GAMINet(tf.keras.Model):
         componment_scales = [0 for i in range(self.input_num)]
         main_effect_norm = [self.maineffect_blocks.subnets[i].moving_norm.numpy()[0] for i in range(self.input_num)]
         beta = (self.output_layer.main_effect_weights.numpy() * np.array([main_effect_norm]).reshape([-1, 1]))
-        if np.sum(np.abs(beta)) > 10**(-10):
-            componment_scales = (np.abs(beta) / np.sum(np.abs(beta))).reshape([-1])
-            sorted_index = np.argsort(componment_scales)[::-1]
+        componment_scales = (np.abs(beta) / np.sum(np.abs(beta))).reshape([-1])
+        sorted_index = np.argsort(componment_scales)[::-1]
         return sorted_index, componment_scales
     
     def get_interaction_rank(self):
@@ -229,13 +228,13 @@ class GAMINet(tf.keras.Model):
             interaction_norm = [self.interact_blocks.interacts[i].moving_norm.numpy()[0] for i in range(self.interact_num_added)]
             gamma = (self.output_layer.interaction_weights.numpy()[:self.interact_num_added] 
                   * np.array([interaction_norm]).reshape([-1, 1]))
-            if np.sum(np.abs(gamma)) > 10**(-10):
-                componment_scales = (np.abs(gamma) / np.sum(np.abs(gamma))).reshape([-1])
-                sorted_index = np.argsort(componment_scales)[::-1]
+            componment_scales = (np.abs(gamma) / np.sum(np.abs(gamma))).reshape([-1])
+            sorted_index = np.argsort(componment_scales)[::-1]
         return sorted_index, componment_scales
     
     def get_all_active_rank(self):
 
+        componment_scales = [0 for i in range(self.input_num + self.interact_num_added)]
         main_effect_norm = [self.maineffect_blocks.subnets[i].moving_norm.numpy()[0] for i in range(self.input_num)]
         beta = (self.output_layer.main_effect_weights.numpy() * np.array([main_effect_norm]).reshape([-1, 1]) 
              * self.output_layer.main_effect_switcher.numpy())
@@ -247,12 +246,10 @@ class GAMINet(tf.keras.Model):
         gamma = np.vstack([gamma, np.zeros((self.interact_num - self.interact_num_added, 1))]) 
 
         componment_coefs = np.vstack([beta, gamma])
-        if np.sum(np.abs(componment_coefs)) > 10**(-10):
-            componment_scales = (np.abs(componment_coefs) / np.sum(np.abs(componment_coefs))).reshape([-1])
-        else:
-            componment_scales = [0 for i in range(self.input_num + self.interact_num_added)]
-        return componment_scales
-
+        componment_scales = (np.abs(componment_coefs) / np.sum(np.abs(componment_coefs))).reshape([-1])
+        sorted_index = np.argsort(componment_scales)[::-1]
+        return sorted_index, componment_scales
+    
     def estimate_density(self, x):
         
         n_samples = x.shape[0]
@@ -558,7 +555,7 @@ class GAMINet(tf.keras.Model):
         ## By default, we use the same main_grid_size and interact_grid_size as that of the zero mean constraint
         ## Alternatively, we can also specify it manually, e.g., when we want to have the same grid size as EBM (256).        
         data_dict_global = self.data_dict_density
-        componment_scales = self.get_all_active_rank()
+        sorted_index, componment_scales = self.get_all_active_rank()
         for indice in range(self.input_num):
             feature_name = self.feature_list_[indice]
             subnet = self.maineffect_blocks.subnets[indice]
