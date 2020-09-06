@@ -32,7 +32,7 @@ class CategNet(tf.keras.layers.Layer):
             self.subnet_mean = self.moving_mean
             self.subnet_norm = self.moving_norm
 
-        output = self.output_original - self.subnet_mean
+        output = self.output_original
         return output
 
 
@@ -74,7 +74,7 @@ class NumerNet(tf.keras.layers.Layer):
             self.subnet_mean = self.moving_mean
             self.subnet_norm = self.moving_norm
         
-        output = self.output_original - self.subnet_mean
+        output = self.output_original
         return output
 
 
@@ -176,7 +176,7 @@ class Interactnetwork(tf.keras.layers.Layer):
             self.subnet_mean = self.moving_mean
             self.subnet_norm = self.moving_norm
             
-        output = self.output_original - self.subnet_mean    
+        output = self.output_original 
         return output
 
 
