@@ -23,7 +23,7 @@ class GAMINet(tf.keras.Model):
                  tuning_epochs=500,
                  early_stop_thres=100,
                  heredity=True,
-                 reg_clarity=0.1,
+                 reg_clarity=0.001,
                  loss_threshold=0.01,
                  val_ratio=0.2,
                  verbose=False,
@@ -125,7 +125,7 @@ class GAMINet(tf.keras.Model):
                 a1 = tf.multiply(tf.gather(self.maineffect_outputs, [k1], axis=1), tf.gather(main_weights, [k1], axis=0))
                 a2 = tf.multiply(tf.gather(self.maineffect_outputs, [k2], axis=1), tf.gather(main_weights, [k2], axis=0))
                 b = tf.multiply(tf.gather(self.interact_outputs, [i], axis=1), tf.gather(interaction_weights, [i], axis=0))
-                clarity_loss += tf.abs(tf.multiply(a1, b)) + tf.abs(tf.multiply(a2, b))
+                clarity_loss += tf.square(tf.multiply(a1, b)) + tf.square(tf.multiply(a2, b))
             self.clarity_loss = tf.reduce_mean(clarity_loss)
         else:
             self.interact_outputs = tf.zeros([inputs.shape[0], self.interact_num])
