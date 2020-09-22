@@ -343,10 +343,6 @@ class GAMINet(tf.keras.Model):
             if self.verbose & (epoch % 1 == 0):
                 print("Main effects tuning epoch: %d, train loss: %0.5f, val loss: %0.5f" %
                       (epoch + 1, self.err_train_main_effect_tuning[-1], self.err_val_main_effect_tuning[-1]))
-                
-        for idx, subnets in enumerate(self.maineffect_blocks):
-            subnets.output_layer.bias.assign(subnets.output_layer.bias - subnets.moving_mean)
-        
         
     def center_main_effects(self):
         
