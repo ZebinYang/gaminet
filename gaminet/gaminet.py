@@ -351,7 +351,7 @@ class GAMINet(tf.keras.Model):
         for idx, subnet in enumerate(self.maineffect_blocks.subnets):
             subnet_bias = subnet.output_layer.bias - subnet.moving_mean
             subnet.output_layer.bias.assign(subnet_bias)
-            output_bias = output_bias + tf.multiply(subnet.moving_mean, tf.gather(main_weights, [idx], axis=0))
+            output_bias = output_bias + tf.multiply(subnet.moving_mean, tf.gather(main_weights, idx, axis=0))
         self.output_layer.output_bias.assign(output_bias)
 
     def add_interaction(self, tr_x, tr_y, val_x, val_y):
@@ -464,7 +464,7 @@ class GAMINet(tf.keras.Model):
         for idx, subnet in enumerate(self.interact_blocks.subnets):
             subnet_bias = subnet.output_layer.bias - subnet.moving_mean
             subnet.output_layer.bias.assign(subnet_bias)
-            output_bias = output_bias + tf.multiply(subnet.moving_mean, tf.gather(interaction_weights, [idx], axis=0))
+            output_bias = output_bias + tf.multiply(subnet.moving_mean, tf.gather(interaction_weights, idx, axis=0))
         self.output_layer.output_bias.assign(output_bias)
         
     def fit(self, train_x, train_y):
