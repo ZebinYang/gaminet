@@ -517,6 +517,7 @@ class GAMINet(tf.keras.Model):
             if self.verbose:
                 print(str(self.input_num - len(self.active_main_effect_index)) + " main effects are pruned, start tuning." + "#" * 10)
             self.fine_tune_main_effect(tr_x, tr_y, val_x, val_y)
+            self.center_main_effects()
         else:
             if self.verbose:
                 print("#" * 10 + "No main effect is pruned, the tuning step is skipped." + "#" * 10)
@@ -542,6 +543,7 @@ class GAMINet(tf.keras.Model):
                 print("#" * 10 + str(len(self.interaction_list) - len(self.active_interaction_index))
                       + " interactions are pruned, start tuning." + "#" * 10)
             self.fine_tune_interaction(tr_x, tr_y, val_x, val_y)
+            self.center_interactions()
         else:
             if self.verbose:
                 print("#" * 10 + "No main interaction is pruned, the tuning step is skipped.")
