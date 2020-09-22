@@ -117,8 +117,8 @@ class GAMINet(tf.keras.Model):
 
         self.maineffect_outputs = self.maineffect_blocks(inputs, training=main_effect_training)
         if self.interaction_status:
-            self.interact_outputs = self.interact_blocks(inputs, training=interaction_training)
             clarity_loss = 0
+            self.interact_outputs = self.interact_blocks(inputs, training=interaction_training)
             for i, (k1, k2) in enumerate(self.interaction_list):
                 main_weights = tf.multiply(self.output_layer.main_effect_switcher, self.output_layer.main_effect_weights)
                 interaction_weights = tf.multiply(self.output_layer.interaction_switcher, self.output_layer.interaction_weights)
@@ -183,7 +183,7 @@ class GAMINet(tf.keras.Model):
 
         train_weights = self.maineffect_blocks.weights
         train_weights.append(self.output_layer.main_effect_weights)
-        train_weights.append(self.output_layer.main_effect_output_bias)
+        train_weights.append(self.output_layer.output_bias)
         train_weights_list = []
         trainable_weights_names = [self.trainable_weights[j].name for j in range(len(self.trainable_weights))]
         for i in range(len(train_weights)):
@@ -201,7 +201,7 @@ class GAMINet(tf.keras.Model):
 
         train_weights = self.interact_blocks.weights
         train_weights.append(self.output_layer.interaction_weights)
-        train_weights.append(self.output_layer.interaction_output_bias)
+        train_weights.append(self.output_layer.output_bias)
         train_weights_list = []
         trainable_weights_names = [self.trainable_weights[j].name for j in range(len(self.trainable_weights))]
         for i in range(len(train_weights)):
@@ -297,7 +297,8 @@ class GAMINet(tf.keras.Model):
                 if self.verbose:
                     print("Early stop at epoch %d, with validation loss: %0.5f" % (epoch + 1, self.err_val_main_effect_training[-1]))
                 break
-
+        
+        
     def prune_main_effect(self, val_x, val_y):
 
         self.main_effect_val_loss = []
@@ -343,6 +344,20 @@ class GAMINet(tf.keras.Model):
                 print("Main effects tuning epoch: %d, train loss: %0.5f, val loss: %0.5f" %
                       (epoch + 1, self.err_train_main_effect_tuning[-1], self.err_val_main_effect_tuning[-1]))
                 
+        for idx, subnets in enumerate(self.maineffect_blocks):
+            subnets.output_layer.bias.assign(subnets.output_layer.bias - subnets.moving_mean)
+        
+        
+    def center_main_effects(self):
+        
+        output_bias = self.output_layer.output_bias
+        main_weights = tf.multiply(self.output_layer.main_effect_switcher, self.output_layer.main_effect_weights)
+        for idx, subnet in enumerate(self.maineffect_blocks.subnets):
+            subnet_bias = subnet.output_layer.bias - subnet.moving_mean
+            subnet.output_layer.bias.assign(subnet_bias)
+            output_bias = output_bias + tf.multiply(subnet.moving_mean, tf.gather(main_weights, [idx], axis=0))
+        self.output_layer.output_bias.assign(output_bias)
+
     def add_interaction(self, tr_x, tr_y, val_x, val_y):
         
         tr_pred = self.__call__(tf.cast(tr_x, tf.float32), main_effect_training=False, interaction_training=False).numpy().astype(np.float64)
@@ -400,7 +415,7 @@ class GAMINet(tf.keras.Model):
                 if self.verbose:
                     print("Early stop at epoch %d, with validation loss: %0.5f" % (epoch + 1, self.err_val_interaction_training[-1]))
                 break
-
+        
     def prune_interaction(self, val_x, val_y):
         
         self.interaction_val_loss = []
@@ -446,6 +461,16 @@ class GAMINet(tf.keras.Model):
                 print("Interaction tuning epoch: %d, train loss: %0.5f, val loss: %0.5f" %
                       (epoch + 1, self.err_train_interaction_tuning[-1], self.err_val_interaction_tuning[-1]))
 
+    def center_interactions(self):
+        
+        output_bias = self.output_layer.output_bias
+        interaction_weights = tf.multiply(self.output_layer.interaction_switcher, self.output_layer.interaction_weights)
+        for idx, subnet in enumerate(self.interact_blocks.subnets):
+            subnet_bias = subnet.output_layer.bias - subnet.moving_mean
+            subnet.output_layer.bias.assign(subnet_bias)
+            output_bias = output_bias + tf.multiply(subnet.moving_mean, tf.gather(interaction_weights, [idx], axis=0))
+        self.output_layer.output_bias.assign(output_bias)
+        
     def fit(self, train_x, train_y):
         
         ## data loading
@@ -484,6 +509,7 @@ class GAMINet(tf.keras.Model):
         if self.verbose:
             print("#" * 10 + "Stage 1: main effect training start." + "#" * 10)
         self.fit_main_effect(tr_x, tr_y, val_x, val_y)
+        self.evaluate(tr_x, tr_y, main_effect_training=True, interaction_training=False)
         if self.verbose:
             print("#" * 10 + "Stage 1: main effect training stop." + "#" * 10)
         self.prune_main_effect(val_x, val_y)
@@ -508,13 +534,13 @@ class GAMINet(tf.keras.Model):
             print("#" * 10 + "Stage 2: interaction training start." + "#" * 10)
         self.add_interaction(tr_x, tr_y, val_x, val_y)
         self.fit_interaction(tr_x, tr_y, val_x, val_y)
+        self.evaluate(tr_x, tr_y, main_effect_training=False, interaction_training=True)
         if self.verbose:
             print("#" * 10 + "Stage 2: interaction training stop." + "#" * 10)
         self.prune_interaction(val_x, val_y)
         if len(self.active_interaction_index) == 0:
             if self.verbose:
                 print("#" * 10 + "No interaction is selected, the model returns to GAM." + "#" * 10)
-            self.output_layer.interaction_output_bias.assign(tf.constant(np.zeros((1)), dtype=tf.float32))
         elif len(self.active_interaction_index) < len(self.interaction_list):
             if self.verbose:
                 print("#" * 10 + str(len(self.interaction_list) - len(self.active_interaction_index))
@@ -525,7 +551,8 @@ class GAMINet(tf.keras.Model):
                 print("#" * 10 + "No main interaction is pruned, the tuning step is skipped.")
         if self.verbose:
             print("#" * 20 + "GAMI-Net training finished." + "#" * 20)
-    
+        self.evaluate(tr_x, tr_y, main_effect_training=True, interaction_training=True)
+        
     def summary_logs(self, save_dict=False, folder="./", name="summary_logs"):
     
         data_dict_log = {}
@@ -669,7 +696,7 @@ class GAMINet(tf.keras.Model):
     def local_explain(self, x, y=None, save_dict=False, folder="./", name="local_explain"):
         
         predicted = self.predict(x)
-        intercept = self.output_layer.main_effect_output_bias.numpy() + self.output_layer.interaction_output_bias.numpy()
+        intercept = self.output_layer.output_bias.numpy()
 
         main_effect_output = self.maineffect_blocks.__call__(tf.cast(tf.constant(x), tf.float32)).numpy().ravel()
         if self.interact_num > 0:
