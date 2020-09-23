@@ -125,8 +125,9 @@ class GAMINet(tf.keras.Model):
                 a1 = tf.multiply(tf.gather(self.maineffect_outputs, [k1], axis=1), tf.gather(main_weights, [k1], axis=0))
                 a2 = tf.multiply(tf.gather(self.maineffect_outputs, [k2], axis=1), tf.gather(main_weights, [k2], axis=0))
                 b = tf.multiply(tf.gather(self.interact_outputs, [i], axis=1), tf.gather(interaction_weights, [i], axis=0))
-                clarity_loss += tf.square(tf.multiply(a1, b)) + tf.square(tf.multiply(a2, b))
-            self.clarity_loss = tf.reduce_mean(clarity_loss)
+                clarity_loss += tf.abs(tf.reduce_mean(tf.multiply(a1, b))) 
+                clarity_loss += tf.abs(tf.reduce_mean(tf.multiply(a2, b)))
+            self.clarity_loss = clarity_loss
         else:
             self.interact_outputs = tf.zeros([inputs.shape[0], self.interact_num])
 
@@ -462,6 +463,8 @@ class GAMINet(tf.keras.Model):
         output_bias = self.output_layer.output_bias
         interaction_weights = tf.multiply(self.output_layer.interaction_switcher, self.output_layer.interaction_weights)
         for idx, interact in enumerate(self.interact_blocks.interacts):
+            if idx >= len(self.interaction_list):
+                break
             interact_bias = interact.output_layer.bias - interact.moving_mean
             interact.output_layer.bias.assign(interact_bias)
             output_bias = output_bias + tf.multiply(interact.moving_mean, tf.gather(interaction_weights, idx, axis=0))
