@@ -115,7 +115,7 @@ class GAMINet(tf.keras.Model):
 
     def call(self, inputs, main_effect_training=False, interaction_training=False):
 
-        self.clarity_loss = 0
+        self.clarity_loss = tf.constant(0)
         self.maineffect_outputs = self.maineffect_blocks(inputs, training=main_effect_training)
         if self.interaction_status:
             self.interact_outputs = self.interact_blocks(inputs, training=interaction_training)
