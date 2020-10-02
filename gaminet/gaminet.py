@@ -488,19 +488,6 @@ class GAMINet(tf.keras.Model):
 
     def init_fit(self, train_x, train_y):
         
-        ## data loading
-        n_samples = train_x.shape[0]
-        indices = np.arange(n_samples)
-        if self.task_type == "Regression":
-            tr_x, val_x, tr_y, val_y, tr_idx, val_idx = train_test_split(train_x, train_y, indices, test_size=self.val_ratio, 
-                                          random_state=self.random_state)
-        elif self.task_type == "Classification":
-            tr_x, val_x, tr_y, val_y, tr_idx, val_idx = train_test_split(train_x, train_y, indices, test_size=self.val_ratio, 
-                                      stratify=train_y, random_state=self.random_state)
-        self.tr_idx = tr_idx
-        self.val_idx = val_idx
-        self.estimate_density(tr_x)
-
         ## initialization
         self.data_dict_density = {}
         self.err_train_main_effect_training = []
@@ -516,9 +503,23 @@ class GAMINet(tf.keras.Model):
         self.main_effect_val_loss = []
         self.interaction_val_loss = []
         
+        ## data loading
+        n_samples = train_x.shape[0]
+        indices = np.arange(n_samples)
+        if self.task_type == "Regression":
+            tr_x, val_x, tr_y, val_y, tr_idx, val_idx = train_test_split(train_x, train_y, indices, test_size=self.val_ratio, 
+                                          random_state=self.random_state)
+        elif self.task_type == "Classification":
+            tr_x, val_x, tr_y, val_y, tr_idx, val_idx = train_test_split(train_x, train_y, indices, test_size=self.val_ratio, 
+                                      stratify=train_y, random_state=self.random_state)
+        self.tr_idx = tr_idx
+        self.val_idx = val_idx
+        self.estimate_density(tr_x)
+        return tr_x, val_x, tr_y, val_y
+        
     def fit(self, train_x, train_y):
         
-        self.init_fit(train_x, train_y)
+        tr_x, val_x, tr_y, val_y = self.init_fit(train_x, train_y)
         if self.verbose:
             print("#" * 20 + "GAMI-Net training start." + "#" * 20)
         ## step 1: main effects
