@@ -308,8 +308,8 @@ class GAMINet(tf.keras.Model):
                 subnet_bias = subnet.output_layer.bias - subnet.moving_mean
                 subnet.output_layer.bias.assign(subnet_bias)
             elif idx in self.cfeature_index_list_:
-                subnet_bias = self.output_layer_bias - subnet.moving_mean
-                self.output_layer_bias.assign(subnet_bias)
+                subnet_bias = subnet.output_layer_bias - subnet.moving_mean
+                subnet.output_layer_bias.assign(subnet_bias)
 
             output_bias = output_bias + tf.multiply(subnet.moving_mean, tf.gather(main_weights, idx, axis=0))
         self.output_layer.output_bias.assign(output_bias)
