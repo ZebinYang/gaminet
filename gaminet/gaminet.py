@@ -469,6 +469,8 @@ class GAMINet(tf.keras.Model):
        
     def fine_tune_all(self, tr_x, tr_y, val_x, val_y):
         
+        last_improvement = 0
+        best_validation = np.inf
         train_size = tr_x.shape[0]
         for epoch in range(self.tuning_epochs):
             shuffle_index = np.arange(train_size)
@@ -485,8 +487,16 @@ class GAMINet(tf.keras.Model):
             self.err_train_tuning.append(self.evaluate(tr_x, tr_y, main_effect_training=False, interaction_training=False))
             self.err_val_tuning.append(self.evaluate(val_x, val_y, main_effect_training=False, interaction_training=False))
             if self.verbose & (epoch % 1 == 0):
-                print("Interaction tuning epoch: %d, train loss: %0.5f, val loss: %0.5f" %
+                print("Fine tuning epoch: %d, train loss: %0.5f, val loss: %0.5f" %
                       (epoch + 1, self.err_train_tuning[-1], self.err_val_tuning[-1]))
+                
+            if self.err_val_tuning[-1] < best_validation:
+                best_validation = self.err_val_tuning[-1]
+                last_improvement = epoch
+            if epoch - last_improvement > self.early_stop_thres:
+                if self.verbose:
+                    print("Early stop at epoch %d, with validation loss: %0.5f" % (epoch + 1, self.err_val_tuning[-1]))
+                break
         self.evaluate(tr_x, tr_y, main_effect_training=True, interaction_training=True)
         self.center_main_effects()
         self.center_interactions()
