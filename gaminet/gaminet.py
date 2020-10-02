@@ -486,7 +486,7 @@ class GAMINet(tf.keras.Model):
         self.center_main_effects()
         self.center_interactions()
 
-    def fit(self, train_x, train_y):
+    def init_fit(self, train_x, train_y):
         
         ## data loading
         n_samples = train_x.shape[0]
@@ -515,6 +515,9 @@ class GAMINet(tf.keras.Model):
         self.main_effect_val_loss = []
         self.interaction_val_loss = []
         
+    def fit(self, train_x, train_y):
+        
+        self.init_fit(train_x, train_y)
         self.estimate_density(tr_x)
         if self.verbose:
             print("#" * 20 + "GAMI-Net training start." + "#" * 20)
