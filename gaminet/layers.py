@@ -46,8 +46,8 @@ class NumerNet(tf.keras.layers.Layer):
             self.layers.append(layers.Dense(nodes, activation=self.activation_func, kernel_initializer=tf.keras.initializers.Orthogonal()))
         self.output_layer = layers.Dense(1, activation=tf.identity, kernel_initializer=tf.keras.initializers.Orthogonal())
         
-        self.min_value = self.add_weight(name="min"+str(self.subnet_id), shape=[1], initializer=tf.ones_initializer(), trainable=False)
-        self.max_value = self.add_weight(name="max"+str(self.subnet_id), shape=[1], initializer=tf.zeros_initializer(), trainable=False)
+        self.min_value = self.add_weight(name="min"+str(self.subnet_id), shape=[1], initializer=tf.constant_initializer(np.inf), trainable=False)
+        self.max_value = self.add_weight(name="max"+str(self.subnet_id), shape=[1], initializer=tf.constant_initializer(-np.inf), trainable=False)
         self.moving_mean = self.add_weight(name="mean"+str(self.subnet_id), shape=[1], initializer=tf.zeros_initializer(), trainable=False)
         self.moving_norm = self.add_weight(name="norm"+str(self.subnet_id), shape=[1], initializer=tf.ones_initializer(), trainable=False)
         

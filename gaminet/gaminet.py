@@ -499,6 +499,7 @@ class GAMINet(tf.keras.Model):
                                       stratify=train_y, random_state=self.random_state)
         self.tr_idx = tr_idx
         self.val_idx = val_idx
+        self.estimate_density(tr_x)
 
         ## initialization
         self.data_dict_density = {}
@@ -518,7 +519,6 @@ class GAMINet(tf.keras.Model):
     def fit(self, train_x, train_y):
         
         self.init_fit(train_x, train_y)
-        self.estimate_density(tr_x)
         if self.verbose:
             print("#" * 20 + "GAMI-Net training start." + "#" * 20)
         ## step 1: main effects
