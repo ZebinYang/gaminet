@@ -26,7 +26,7 @@ class CategNet(tf.keras.layers.Layer):
     def call(self, inputs, training=False):
 
         dummy = tf.one_hot(indices=tf.cast(inputs[:,0], tf.int32), depth=self.category_num)
-        self.output_original = tf.matmul(dummy, self.categ_bias) - self.output_layer_bias
+        self.output_original = tf.matmul(dummy, self.categ_bias) + self.output_layer_bias
 
         if training:
             self.subnet_mean = tf.reduce_mean(self.output_original, 0)

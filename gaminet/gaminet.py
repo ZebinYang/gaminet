@@ -125,8 +125,8 @@ class GAMINet(tf.keras.Model):
                 a1 = tf.multiply(tf.gather(self.maineffect_outputs, [k1], axis=1), tf.gather(main_weights, [k1], axis=0))
                 a2 = tf.multiply(tf.gather(self.maineffect_outputs, [k2], axis=1), tf.gather(main_weights, [k2], axis=0))
                 b = tf.multiply(tf.gather(self.interact_outputs, [i], axis=1), tf.gather(interaction_weights, [i], axis=0))
-                self.clarity_loss += tf.square(tf.reduce_mean(tf.multiply(a1, b))) 
-                self.clarity_loss += tf.square(tf.reduce_mean(tf.multiply(a2, b)))
+                self.clarity_loss += tf.abs(tf.reduce_mean(tf.multiply(a1, b))) 
+                self.clarity_loss += tf.abs(tf.reduce_mean(tf.multiply(a2, b)))
         else:
             self.interact_outputs = tf.zeros([inputs.shape[0], self.interact_num])
 
@@ -548,7 +548,7 @@ class GAMINet(tf.keras.Model):
             if self.verbose:
                 print("#" * 10 + "No main effect is selected, training stop." + "#" * 10)
             return 
-
+        
         ## step2: interaction
         if self.interact_num == 0:
             if self.verbose:
