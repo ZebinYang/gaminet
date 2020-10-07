@@ -30,7 +30,7 @@ class CategNet(tf.keras.layers.Layer):
 
         if training:
             self.subnet_mean = tf.reduce_mean(self.output_original, 0)
-            self.subnet_norm = tf.maximum(tf.math.reduce_std(self.output_original, 0), 1e-10)
+            self.subnet_norm = tf.math.reduce_variance(self.output_original, 0)
             self.moving_mean.assign(self.subnet_mean)
             self.moving_norm.assign(self.subnet_norm)
         else:
@@ -72,7 +72,7 @@ class NumerNet(tf.keras.layers.Layer):
         
         if training:
             self.subnet_mean = tf.reduce_mean(self.output_original, 0)
-            self.subnet_norm = tf.maximum(tf.math.reduce_std(self.output_original, 0), 1e-10)
+            self.subnet_norm = tf.math.reduce_variance(self.output_original, 0)
             self.moving_mean.assign(self.subnet_mean)
             self.moving_norm.assign(self.subnet_norm)
         else:
@@ -174,7 +174,7 @@ class Interactnetwork(tf.keras.layers.Layer):
 
         if training:
             self.subnet_mean = tf.reduce_mean(self.output_original, 0)
-            self.subnet_norm = tf.maximum(tf.math.reduce_std(self.output_original, 0), 1e-10)
+            self.subnet_norm = tf.math.reduce_variance(self.output_original, 0)
             self.moving_mean.assign(self.subnet_mean)
             self.moving_norm.assign(self.subnet_norm)
         else:
