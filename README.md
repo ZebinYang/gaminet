@@ -169,7 +169,7 @@ local_visualize(data_dict_local, save_png=True, folder=simu_dir, name='s1_local'
 
 ## Citations
 ----------
-Yang, Z., Zhang, A. and Sudjianto, A., 2020. GAMI-Net: An Explainable Neural Network based on Generalized Additive Models with Structured Interactions. [arXiv:2003.0713](https://arxiv.org/abs/2003.00713)
+Yang, Z., Zhang, A. and Sudjianto, A., 2020. GAMI-Net: An Explainable Neural Network based on Generalized Additive Models with Structured Interactions. [arXiv:2003.0713](https://arxiv.org/abs/2003.07132)
 
 ```latex
 @article{yang2020gami,
