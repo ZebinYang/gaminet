@@ -1,5 +1,5 @@
 #  GAMI-Net
-Generalized additive model with structured interactions
+Generalized additive models with structured interactions
 
 ## Installation 
 
@@ -8,25 +8,9 @@ The following environments are required:
 - Python 3.7 (anaconda is preferable)
 - tensorflow 2.0
 
-
-Github Installation
 ```shell
-pip install git+https://github.com/zebinyang/gaminet.git
+pip install git+https://github.com/SelfExplainML/gaminet.git
 ```
-
-Manual Installation
-
-- Download the source codes from https://github.com/ZebinYang/gaminet.git
-
-- unzip and switch to the root folder.
-
-- Run the following shell commands to finish installation.
-
-```shell
-pip install -r requirements.txt
-python setup.py install
-```
-
 
 ## Usage
 
