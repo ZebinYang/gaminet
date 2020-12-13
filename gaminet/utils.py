@@ -1,6 +1,6 @@
-import os 
+import os
 import numpy as np
-import pandas as pd 
+import pandas as pd
 from contextlib import closing
 from itertools import combinations
 
@@ -8,8 +8,6 @@ import matplotlib
 from matplotlib import gridspec
 from matplotlib import pyplot as plt
 from matplotlib.ticker import MaxNLocator
-
-from sklearn.model_selection import train_test_split 
 
 from interpret.glassbox.ebm.utils import EBMUtils
 from interpret.utils import autogen_schema
@@ -28,16 +26,16 @@ def get_interaction_list(tr_x, val_x, tr_y, val_y, pred_tr, pred_val, feature_li
         model_type = "classification"
         pred_tr = np.minimum(np.maximum(pred_tr, 0.0000001), 0.9999999)
         pred_val = np.minimum(np.maximum(pred_val, 0.0000001), 0.9999999)
-        pred_tr = np.log(pred_tr / (1 - pred_tr)) 
-        pred_val = np.log(pred_val / (1 - pred_val)) 
-        
+        pred_tr = np.log(pred_tr / (1 - pred_tr))
+        pred_val = np.log(pred_val / (1 - pred_val))
+
     train_num = tr_x.shape[0]
     x = np.vstack([tr_x, val_x])
     schema_ = autogen_schema(pd.DataFrame(x), feature_names=feature_list, feature_types=feature_type_list)
     preprocessor_ = EBMPreprocessor(schema=schema_)
     preprocessor_.fit(x)
     xt = preprocessor_.transform(x)
-    
+
     tr_x, val_x = xt[:train_num, :], xt[train_num:, :]
     attributes_ = EBMUtils.gen_attributes(preprocessor_.col_types_, preprocessor_.col_n_bins_)
     main_attr_sets = EBMUtils.gen_attribute_sets([[item] for item in range(len(attributes_))])
@@ -72,13 +70,14 @@ def get_interaction_list(tr_x, val_x, tr_y, val_y, pred_tr, pred_val, feature_li
     interaction_list = [ranked_scores[i][0] for i in range(len(ranked_scores))]
     return interaction_list
 
+
 def plot_regularization(data_dict_logs, log_scale=True, save_eps=False, save_png=False, folder="./results/", name="trajectory_plot"):
 
     main_loss = data_dict_logs["main_effect_val_loss"]
     inter_loss = data_dict_logs["interaction_val_loss"]
     active_main_effect_index = data_dict_logs["active_main_effect_index"]
     active_interaction_index = data_dict_logs["active_interaction_index"]
-    
+
     fig = plt.figure(figsize=(14, 4))
     if len(main_loss) > 0:
         ax1 = plt.subplot(1, 2, 1)
@@ -137,9 +136,10 @@ def plot_regularization(data_dict_logs, log_scale=True, save_eps=False, save_png
             os.makedirs(folder)
         fig.savefig("%s.png" % save_path, bbox_inches="tight", dpi=100)
 
+
 def plot_trajectory(data_dict_logs, log_scale=True, save_eps=False, save_png=False, folder="./results/", name="trajectory_plot"):
 
-    t1, t2, t3 = [data_dict_logs["err_train_main_effect_training"], 
+    t1, t2, t3 = [data_dict_logs["err_train_main_effect_training"],
               data_dict_logs["err_train_interaction_training"], data_dict_logs["err_train_tuning"]]
     v1, v2, v3= [data_dict_logs["err_val_main_effect_training"],
               data_dict_logs["err_val_interaction_training"], data_dict_logs["err_val_tuning"]]
@@ -162,7 +162,7 @@ def plot_trajectory(data_dict_logs, log_scale=True, save_eps=False, save_png=Fal
         ax1.get_yaxis().set_minor_formatter(matplotlib.ticker.NullFormatter())
         ax1.set_xlabel("Number of Epochs", fontsize=12)
         ax1.set_ylabel("Training Loss", fontsize=12)
-        
+
     ax1.legend(["Stage 1: Training Main Effects", "Stage 2: Training Interactions", "Stage 3: Fine Tuning"])
 
     ax2 = plt.subplot(1, 2, 2)
@@ -184,7 +184,7 @@ def plot_trajectory(data_dict_logs, log_scale=True, save_eps=False, save_png=Fal
         ax2.set_ylabel("Validation Loss", fontsize=12)
     ax2.legend(["Stage 1: Training Main Effects", "Stage 2: Training Interactions", "Stage 3: Fine Tuning"])
     plt.show()
-    
+
     save_path = folder + name
     if save_eps:
         if not os.path.exists(folder):
@@ -195,6 +195,7 @@ def plot_trajectory(data_dict_logs, log_scale=True, save_eps=False, save_png=Fal
             os.makedirs(folder)
         fig.savefig("%s.png" % save_path, bbox_inches="tight", dpi=100)
 
+
 def feature_importance_visualize(data_dict_global, folder="./results/", name="demo", save_png=False, save_eps=False):
 
     all_ir = []
@@ -203,14 +204,14 @@ def feature_importance_visualize(data_dict_global, folder="./results/", name="de
         if item["importance"] > 0:
             all_ir.append(item["importance"])
             all_names.append(key)
-            
+
     max_ids = len(all_names)
     if max_ids > 0:
         fig = plt.figure(figsize=(0.4 + 0.6 * max_ids, 4))
         ax = plt.axes()
-        rects = ax.bar(np.arange(len(all_ir)), [ir for ir,_ in sorted(zip(all_ir, all_names))][::-1])
+        ax.bar(np.arange(len(all_ir)), [ir for ir, _ in sorted(zip(all_ir, all_names))][::-1])
         ax.set_xticks(np.arange(len(all_ir)))
-        ax.set_xticklabels([name for _,name in sorted(zip(all_ir, all_names))][::-1], rotation=60)
+        ax.set_xticklabels([name for _, name in sorted(zip(all_ir, all_names))][::-1], rotation=60)
         plt.xlabel("Feature Name", fontsize=12)
         plt.ylim(0, np.max(all_ir) + 0.05)
         plt.xlim(-1, len(all_names))
@@ -226,6 +227,7 @@ def feature_importance_visualize(data_dict_global, folder="./results/", name="de
                 os.makedirs(folder)
             fig.savefig("%s.png" % save_path, bbox_inches="tight", dpi=100)
 
+
 def global_visualize_density(data_dict_global, main_effect_num=10**5, interaction_num=10**5, cols_per_row=4,
                         save_png=False, save_eps=False, folder="./results/", name="demo"):
 
@@ -238,7 +240,7 @@ def global_visualize_density(data_dict_global, main_effect_num=10**5, interactio
 
     componment_scales = np.array(componment_scales)
     sorted_index = np.argsort(componment_scales)
-    active_index = sorted_index[componment_scales[sorted_index].cumsum()>0][::-1]
+    active_index = sorted_index[componment_scales[sorted_index].cumsum() > 0][::-1]
     active_univariate_index = active_index[active_index < maineffect_count][:main_effect_num]
     active_interaction_index = active_index[active_index >= maineffect_count][:interaction_num]
     max_ids = len(active_univariate_index) + len(active_interaction_index)
@@ -252,13 +254,13 @@ def global_visualize_density(data_dict_global, main_effect_num=10**5, interactio
         if data_dict_global[feature_name]["type"] == "continuous":
 
             inner = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=outer[idx], wspace=0.1, hspace=0.1, height_ratios=[6, 1])
-            ax1 = plt.Subplot(fig, inner[0]) 
+            ax1 = plt.Subplot(fig, inner[0])
             ax1.plot(data_dict_global[feature_name]["inputs"], data_dict_global[feature_name]["outputs"])
             ax1.set_xticklabels([])
             fig.add_subplot(ax1)
 
-            ax2 = plt.Subplot(fig, inner[1]) 
-            xint = ((np.array(data_dict_global[feature_name]["density"]["names"][1:]) 
+            ax2 = plt.Subplot(fig, inner[1])
+            xint = ((np.array(data_dict_global[feature_name]["density"]["names"][1:])
                             + np.array(data_dict_global[feature_name]["density"]["names"][:-1])) / 2).reshape([-1, 1]).reshape([-1])
             ax2.bar(xint, data_dict_global[feature_name]["density"]["scores"], width=xint[1] - xint[0])
             ax2.get_shared_x_axes().join(ax1, ax2)
@@ -285,7 +287,7 @@ def global_visualize_density(data_dict_global, main_effect_num=10**5, interactio
             ax2.set_xticklabels(data_dict_global[feature_name]["input_labels"])
             ax2.set_yticklabels([])
             fig.add_subplot(ax2)
-            
+
         idx = idx + 1
         if len(str(ax2.get_xticks())) > 60:
             ax2.xaxis.set_tick_params(rotation=20)
@@ -315,7 +317,7 @@ def global_visualize_density(data_dict_global, main_effect_num=10**5, interactio
             ax_bottom.set_xticks(data_dict_global[feature_name]["input1_ticks"])
             ax_bottom.set_xticklabels(data_dict_global[feature_name]["input1_labels"])
         else:
-            xint = ((np.array(data_dict_global[feature_name1]["density"]["names"][1:]) 
+            xint = ((np.array(data_dict_global[feature_name1]["density"]["names"][1:])
                   + np.array(data_dict_global[feature_name1]["density"]["names"][:-1])) / 2).reshape([-1])
             ax_bottom.bar(xint, data_dict_global[feature_name1]["density"]["scores"], width=xint[1] - xint[0])
         ax_bottom.set_yticklabels([])
@@ -333,7 +335,7 @@ def global_visualize_density(data_dict_global, main_effect_num=10**5, interactio
             ax_left.set_yticks(data_dict_global[feature_name]["input2_ticks"])
             ax_left.set_yticklabels(data_dict_global[feature_name]["input2_labels"])
         else:
-            xint = ((np.array(data_dict_global[feature_name2]["density"]["names"][1:]) 
+            xint = ((np.array(data_dict_global[feature_name2]["density"]["names"][1:])
                   + np.array(data_dict_global[feature_name2]["density"]["names"][:-1])) / 2).reshape([-1])
             ax_left.barh(xint, data_dict_global[feature_name2]["density"]["scores"], height=xint[1] - xint[0])
         ax_left.set_xticklabels([])
@@ -343,7 +345,7 @@ def global_visualize_density(data_dict_global, main_effect_num=10**5, interactio
         fig.add_subplot(ax_left)
 
         ax_colorbar = plt.Subplot(fig, inner[2])
-        response_precision = max(int(- np.log10(np.max(data_dict_global[feature_name]["outputs"]) 
+        response_precision = max(int(- np.log10(np.max(data_dict_global[feature_name]["outputs"])
                                    - np.min(data_dict_global[feature_name]["outputs"]))) + 2, 0)
         fig.colorbar(interact_plot, cax=ax_colorbar, orientation="vertical",
                      format="%0." + str(response_precision) + "f", use_gridspec=True)
@@ -374,20 +376,20 @@ def global_visualize_wo_density(data_dict_global, main_effect_num=10**5, interac
 
     componment_scales = np.array(componment_scales)
     sorted_index = np.argsort(componment_scales)
-    active_index = sorted_index[componment_scales[sorted_index].cumsum()>0][::-1]
+    active_index = sorted_index[componment_scales[sorted_index].cumsum() > 0][::-1]
     active_univariate_index = active_index[active_index < maineffect_count][:main_effect_num]
     active_interaction_index = active_index[active_index >= maineffect_count][:interaction_num]
     max_ids = len(active_univariate_index) + len(active_interaction_index)
 
     idx = 0
     fig = plt.figure(figsize=(5.2 * cols_per_row, 4 * int(np.ceil(max_ids / cols_per_row))))
-    outer = gridspec.GridSpec(int(np.ceil(max_ids/cols_per_row)), cols_per_row, wspace=0.25, hspace=0.35)
+    outer = gridspec.GridSpec(int(np.ceil(max_ids / cols_per_row)), cols_per_row, wspace=0.25, hspace=0.35)
     for indice in active_univariate_index:
 
         feature_name = list(data_dict_global.keys())[indice]
         if data_dict_global[feature_name]["type"] == "continuous":
 
-            ax1 = plt.Subplot(fig, outer[idx]) 
+            ax1 = plt.Subplot(fig, outer[idx])
             ax1.plot(data_dict_global[feature_name]["inputs"], data_dict_global[feature_name]["outputs"])
             ax1.set_title(feature_name, fontsize=12)
             fig.add_subplot(ax1)
@@ -396,14 +398,14 @@ def global_visualize_wo_density(data_dict_global, main_effect_num=10**5, interac
 
         elif data_dict_global[feature_name]["type"] == "categorical":
 
-            ax1 = plt.Subplot(fig, outer[idx]) 
+            ax1 = plt.Subplot(fig, outer[idx])
             ax1.bar(np.arange(len(data_dict_global[feature_name]["inputs"])),
                         data_dict_global[feature_name]["outputs"])
             ax1.set_title(feature_name, fontsize=12)
             ax1.set_xticks(data_dict_global[feature_name]["input_ticks"])
             ax1.set_xticklabels(data_dict_global[feature_name]["input_labels"])
             fig.add_subplot(ax1)
-        
+
         idx = idx + 1
         if len(str(ax1.get_xticks())) > 60:
             ax1.xaxis.set_tick_params(rotation=20)
@@ -412,8 +414,6 @@ def global_visualize_wo_density(data_dict_global, main_effect_num=10**5, interac
     for indice in active_interaction_index:
 
         feature_name = list(data_dict_global.keys())[indice]
-        feature_name1 = feature_name.split(" vs. ")[0]
-        feature_name2 = feature_name.split(" vs. ")[1]
         axis_extent = data_dict_global[feature_name]["axis_extent"]
 
         ax_main = plt.Subplot(fig, outer[idx])
@@ -427,18 +427,18 @@ def global_visualize_wo_density(data_dict_global, main_effect_num=10**5, interac
             ax_main.set_yticks(data_dict_global[feature_name]["input2_ticks"])
             ax_main.set_yticklabels(data_dict_global[feature_name]["input2_labels"])
 
-        response_precision = max(int(- np.log10(np.max(data_dict_global[feature_name]["outputs"]) 
+        response_precision = max(int(- np.log10(np.max(data_dict_global[feature_name]["outputs"])
                                    - np.min(data_dict_global[feature_name]["outputs"]))) + 2, 0)
         fig.colorbar(interact_plot, ax=ax_main, orientation="vertical",
                      format="%0." + str(response_precision) + "f", use_gridspec=True)
 
         ax_main.set_title(feature_name + " (" + str(np.round(100 * data_dict_global[feature_name]["importance"], 1)) + "%)", fontsize=12)
         fig.add_subplot(ax_main)
-        
+
         idx = idx + 1
         if len(str(ax_main.get_xticks())) > 60:
-                ax_main.xaxis.set_tick_params(rotation=20)
-        
+            ax_main.xaxis.set_tick_params(rotation=20)
+
     if max_ids > 0:
         save_path = folder + name
         if save_eps:
@@ -450,6 +450,7 @@ def global_visualize_wo_density(data_dict_global, main_effect_num=10**5, interac
                 os.makedirs(folder)
             fig.savefig("%s.png" % save_path, bbox_inches="tight", dpi=100)
 
+
 def local_visualize(data_dict_local, folder="./results/", name="demo", save_png=False, save_eps=False):
 
     max_ids = len(data_dict_local["active_indice"])
@@ -459,9 +460,9 @@ def local_visualize(data_dict_local, folder="./results/", name="demo", save_png=
             data_dict_local["effect_names"][data_dict_local["active_indice"]], rotation=60)
 
     if "actual" in data_dict_local.keys():
-        title = "Predicted: %0.4f | Actual: %0.4f" % (data_dict_local["predicted"], data_dict_local["actual"])  
+        title = "Predicted: %0.4f | Actual: %0.4f" % (data_dict_local["predicted"], data_dict_local["actual"])
     else:
-        title = "Predicted: %0.4f"% (data_dict_local["predicted"])
+        title = "Predicted: %0.4f" % (data_dict_local["predicted"])
     plt.title(title, fontsize=12)
 
     if max_ids > 0:
