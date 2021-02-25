@@ -1,5 +1,5 @@
 #  GAMI-Net
-Generalized additive model with pairwise interactions
+Generalized additive models with structured interactions
 
 ## Installation 
 
@@ -8,25 +8,9 @@ The following environments are required:
 - Python 3.7 + (anaconda is preferable)
 - tensorflow 2.0
 
-
-Github Installation
 ```shell
-pip install git+https://github.com/zebinyang/gaminet.git
+pip install git+https://github.com/SelfExplainML/gaminet.git
 ```
-
-Manual Installation
-
-- Download the source codes from https://github.com/ZebinYang/gaminet.git
-
-- unzip and switch to the root folder.
-
-- Run the following shell commands to finish installation.
-
-```shell
-pip install -r requirements.txt
-python setup.py install
-```
-
 
 ## Usage
 
@@ -158,7 +142,10 @@ local_visualize(data_dict_local, save_png=True, folder=simu_dir, name='s1_local'
 ```
 <img src="https://github.com/ZebinYang/gaminet/blob/master/examples/results/s1_local.png" width="480">
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 6c24427e1bddd41587771e0e95c614dec2fb6d0a
 ## Citations
 ----------
 Yang, Z., Zhang, A. and Sudjianto, A., 2020. GAMI-Net: An Explainable Neural Network based on Generalized Additive Models with Structured Interactions. [arXiv:2003.0713](https://arxiv.org/abs/2003.07132)
