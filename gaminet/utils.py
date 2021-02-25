@@ -9,10 +9,7 @@ from matplotlib import gridspec
 from matplotlib import pyplot as plt
 from matplotlib.ticker import MaxNLocator
 
-from interpret.glassbox.ebm.utils import EBMUtils
-from interpret.utils import autogen_schema
-from interpret.glassbox.ebm.internal import NativeEBM
-from interpret.glassbox.ebm.ebm import EBMPreprocessor
+from .interpret import *
 
 
 def get_interaction_list(tr_x, val_x, tr_y, val_y, pred_tr, pred_val, feature_list, feature_type_list, 
@@ -37,8 +34,8 @@ def get_interaction_list(tr_x, val_x, tr_y, val_y, pred_tr, pred_val, feature_li
     xt = preprocessor_.transform(x)
 
     tr_x, val_x = xt[:train_num, :], xt[train_num:, :]
-    attributes_ = EBMUtils.gen_attributes(preprocessor_.col_types_, preprocessor_.col_n_bins_)
-    main_attr_sets = EBMUtils.gen_attribute_sets([[item] for item in range(len(attributes_))])
+    attributes_ = gen_attributes(preprocessor_.col_types_, preprocessor_.col_n_bins_)
+    main_attr_sets = gen_attribute_sets([[item] for item in range(len(attributes_))])
 
     with closing(
         NativeEBM(
