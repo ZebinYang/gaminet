@@ -6,7 +6,11 @@ Generalized additive models with structured interactions
 The following environments are required:
 
 - Python 3.7 + (anaconda is preferable)
-- tensorflow 2.0
+- tensorflow>=2.0.0, <=2.3.0
+- numpy>=1.15.2
+- pandas>=0.19.2
+- matplotlib>=3.1.3
+- scikit-learn>=0.23.0
 
 ```shell
 pip install git+https://github.com/SelfExplainML/gaminet.git

@@ -1,4 +1,4 @@
-# Copyright (c) 2019 Microsoft Corporation
+# All the codes in this file are derived from interpret package by Microsoft Corporation
 
 # Distributed under the MIT software license
 
