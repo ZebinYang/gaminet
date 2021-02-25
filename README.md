@@ -5,8 +5,12 @@ Generalized additive models with structured interactions
 
 The following environments are required:
 
-- Python 3.7 (anaconda is preferable)
-- tensorflow 2.0
+- Python 3.7 + (anaconda is preferable)
+- tensorflow>=2.0.0, <=2.3.0
+- numpy>=1.15.2
+- pandas>=0.19.2
+- matplotlib>=3.1.3
+- scikit-learn>=0.23.0
 
 ```shell
 pip install git+https://github.com/SelfExplainML/gaminet.git
@@ -42,13 +46,12 @@ def rmse(label, pred, scaler):
     label = scaler.inverse_transform(label.reshape([-1, 1]))
     return np.sqrt(np.mean((pred - label)**2))
 
-def data_generator1(datanum, random_state=0):
+def data_generator1(datanum, dist="uniform", random_state=0):
     
+    nfeatures = 100
     np.random.seed(random_state)
-    x = np.zeros((datanum, 10))
-    for i in range(10):
-        x[:, i:i+1] = np.random.uniform(0, 1,[datanum,1])
-    x1, x2, x3, x4, x5, x6, x7, x8, x9, x10 = [x[:, [i]] for i in range(10)]
+    x = np.random.uniform(0, 1, [datanum, nfeatures])
+    x1, x2, x3, x4, x5, x6 = [x[:, [i]] for i in range(6)]
 
     def cliff(x1, x2):
         # x1: -20,20
@@ -66,17 +69,8 @@ def data_generator1(datanum, random_state=0):
         + cliff(x5, x6)).reshape([-1,1]) + 1 * np.random.normal(0, 1, [datanum, 1])
 
     task_type = "Regression"
-    meta_info = {"X1":{"type":'continuous'},
-             'X2':{'type':'continuous'},
-             'X3':{'type':'continuous'},
-             'X4':{'type':'continuous'},
-             'X5':{'type':'continuous'},
-             'X6':{'type':'continuous'},
-             'X7':{'type':'continuous'},
-             'X8':{'type':'continuous'},
-             'X9':{'type':'continuous'},
-             'X10':{'type':'continuous'},
-             'Y':{'type':'target'}}
+    meta_info = {"X" + str(i + 1):{'type':'continuous'} for i in range(nfeatures)}
+    meta_info.update({'Y':{'type':'target'}})         
     for i, (key, item) in enumerate(meta_info.items()):
         if item['type'] == 'target':
             sy = MinMaxScaler((0, 1))
@@ -91,17 +85,18 @@ def data_generator1(datanum, random_state=0):
     train_x, test_x, train_y, test_y = train_test_split(x, y, test_size=0.2, random_state=random_state)
     return train_x, test_x, train_y, test_y, task_type, meta_info, metric_wrapper(rmse, sy)
 
-train_x, test_x, train_y, test_y, task_type, meta_info, get_metric = data_generator1(5000, 0)
+train_x, test_x, train_y, test_y, task_type, meta_info, get_metric = data_generator1(10000, 0)
 ```
 
 Run GAMI-Net
 ```python
 ## Note the current GAMINet API requires input features being normalized within 0 to 1. 
-model = GAMINet(meta_info=meta_info, interact_num=20, interact_arch=[20, 10], subnet_arch=[20, 10],
-                task_type=task_type, activation_func=tf.tanh, main_grid_size=41, interact_grid_size=41,
-                batch_size=500, lr_bp=0.001, main_effect_epochs=2000,
-                interaction_epochs=2000, tuning_epochs=50, loss_threshold=0.01,
-                verbose=True, val_ratio=0.2, early_stop_thres=100)
+model = GAMINet(meta_info=meta_info, interact_num=20, 
+                interact_arch=[40] * 5, subnet_arch=[40] * 5, 
+                lr_bp=0.0001, batch_size=200, task_type=task_type, activation_func=tf.nn.relu, 
+                main_effect_epochs=5000, interaction_epochs=5000, tuning_epochs=500, early_stop_thres=50, 
+                heredity=True, loss_threshold=0.01, reg_clarity=1,
+                verbose=False, val_ratio=0.2, random_state=random_state)
 
 model.fit(train_x, train_y)
 

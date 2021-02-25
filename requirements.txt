@@ -4,14 +4,13 @@
 
 ## data processing ##
 numpy>=1.15.2
-pandas
+pandas>=0.19.2
 
 ## visualization ##
-matplotlib>=2.2.2
+matplotlib>=3.1.3
 
 ## network platform
-tensorflow>=2.0.0
+tensorflow>=2.0.0, <=2.3.0
 
 ## external tools
-scikit-learn>0.20.1
-git+https://github.com/ZebinYang/interpret.git
+scikit-learn>=0.23.0
