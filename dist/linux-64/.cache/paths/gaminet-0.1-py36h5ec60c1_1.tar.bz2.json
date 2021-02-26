@@ -1,0 +1,155 @@
+{
+  "paths": [
+    {
+      "_path": "lib/python3.6/site-packages/gaminet-0.1-py3.6.egg-info/PKG-INFO",
+      "path_type": "hardlink",
+      "sha256": "163a67fdac2e329783b736e76dc55aae71ddb385ae6b4082bb1af27f77f246be",
+      "size_in_bytes": 303
+    },
+    {
+      "_path": "lib/python3.6/site-packages/gaminet-0.1-py3.6.egg-info/SOURCES.txt",
+      "path_type": "hardlink",
+      "sha256": "60aec6c66386fa0262546bfe5e84433619c10ff5ff9388ae92664af8df8cf412",
+      "size_in_bytes": 615
+    },
+    {
+      "_path": "lib/python3.6/site-packages/gaminet-0.1-py3.6.egg-info/dependency_links.txt",
+      "path_type": "hardlink",
+      "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+      "size_in_bytes": 1
+    },
+    {
+      "_path": "lib/python3.6/site-packages/gaminet-0.1-py3.6.egg-info/installed-files.txt",
+      "path_type": "hardlink",
+      "sha256": "0e3433b3480e44f40d7c483a7dbbb21bb0abce11b322bfaff83c396b99874390",
+      "size_in_bytes": 764
+    },
+    {
+      "_path": "lib/python3.6/site-packages/gaminet-0.1-py3.6.egg-info/not-zip-safe",
+      "path_type": "hardlink",
+      "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+      "size_in_bytes": 1
+    },
+    {
+      "_path": "lib/python3.6/site-packages/gaminet-0.1-py3.6.egg-info/requires.txt",
+      "path_type": "hardlink",
+      "sha256": "5580dcc6918be2faa07a03a5fa5aa03d7f6f2dbb2a0f778fb0541fff7b00d78c",
+      "size_in_bytes": 86
+    },
+    {
+      "_path": "lib/python3.6/site-packages/gaminet-0.1-py3.6.egg-info/top_level.txt",
+      "path_type": "hardlink",
+      "sha256": "90d9eaa7d408089bf289bb8e19d7f93016bb2583d35b8475bbfbbc87f9f0504b",
+      "size_in_bytes": 8
+    },
+    {
+      "_path": "lib/python3.6/site-packages/gaminet/__init__.py",
+      "path_type": "hardlink",
+      "sha256": "fd7fc7aec02fc179726534875cbcb6d9500bdc424daf6b8b1210fc5d65e4ee4e",
+      "size_in_bytes": 117
+    },
+    {
+      "_path": "lib/python3.6/site-packages/gaminet/__pycache__/__init__.cpython-36.pyc",
+      "path_type": "hardlink",
+      "sha256": "aee550c4ebe29e220076d50e0805cdbc4fe82a22a9e6a39d93906c7dce198825",
+      "size_in_bytes": 263
+    },
+    {
+      "_path": "lib/python3.6/site-packages/gaminet/__pycache__/gaminet.cpython-36.pyc",
+      "path_type": "hardlink",
+      "sha256": "2df0214b1f90c1538f8e68c3914c308f4a60bc0891ad038b3b3686ac670e0f4b",
+      "size_in_bytes": 24749
+    },
+    {
+      "_path": "lib/python3.6/site-packages/gaminet/__pycache__/interpret.cpython-36.pyc",
+      "path_type": "hardlink",
+      "sha256": "8f9422513052a0af26c3795e1f0604100458ecfdbe42f55aac5feb69db692177",
+      "size_in_bytes": 13577
+    },
+    {
+      "_path": "lib/python3.6/site-packages/gaminet/__pycache__/layers.cpython-36.pyc",
+      "path_type": "hardlink",
+      "sha256": "49a01fa73d92300615e5ca08dacb031857cfc31fc1c3528c89167710527d0889",
+      "size_in_bytes": 8225
+    },
+    {
+      "_path": "lib/python3.6/site-packages/gaminet/__pycache__/utils.cpython-36.pyc",
+      "path_type": "hardlink",
+      "sha256": "f6641a3b60c489527a312edef99665e74f79056f194be632fed5e6165663d1b8",
+      "size_in_bytes": 14506
+    },
+    {
+      "_path": "lib/python3.6/site-packages/gaminet/gaminet.py",
+      "path_type": "hardlink",
+      "sha256": "36aca4cc0f2cb13699763b534be8ae5b03ac1cccd870428541359e5275550486",
+      "size_in_bytes": 40871
+    },
+    {
+      "_path": "lib/python3.6/site-packages/gaminet/interpret.py",
+      "path_type": "hardlink",
+      "sha256": "c40c3c6e79f708f5f615ee39dafb6c784761c79e7c77325c10bc21be82dda251",
+      "size_in_bytes": 20909
+    },
+    {
+      "_path": "lib/python3.6/site-packages/gaminet/layers.py",
+      "path_type": "hardlink",
+      "sha256": "061ae6546ca9da304c7d5560995153f28f09d3f4c03fe8163125f1a1bf50df80",
+      "size_in_bytes": 12655
+    },
+    {
+      "_path": "lib/python3.6/site-packages/gaminet/lib/lib_ebmcore_linux_x64.so",
+      "path_type": "hardlink",
+      "sha256": "a9b0b6998bce1c81b276b7c364bd7d5767fa4a0b9145d38ebaa38e3394c06c8b",
+      "size_in_bytes": 1944160
+    },
+    {
+      "_path": "lib/python3.6/site-packages/gaminet/lib/lib_ebmcore_linux_x64_debug.so",
+      "path_type": "hardlink",
+      "sha256": "0db2da24a5d0a03be4cabe834747ea54f6908869835df4a7eb249ddbc8ca5b0d",
+      "size_in_bytes": 3992200
+    },
+    {
+      "_path": "lib/python3.6/site-packages/gaminet/lib/lib_ebmcore_mac_x64.dylib",
+      "path_type": "hardlink",
+      "sha256": "3829b05747116d8535bfc0da3b1ee6dab9f79c80cfa70b1679b1181f2a9941cf",
+      "size_in_bytes": 1667920
+    },
+    {
+      "_path": "lib/python3.6/site-packages/gaminet/lib/lib_ebmcore_mac_x64_debug.dylib",
+      "path_type": "hardlink",
+      "sha256": "205687a4be9b032d50cfb661dd3ce9f5adaab8ad3e44e13c0fad4410db11f308",
+      "size_in_bytes": 3525240
+    },
+    {
+      "_path": "lib/python3.6/site-packages/gaminet/lib/lib_ebmcore_win_x64.dll",
+      "path_type": "hardlink",
+      "sha256": "502c486b91d067ccbd8dca4b1759cc785f099c712d2dc16f8e55401148784736",
+      "size_in_bytes": 412672
+    },
+    {
+      "_path": "lib/python3.6/site-packages/gaminet/lib/lib_ebmcore_win_x64.pdb",
+      "path_type": "hardlink",
+      "sha256": "b1dd9c72b9c2ff2db3f7d685a435f97192e82963893a70dd978df644df39cd99",
+      "size_in_bytes": 7622656
+    },
+    {
+      "_path": "lib/python3.6/site-packages/gaminet/lib/lib_ebmcore_win_x64_debug.dll",
+      "path_type": "hardlink",
+      "sha256": "a390ba7a01275dea70524e3242daa40e8f793d78065c10733ff20b04cbc4330b",
+      "size_in_bytes": 8859648
+    },
+    {
+      "_path": "lib/python3.6/site-packages/gaminet/lib/lib_ebmcore_win_x64_debug.pdb",
+      "path_type": "hardlink",
+      "sha256": "cbd35c63433ea5b9e6aadfd847605bb18925241ddaa8f77d40f93b6797ccdf53",
+      "size_in_bytes": 8343552
+    },
+    {
+      "_path": "lib/python3.6/site-packages/gaminet/utils.py",
+      "path_type": "hardlink",
+      "sha256": "052d851cf9aac044988c53cbbd3cfd866a4cae56d465d05ae91f77ca4c9600fb",
+      "size_in_bytes": 23494
+    }
+  ],
+  "paths_version": 1
+}
