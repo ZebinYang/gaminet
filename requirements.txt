@@ -10,7 +10,7 @@ pandas>=0.19.2
 matplotlib>=3.1.3
 
 ## network platform
-tensorflow>=2.0.0, <=2.3.1
+tensorflow>=2.0.0, <=2.3.2
 
 ## external tools
 scikit-learn>=0.23.0
