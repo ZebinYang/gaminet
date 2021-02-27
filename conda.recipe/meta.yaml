@@ -6,6 +6,7 @@ source:
    - path: ../
 
 build:
+   noarch: python
    number: 1
    script:
     - export PYTHONUNBUFFERED=1  # [ppc64le]
