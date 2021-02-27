@@ -13,7 +13,7 @@ The following environments are required:
 - scikit-learn>=0.23.0
 
 ```shell
-pip install git+https://github.com/SelfExplainML/gaminet.git
+pip install gaminet
 ```
 
 ## Usage
