@@ -94,7 +94,7 @@ def plot_regularization(data_dict_logs, log_scale=True, save_eps=False, save_png
             ax1.get_yaxis().set_minor_formatter(matplotlib.ticker.NullFormatter())
             ax1.set_ylabel("Training Loss (Log Scale)", fontsize=12)
         else:
-            ax1.set_yticks((np.linspace(np.nanmin(main_loss), np.nanmax(main_loss), 5)).round(5))
+            ax1.set_yticks((np.linspace(np.nanmin(main_loss), np.nanmax(main_loss), 5)))
             ax1.get_yaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
             ax1.get_yaxis().set_minor_formatter(matplotlib.ticker.NullFormatter())
             ax1.set_ylabel("Training Loss", fontsize=12)
@@ -112,7 +112,7 @@ def plot_regularization(data_dict_logs, log_scale=True, save_eps=False, save_png
         ax2.xaxis.set_major_locator(MaxNLocator(integer=True))
         if log_scale:
             ax2.set_yscale("log")
-            ax2.set_yticks((10 ** np.linspace(np.log10(np.nanmin(inter_loss)), np.log10(np.nanmax(inter_loss)), 5)).round(5))
+            ax2.set_yticks((10 ** np.linspace(np.log10(np.nanmin(inter_loss)), np.log10(np.nanmax(inter_loss)), 5)))
             ax2.get_yaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
             ax2.get_yaxis().set_minor_formatter(matplotlib.ticker.NullFormatter())
             ax2.set_ylabel("Validation Loss (Log Scale)", fontsize=12)
@@ -148,7 +148,7 @@ def plot_trajectory(data_dict_logs, log_scale=True, save_eps=False, save_png=Fal
     ax1.plot(np.arange(len(t1 + t2) + 1, len(t1 + t2 + t3) + 1, 1), t3, color="y")
     if log_scale:
         ax1.set_yscale("log")
-        ax1.set_yticks((10 ** np.linspace(np.log10(np.nanmin(t1 + t2 + t3)), np.log10(np.nanmax(t1 + t2 + t3)), 5).round(5)))
+        ax1.set_yticks((10 ** np.linspace(np.log10(np.nanmin(t1 + t2 + t3)), np.log10(np.nanmax(t1 + t2 + t3)), 5)))
         ax1.get_yaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
         ax1.get_yaxis().set_minor_formatter(matplotlib.ticker.NullFormatter())
         ax1.set_xlabel("Number of Epochs", fontsize=12)
@@ -168,7 +168,7 @@ def plot_trajectory(data_dict_logs, log_scale=True, save_eps=False, save_png=Fal
     ax2.plot(np.arange(len(v1 + v2) + 1, len(v1 + v2 + v3) + 1, 1), v3, color="y")
     if log_scale:
         ax2.set_yscale("log")
-        ax2.set_yticks((10 ** np.linspace(np.log10(np.nanmin(v1 + v2 + v3)), np.log10(np.nanmax(v1 + v2 + v3)), 5).round(5)))
+        ax2.set_yticks((10 ** np.linspace(np.log10(np.nanmin(v1 + v2 + v3)), np.log10(np.nanmax(v1 + v2 + v3)), 5)))
         ax2.get_yaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
         ax2.get_yaxis().set_minor_formatter(matplotlib.ticker.NullFormatter())
         ax2.set_xlabel("Number of Epochs", fontsize=12)
