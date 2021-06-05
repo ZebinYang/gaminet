@@ -23,14 +23,17 @@ class CategNet(tf.keras.layers.Layer):
         self.moving_norm = self.add_weight(name="norm" + str(self.cagetnet_id), shape=[1],
                                            initializer=tf.ones_initializer(), trainable=False)
 
-    def call(self, inputs, training=False):
+    def call(self, inputs, sample_weight=None, training=False):
 
         dummy = tf.one_hot(indices=tf.cast(inputs[:, 0], tf.int32), depth=self.category_num)
         self.output_original = tf.matmul(dummy, self.categ_bias) + self.output_layer_bias
 
         if training:
-            self.subnet_mean = tf.reduce_mean(self.output_original, 0)
-            self.subnet_norm = tf.math.reduce_variance(self.output_original, 0)
+            if sample_weight is not None:
+                self.subnet_mean, self.subnet_norm = tf.nn.weighted_moments(self.output_original,
+                                                    frequency_weights=tf.reshape(sample_weight, shape=(-1, 1)), axes=0)
+            else:
+                self.subnet_mean, self.subnet_norm = tf.nn.weighted_moments(self.output_original, axes=0)
             self.moving_mean.assign(self.subnet_mean)
             self.moving_norm.assign(self.subnet_norm)
         else:
@@ -59,7 +62,7 @@ class NumerNet(tf.keras.layers.Layer):
         self.moving_mean = self.add_weight(name="mean" + str(self.subnet_id), shape=[1], initializer=tf.zeros_initializer(), trainable=False)
         self.moving_norm = self.add_weight(name="norm" + str(self.subnet_id), shape=[1], initializer=tf.ones_initializer(), trainable=False)
 
-    def call(self, inputs, training=False):
+    def call(self, inputs, sample_weight=None, training=False):
 
         if training:
             self.min_value.assign(tf.minimum(self.min_value, tf.reduce_min(inputs)))
@@ -71,8 +74,11 @@ class NumerNet(tf.keras.layers.Layer):
         self.output_original = self.output_layer(x)
 
         if training:
-            self.subnet_mean = tf.reduce_mean(self.output_original, 0)
-            self.subnet_norm = tf.math.reduce_variance(self.output_original, 0)
+            if sample_weight is not None:
+                self.subnet_mean, self.subnet_norm = tf.nn.weighted_moments(self.output_original,
+                                                    frequency_weights=tf.reshape(sample_weight, shape=(-1, 1)), axes=0)
+            else:
+                self.subnet_mean, self.subnet_norm = tf.nn.weighted_moments(self.output_original, axes=0)
             self.moving_mean.assign(self.subnet_mean)
             self.moving_norm.assign(self.subnet_norm)
         else:
@@ -106,12 +112,12 @@ class MainEffectBlock(tf.keras.layers.Layer):
                 feature_name = self.feature_list[i]
                 self.subnets.append(CategNet(category_num=len(self.dummy_values[feature_name]), cagetnet_id=i))
 
-    def call(self, inputs, training=False):
+    def call(self, inputs, sample_weight=None, training=False):
 
         self.subnet_outputs = []
         for i in range(self.subnet_num):
             subnet = self.subnets[i]
-            subnet_output = subnet(tf.gather(inputs, [i], axis=1), training=training)
+            subnet_output = subnet(tf.gather(inputs, [i], axis=1), sample_weight=sample_weight, training=training)
             self.subnet_outputs.append(subnet_output)
         output = tf.reshape(tf.squeeze(tf.stack(self.subnet_outputs, 1)), [-1, self.subnet_num])
 
@@ -165,7 +171,7 @@ class Interactnetwork(tf.keras.layers.Layer):
             interact_input_list.append(inputs[:, 1])
         return interact_input_list
 
-    def call(self, inputs, training=False):
+    def call(self, inputs, sample_weight=None, training=False):
 
         x = tf.stack(self.onehot_encoding(inputs), 1)
         for dense_layer in self.layers:
@@ -173,8 +179,11 @@ class Interactnetwork(tf.keras.layers.Layer):
         self.output_original = self.output_layer(x)
 
         if training:
-            self.subnet_mean = tf.reduce_mean(self.output_original, 0)
-            self.subnet_norm = tf.math.reduce_variance(self.output_original, 0)
+            if sample_weight is not None:
+                self.subnet_mean, self.subnet_norm = tf.nn.weighted_moments(self.output_original,
+                                                    frequency_weights=tf.reshape(sample_weight, shape=(-1, 1)), axes=0)
+            else:
+                self.subnet_mean, self.subnet_norm = tf.nn.weighted_moments(self.output_original, axes=0)
             self.moving_mean.assign(self.subnet_mean)
             self.moving_norm.assign(self.subnet_norm)
         else:
@@ -218,7 +227,7 @@ class InteractionBlock(tf.keras.layers.Layer):
         for i in range(self.interact_num_filtered):
             self.interacts[i].set_interaction(interaction_list[i])
 
-    def call(self, inputs, training=False):
+    def call(self, inputs, sample_weight=None, training=False):
 
         self.interact_outputs = []
         for i in range(self.interact_num):
@@ -227,7 +236,7 @@ class InteractionBlock(tf.keras.layers.Layer):
             else:
                 interact = self.interacts[i]
                 interact_input = tf.gather(inputs, self.interaction_list[i], axis=1)
-                interact_output = interact(interact_input, training=training)
+                interact_output = interact(interact_input, sample_weight=sample_weight, training=training)
                 self.interact_outputs.append(interact_output)
 
         if len(self.interact_outputs) > 0:
