@@ -567,9 +567,9 @@ class GAMINet(tf.keras.Model):
 
         n_samples = train_x.shape[0]
         if sample_weight is None:
-            sample_weight = np.ones(n_samples) / n_samples
+            sample_weight = np.ones(n_samples)
         else:
-            sample_weight = sample_weight.ravel() / np.sum(sample_weight)
+            sample_weight = n_samples * sample_weight.ravel() / np.sum(sample_weight)
 
         tr_x, val_x, tr_y, val_y = self.init_fit(train_x, train_y, sample_weight)
         if self.verbose:
