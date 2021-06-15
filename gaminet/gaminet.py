@@ -1,4 +1,5 @@
 import os
+import pickle
 import numpy as np
 import tensorflow as tf
 from sklearn.model_selection import train_test_split
@@ -184,11 +185,11 @@ class GAMINet(tf.keras.Model):
             pred = self.__call__(inputs, sample_weight, main_effect_training=True, interaction_training=False)
             total_loss = self.loss_fn(labels, pred, sample_weight=sample_weight)
 
+        train_weights_list = []
         train_weights = self.maineffect_blocks.weights
         train_weights.append(self.output_layer.main_effect_weights)
         train_weights.append(self.output_layer.output_bias)
-        train_weights_list = []
-        trainable_weights_names = [self.trainable_weights[j].name for j in range(len(self.trainable_weights))]
+        trainable_weights_names = [w.name for w in self.trainable_weights]
         for i in range(len(train_weights)):
             if train_weights[i].name in trainable_weights_names:
                 train_weights_list.append(train_weights[i])
@@ -202,11 +203,11 @@ class GAMINet(tf.keras.Model):
             pred = self.__call__(inputs, sample_weight, main_effect_training=False, interaction_training=True)
             total_loss = self.loss_fn(labels, pred, sample_weight=sample_weight) + self.reg_clarity * self.clarity_loss
 
+        train_weights_list = []
         train_weights = self.interact_blocks.weights
         train_weights.append(self.output_layer.interaction_weights)
         train_weights.append(self.output_layer.output_bias)
-        train_weights_list = []
-        trainable_weights_names = [self.trainable_weights[j].name for j in range(len(self.trainable_weights))]
+        trainable_weights_names = [w.name for w in self.trainable_weights]
         for i in range(len(train_weights)):
             if train_weights[i].name in trainable_weights_names:
                 train_weights_list.append(train_weights[i])
@@ -222,22 +223,21 @@ class GAMINet(tf.keras.Model):
                 total_loss_maineffects = self.loss_fn(labels, pred, sample_weight=sample_weight)
                 total_loss_interactions = self.loss_fn(labels, pred, sample_weight=sample_weight) + self.reg_clarity * self.clarity_loss
 
+        train_weights_list = []
         train_weights = self.maineffect_blocks.weights
         train_weights.append(self.output_layer.main_effect_weights)
         train_weights.append(self.output_layer.output_bias)
-        train_weights_list = []
-        trainable_weights_names = [self.trainable_weights[j].name for j in range(len(self.trainable_weights))]
+        trainable_weights_names = [w.name for w in self.trainable_weights]
         for i in range(len(train_weights)):
             if train_weights[i].name in trainable_weights_names:
                 train_weights_list.append(train_weights[i])
         grads = tape_maineffects.gradient(total_loss_maineffects, train_weights_list)
         self.optimizer.apply_gradients(zip(grads, train_weights_list))
 
+        train_weights_list = []
         train_weights = self.interact_blocks.weights
         train_weights.append(self.output_layer.interaction_weights)
         train_weights.append(self.output_layer.output_bias)
-        train_weights_list = []
-        trainable_weights_names = [self.trainable_weights[j].name for j in range(len(self.trainable_weights))]
         for i in range(len(train_weights)):
             if train_weights[i].name in trainable_weights_names:
                 train_weights_list.append(train_weights[i])
@@ -348,7 +348,7 @@ class GAMINet(tf.keras.Model):
                 batch_sw = tr_sw[offset:(offset + self.batch_size)]
                 self.train_main_effect(tf.cast(batch_xx, tf.float32), tf.cast(batch_yy, tf.float32), tf.cast(batch_sw, tf.float32))
 
-            self.err_train_main_effect_training.append(self.evaluate(tr_x, tr_y, sample_weight[self.tr_idx],
+            self.err_train_main_effect_training.append(self.evaluate(tr_x, tr_y, sample_weight[self.tr_idx][shuffle_index],
                                                  main_effect_training=False, interaction_training=False))
             self.err_val_main_effect_training.append(self.evaluate(val_x, val_y, sample_weight[self.val_idx],
                                                  main_effect_training=False, interaction_training=False))
@@ -450,7 +450,7 @@ class GAMINet(tf.keras.Model):
                 batch_sw = tr_sw[offset:(offset + self.batch_size)]
                 self.train_interaction(tf.cast(batch_xx, tf.float32), tf.cast(batch_yy, tf.float32), tf.cast(batch_sw, tf.float32))
 
-            self.err_train_interaction_training.append(self.evaluate(tr_x, tr_y, sample_weight[self.tr_idx],
+            self.err_train_interaction_training.append(self.evaluate(tr_x, tr_y, sample_weight[self.tr_idx][shuffle_index],
                                                  main_effect_training=False, interaction_training=False))
             self.err_val_interaction_training.append(self.evaluate(val_x, val_y, sample_weight[self.val_idx],
                                                  main_effect_training=False, interaction_training=False))
@@ -513,7 +513,7 @@ class GAMINet(tf.keras.Model):
                 batch_sw = tr_sw[offset:(offset + self.batch_size)]
                 self.train_all(tf.cast(batch_xx, tf.float32), tf.cast(batch_yy, tf.float32), tf.cast(batch_sw, tf.float32))
 
-            self.err_train_tuning.append(self.evaluate(tr_x, tr_y, sample_weight[self.tr_idx],
+            self.err_train_tuning.append(self.evaluate(tr_x, tr_y, sample_weight[self.tr_idx][shuffle_index],
                                          main_effect_training=False, interaction_training=False))
             self.err_val_tuning.append(self.evaluate(val_x, val_y, sample_weight[self.val_idx],
                                         main_effect_training=False, interaction_training=False))
@@ -600,6 +600,9 @@ class GAMINet(tf.keras.Model):
         self.prune_interaction(val_x, val_y, sample_weight)
 
         self.fine_tune_all(tr_x, tr_y, val_x, val_y, sample_weight)
+        self.active_indice = 1 + np.hstack([-1, self.active_main_effect_index, self.input_num + self.active_interaction_index]).astype(int)
+        self.effect_names = np.hstack(["Intercept", np.array(self.feature_list_), [self.feature_list_[self.interaction_list[i][0]] + " x "
+                          + self.feature_list_[self.interaction_list[i][1]] for i in range(len(self.interaction_list))]])
         if self.verbose:
             print("#" * 20 + "GAMI-Net training finished." + "#" * 20)
 
@@ -617,6 +620,7 @@ class GAMINet(tf.keras.Model):
                        "active_interaction_index": self.active_interaction_index,
                        "main_effect_val_loss": self.main_effect_val_loss,
                        "interaction_val_loss": self.interaction_val_loss})
+        
         if save_dict:
             if not os.path.exists(folder):
                 os.makedirs(folder)
@@ -741,13 +745,13 @@ class GAMINet(tf.keras.Model):
         return data_dict_global
         
     def local_explain(self, x, y=None, save_dict=False, folder="./", name="local_explain"):
-        
+
         predicted = self.predict(x)
         intercept = self.output_layer.output_bias.numpy()
 
-        main_effect_output = self.maineffect_blocks.__call__(tf.cast(tf.constant(x), tf.float32)).numpy().ravel()
+        main_effect_output = self.maineffect_blocks.__call__(tf.cast(tf.constant(x), tf.float32)).numpy()
         if self.interact_num > 0:
-            interaction_output = self.interact_blocks.__call__(tf.cast(tf.constant(x), tf.float32)).numpy().ravel()
+            interaction_output = self.interact_blocks.__call__(tf.cast(tf.constant(x), tf.float32)).numpy()
         else:
             interaction_output = np.array([])
 
@@ -755,20 +759,14 @@ class GAMINet(tf.keras.Model):
         interaction_weights = ((self.output_layer.interaction_weights.numpy()[:self.interact_num_added])
                               * self.output_layer.interaction_switcher.numpy()[:self.interact_num_added]).ravel()
         interaction_weights = np.hstack([interaction_weights, np.zeros((self.interact_num - self.interact_num_added))])
+        scores = np.hstack([np.repeat(intercept[0], x.shape[0]).reshape(-1, 1), np.hstack([main_effect_weights, interaction_weights])
+                                  * np.hstack([main_effect_output, interaction_output])])
 
-        scores = np.hstack([intercept[0], np.hstack([main_effect_weights, interaction_weights])
-                                          * np.hstack([main_effect_output, interaction_output])])
-        active_indice = 1 + np.hstack([-1, self.active_main_effect_index, self.input_num + self.active_interaction_index])
-        effect_names = np.hstack(["Intercept",
-                          np.array(self.feature_list_),
-                          [self.feature_list_[self.interaction_list[i][0]] + " x "
-                          + self.feature_list_[self.interaction_list[i][1]] for i in range(len(self.interaction_list))]])
-
-        data_dict_local = {"active_indice": active_indice.astype(int),
-                     "scores": scores,
-                     "effect_names": effect_names,
-                     "predicted": predicted,
-                     "actual": y}
+        data_dict_local = [{"active_indice": self.active_indice,
+                    "scores": scores[i],
+                    "effect_names": self.effect_names,
+                    "predicted": predicted[i],
+                    "actual": y[i]} for i in range(x.shape[0])]
 
         if save_dict:
             if not os.path.exists(folder):
@@ -777,3 +775,88 @@ class GAMINet(tf.keras.Model):
             np.save("%s.npy" % save_path, data_dict_local)
 
         return data_dict_local
+    
+    def load(self, folder="./", name="model"):
+        
+        save_path = folder + name + ".pickle"
+        if not os.path.exists(save_path):
+            raise "file not found!"
+
+        with open(save_path, "rb") as input_file:
+            model_dict = pickle.load(input_file)
+        for key, item in model_dict.items():
+            setattr(self, key, item)
+        self.optimizer.lr = model_dict["lr_bp"]
+
+    def save(self, folder="./", name="model"):
+
+        model_dict = {}
+        model_dict["meta_info"] = self.meta_info
+        model_dict["subnet_arch"] = self.subnet_arch
+        model_dict["interact_arch"] = self.interact_arch
+
+        model_dict["lr_bp"] = self.lr_bp
+        model_dict["batch_size"] = self.batch_size
+        model_dict["task_type"] = self.task_type
+        model_dict["activation_func"] = self.activation_func
+        model_dict["tuning_epochs"] = self.tuning_epochs
+        model_dict["main_effect_epochs"] = self.main_effect_epochs
+        model_dict["interaction_epochs"] = self.interaction_epochs
+        model_dict["early_stop_thres"] = self.early_stop_thres
+
+        model_dict["heredity"] = self.heredity
+        model_dict["reg_clarity"] = self.reg_clarity
+        model_dict["loss_threshold"] = self.loss_threshold
+
+        model_dict["verbose"] = self.verbose
+        model_dict["val_ratio"]= self.val_ratio
+        model_dict["random_state"] = self.random_state
+
+        model_dict["dummy_values_"] = self.dummy_values_ 
+        model_dict["nfeature_scaler_"] = self.nfeature_scaler_
+        model_dict["cfeature_num_"] = self.cfeature_num_
+        model_dict["nfeature_num_"] = self.nfeature_num_
+        model_dict["feature_list_"] = self.feature_list_
+        model_dict["cfeature_list_"] = self.cfeature_list_
+        model_dict["nfeature_list_"] = self.nfeature_list_
+        model_dict["feature_type_list_"] = self.feature_type_list_
+        model_dict["cfeature_index_list_"] = self.cfeature_index_list_
+        model_dict["nfeature_index_list_"] = self.nfeature_index_list_
+
+        # build
+        model_dict["interaction_list"] = self.interaction_list
+        model_dict["interact_num_added"] = self.interact_num_added 
+        model_dict["interaction_status"] = self.interaction_status
+        model_dict["input_num"] = self.input_num
+        model_dict["max_interact_num"] = self.max_interact_num
+        model_dict["interact_num"] = self.interact_num
+
+        model_dict["maineffect_blocks"] = self.maineffect_blocks
+        model_dict["interact_blocks"] = self.interact_blocks
+        model_dict["output_layer"] = self.output_layer
+        model_dict["loss_fn"] = self.loss_fn
+
+        model_dict["clarity_loss"] = self.clarity_loss
+        model_dict["data_dict_density"] = self.data_dict_density
+        
+        model_dict["err_train_main_effect_training"] = self.err_train_main_effect_training
+        model_dict["err_val_main_effect_training"] = self.err_val_main_effect_training
+        model_dict["err_train_interaction_training"] = self.err_train_interaction_training
+        model_dict["err_val_interaction_training"] = self.err_val_interaction_training
+        model_dict["err_train_tuning"] = self.err_train_tuning
+        model_dict["err_val_tuning"] = self.err_val_tuning
+        model_dict["interaction_list"] = self.interaction_list
+        model_dict["main_effect_val_loss"] = self.main_effect_val_loss
+        model_dict["interaction_val_loss"] = self.interaction_val_loss
+
+        model_dict["active_indice"] = self.active_indice
+        model_dict["effect_names"] = self.effect_names
+        model_dict["active_main_effect_index"] = self.active_main_effect_index
+        model_dict["active_interaction_index"] = self.active_interaction_index
+
+        self.__call__(np.random.uniform(0, 1, size=(1, len(self.meta_info) - 1)))
+        if not os.path.exists(folder):
+            os.makedirs(folder)
+        save_path = folder + name + ".pickle"
+        with open(save_path, 'wb') as handle:
+            pickle.dump(model_dict, handle)

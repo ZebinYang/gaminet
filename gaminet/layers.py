@@ -29,11 +29,15 @@ class CategNet(tf.keras.layers.Layer):
         self.output_original = tf.matmul(dummy, self.categ_bias) + self.output_layer_bias
 
         if training:
-            if sample_weight is not None:
-                self.subnet_mean, self.subnet_norm = tf.nn.weighted_moments(self.output_original,
-                                                    frequency_weights=tf.reshape(sample_weight, shape=(-1, 1)), axes=0)
+            if sample_weight is None:
+                if inputs.shape[0] is not None:
+                    sample_weight = tf.ones([inputs.shape[0], 1])
+                    self.subnet_mean, self.subnet_norm = tf.nn.weighted_moments(self.output_original,
+                                                            frequency_weights=sample_weight, axes=0)
             else:
-                self.subnet_mean, self.subnet_norm = tf.nn.weighted_moments(self.output_original, axes=0)
+                sample_weight = tf.reshape(sample_weight, shape=(-1, 1))
+                self.subnet_mean, self.subnet_norm = tf.nn.weighted_moments(self.output_original,
+                                                        frequency_weights=sample_weight, axes=0)
             self.moving_mean.assign(self.subnet_mean)
             self.moving_norm.assign(self.subnet_norm)
         else:
@@ -74,11 +78,15 @@ class NumerNet(tf.keras.layers.Layer):
         self.output_original = self.output_layer(x)
 
         if training:
-            if sample_weight is not None:
-                self.subnet_mean, self.subnet_norm = tf.nn.weighted_moments(self.output_original,
-                                                    frequency_weights=tf.reshape(sample_weight, shape=(-1, 1)), axes=0)
+            if sample_weight is None:
+                if inputs.shape[0] is not None:
+                    sample_weight = tf.ones([inputs.shape[0], 1])
+                    self.subnet_mean, self.subnet_norm = tf.nn.weighted_moments(self.output_original,
+                                                            frequency_weights=sample_weight, axes=0)
             else:
-                self.subnet_mean, self.subnet_norm = tf.nn.weighted_moments(self.output_original, axes=0)
+                sample_weight = tf.reshape(sample_weight, shape=(-1, 1))
+                self.subnet_mean, self.subnet_norm = tf.nn.weighted_moments(self.output_original,
+                                                        frequency_weights=sample_weight, axes=0)
             self.moving_mean.assign(self.subnet_mean)
             self.moving_norm.assign(self.subnet_norm)
         else:
@@ -179,11 +187,15 @@ class Interactnetwork(tf.keras.layers.Layer):
         self.output_original = self.output_layer(x)
 
         if training:
-            if sample_weight is not None:
-                self.subnet_mean, self.subnet_norm = tf.nn.weighted_moments(self.output_original,
-                                                    frequency_weights=tf.reshape(sample_weight, shape=(-1, 1)), axes=0)
+            if sample_weight is None:
+                if inputs.shape[0] is not None:
+                    sample_weight = tf.ones([inputs.shape[0], 1])
+                    self.subnet_mean, self.subnet_norm = tf.nn.weighted_moments(self.output_original,
+                                                            frequency_weights=sample_weight, axes=0)
             else:
-                self.subnet_mean, self.subnet_norm = tf.nn.weighted_moments(self.output_original, axes=0)
+                sample_weight = tf.reshape(sample_weight, shape=(-1, 1))
+                self.subnet_mean, self.subnet_norm = tf.nn.weighted_moments(self.output_original,
+                                                        frequency_weights=sample_weight, axes=0)
             self.moving_mean.assign(self.subnet_mean)
             self.moving_norm.assign(self.subnet_norm)
         else:
