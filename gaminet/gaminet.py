@@ -348,7 +348,7 @@ class GAMINet(tf.keras.Model):
                 batch_sw = tr_sw[offset:(offset + self.batch_size)]
                 self.train_main_effect(tf.cast(batch_xx, tf.float32), tf.cast(batch_yy, tf.float32), tf.cast(batch_sw, tf.float32))
 
-            self.err_train_main_effect_training.append(self.evaluate(tr_x, tr_y, sample_weight[self.tr_idx][shuffle_index],
+            self.err_train_main_effect_training.append(self.evaluate(tr_x, tr_y, tr_sw,
                                                  main_effect_training=False, interaction_training=False))
             self.err_val_main_effect_training.append(self.evaluate(val_x, val_y, sample_weight[self.val_idx],
                                                  main_effect_training=False, interaction_training=False))
@@ -450,7 +450,7 @@ class GAMINet(tf.keras.Model):
                 batch_sw = tr_sw[offset:(offset + self.batch_size)]
                 self.train_interaction(tf.cast(batch_xx, tf.float32), tf.cast(batch_yy, tf.float32), tf.cast(batch_sw, tf.float32))
 
-            self.err_train_interaction_training.append(self.evaluate(tr_x, tr_y, sample_weight[self.tr_idx][shuffle_index],
+            self.err_train_interaction_training.append(self.evaluate(tr_x, tr_y, tr_sw,
                                                  main_effect_training=False, interaction_training=False))
             self.err_val_interaction_training.append(self.evaluate(val_x, val_y, sample_weight[self.val_idx],
                                                  main_effect_training=False, interaction_training=False))
@@ -513,7 +513,7 @@ class GAMINet(tf.keras.Model):
                 batch_sw = tr_sw[offset:(offset + self.batch_size)]
                 self.train_all(tf.cast(batch_xx, tf.float32), tf.cast(batch_yy, tf.float32), tf.cast(batch_sw, tf.float32))
 
-            self.err_train_tuning.append(self.evaluate(tr_x, tr_y, sample_weight[self.tr_idx][shuffle_index],
+            self.err_train_tuning.append(self.evaluate(tr_x, tr_y, tr_sw,
                                          main_effect_training=False, interaction_training=False))
             self.err_val_tuning.append(self.evaluate(val_x, val_y, sample_weight[self.val_idx],
                                         main_effect_training=False, interaction_training=False))
