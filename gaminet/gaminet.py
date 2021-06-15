@@ -149,32 +149,32 @@ class GAMINet(tf.keras.Model):
 
     @tf.function
     def predict_graph(self, x, main_effect_training=False, interaction_training=False):
-        return self.__call__(tf.cast(x, tf.float32), sample_weight=None,
+        return self.__call__(x, sample_weight=None,
                       main_effect_training=main_effect_training,
                       interaction_training=interaction_training)
 
     def predict(self, x):
-        return self.predict_graph(x).numpy()
+        return self.predict_graph(tf.cast(x, tf.float32)).numpy()
 
     @tf.function
     def evaluate_graph_init(self, x, y, sample_weight=None, main_effect_training=False, interaction_training=False):
-        return self.loss_fn(y, self.__call__(tf.cast(x, tf.float32), tf.cast(sample_weight, tf.float32),
+        return self.loss_fn(y, self.__call__(x, sample_weight,
                                main_effect_training=main_effect_training,
                                interaction_training=interaction_training), sample_weight=sample_weight)
 
     @tf.function
     def evaluate_graph_inter(self, x, y, sample_weight=None, main_effect_training=False, interaction_training=False):
-        return self.loss_fn(y, self.__call__(tf.cast(x, tf.float32), tf.cast(sample_weight, tf.float32),
+        return self.loss_fn(y, self.__call__(x, sample_weight,
                                main_effect_training=main_effect_training,
                                interaction_training=interaction_training), sample_weight=sample_weight)
 
     def evaluate(self, x, y, sample_weight=None, main_effect_training=False, interaction_training=False):
         if self.interaction_status:
-            return self.evaluate_graph_inter(x, y, sample_weight,
+            return self.evaluate_graph_inter(tf.cast(x, tf.float32), tf.cast(y, tf.float32), tf.cast(sample_weight, tf.float32),
                                   main_effect_training=main_effect_training,
                                   interaction_training=interaction_training).numpy()
         else:
-            return self.evaluate_graph_init(x, y, sample_weight,
+            return self.evaluate_graph_init(tf.cast(x, tf.float32), tf.cast(y, tf.float32), tf.cast(sample_weight, tf.float32),
                                   main_effect_training=main_effect_training,
                                   interaction_training=interaction_training).numpy()
 
@@ -790,6 +790,8 @@ class GAMINet(tf.keras.Model):
 
     def save(self, folder="./", name="model"):
 
+        self.__call__(np.random.uniform(0, 1, size=(1, len(self.meta_info) - 1)))
+
         model_dict = {}
         model_dict["meta_info"] = self.meta_info
         model_dict["subnet_arch"] = self.subnet_arch
@@ -854,7 +856,6 @@ class GAMINet(tf.keras.Model):
         model_dict["active_main_effect_index"] = self.active_main_effect_index
         model_dict["active_interaction_index"] = self.active_interaction_index
 
-        self.__call__(np.random.uniform(0, 1, size=(1, len(self.meta_info) - 1)))
         if not os.path.exists(folder):
             os.makedirs(folder)
         save_path = folder + name + ".pickle"

@@ -141,8 +141,8 @@ feature_importance_visualize(data_dict, save_png=True, folder=simu_dir, name='s1
 
 Local Visualization
 ```python 
-data_dict_local = model.local_explain(train_x[[0]], train_y[[0]], save_dict=False)
-local_visualize(data_dict_local, save_png=True, folder=simu_dir, name='s1_local')
+data_dict_local = model.local_explain(train_x[:10], train_y[:10], save_dict=False)
+local_visualize(data_dict_local[0], save_png=True, folder=simu_dir, name='s1_local')
 ```
 <img src="https://github.com/ZebinYang/gaminet/blob/master/examples/results/s1_local.png" width="480">
 
