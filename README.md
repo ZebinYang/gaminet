@@ -6,7 +6,7 @@ Generalized additive models with structured interactions
 The following environments are required:
 
 - Python 3.7 + (anaconda is preferable)
-- tensorflow>=2.0.0, <=2.3.0
+- tensorflow>=2.0.0
 - numpy>=1.15.2
 - pandas>=0.19.2
 - matplotlib>=3.1.3
@@ -93,8 +93,9 @@ Run GAMI-Net
 ## Note the current GAMINet API requires input features being normalized within 0 to 1. 
 model = GAMINet(meta_info=meta_info, interact_num=20, 
                 interact_arch=[40] * 5, subnet_arch=[40] * 5, 
-                lr_bp=0.0001, batch_size=200, task_type=task_type, activation_func=tf.nn.relu, 
-                main_effect_epochs=5000, interaction_epochs=5000, tuning_epochs=500, early_stop_thres=50, 
+                batch_size=200, task_type=task_type, activation_func=tf.nn.relu, 
+                main_effect_epochs=5000, interaction_epochs=5000, tuning_epochs=500, 
+                lr_bp=[0.0001, 0.0001, 0.0001], early_stop_thres=[50, 50, 50],
                 heredity=True, loss_threshold=0.01, reg_clarity=1,
                 verbose=False, val_ratio=0.2, random_state=random_state)
 
