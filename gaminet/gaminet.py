@@ -252,7 +252,7 @@ class GAMINet(tf.keras.Model):
         sorted_index = np.array([])
         componment_scales = [0 for i in range(self.input_num)]
         main_effect_norm = [self.maineffect_blocks.subnets[i].moving_norm.numpy()[0] for i in range(self.input_num)]
-        beta = (self.output_layer.main_effect_weights.numpy() * np.array([main_effect_norm]).reshape([-1, 1]))
+        beta = (self.output_layer.main_effect_weights.numpy() ** 2 * np.array([main_effect_norm]).reshape([-1, 1]))
         componment_scales = (np.abs(beta) / np.sum(np.abs(beta))).reshape([-1])
         sorted_index = np.argsort(componment_scales)[::-1]
         return sorted_index, componment_scales
@@ -263,7 +263,7 @@ class GAMINet(tf.keras.Model):
         componment_scales = [0 for i in range(self.interact_num_added)]
         if self.interact_num_added > 0:
             interaction_norm = [self.interact_blocks.interacts[i].moving_norm.numpy()[0] for i in range(self.interact_num_added)]
-            gamma = (self.output_layer.interaction_weights.numpy()[:self.interact_num_added]
+            gamma = (self.output_layer.interaction_weights.numpy()[:self.interact_num_added] ** 2
                   * np.array([interaction_norm]).reshape([-1, 1]))
             componment_scales = (np.abs(gamma) / np.sum(np.abs(gamma))).reshape([-1])
             sorted_index = np.argsort(componment_scales)[::-1]
