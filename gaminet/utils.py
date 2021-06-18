@@ -84,7 +84,6 @@ def plot_regularization(data_dict_logs, log_scale=True, save_eps=False, save_png
         ax1.plot(np.argmin(main_loss), np.min(main_loss), "*", markersize=12, color="red")
         ax1.plot(len(active_main_effect_index), main_loss[len(active_main_effect_index)], "o", markersize=8, color="red")
         ax1.set_xlabel("Number of Main Effects", fontsize=12)
-        ax1.set_ylabel("Validation Loss (Log Scale)", fontsize=12)
         ax1.set_xlim(-0.5, len(main_loss) - 0.5)
         ax1.xaxis.set_major_locator(MaxNLocator(integer=True))
         if log_scale:
@@ -92,12 +91,12 @@ def plot_regularization(data_dict_logs, log_scale=True, save_eps=False, save_png
             ax1.set_yticks((10 ** np.linspace(np.log10(np.nanmin(main_loss)), np.log10(np.nanmax(main_loss)), 5)).round(5))
             ax1.get_yaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
             ax1.get_yaxis().set_minor_formatter(matplotlib.ticker.NullFormatter())
-            ax1.set_ylabel("Training Loss (Log Scale)", fontsize=12)
+            ax1.set_ylabel("Validation Loss (Log Scale)", fontsize=12)
         else:
             ax1.set_yticks((np.linspace(np.nanmin(main_loss), np.nanmax(main_loss), 5)).round(5))
             ax1.get_yaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
             ax1.get_yaxis().set_minor_formatter(matplotlib.ticker.NullFormatter())
-            ax1.set_ylabel("Training Loss", fontsize=12)
+            ax1.set_ylabel("Validation Loss", fontsize=12)
 
     if len(inter_loss) > 0:
         ax2 = plt.subplot(1, 2, 2)
@@ -107,7 +106,6 @@ def plot_regularization(data_dict_logs, log_scale=True, save_eps=False, save_png
         ax2.plot(np.argmin(inter_loss), np.min(inter_loss), "*", markersize=12, color="red")
         ax2.plot(len(active_interaction_index), inter_loss[len(active_interaction_index)], "o", markersize=8, color="red")
         ax2.set_xlabel("Number of Interactions", fontsize=12)
-        ax2.set_ylabel("Validation Loss (Log Scale)", fontsize=12)
         ax2.set_xlim(-0.5, len(inter_loss) - 0.5)
         ax2.xaxis.set_major_locator(MaxNLocator(integer=True))
         if log_scale:
@@ -450,11 +448,13 @@ def global_visualize_wo_density(data_dict_global, main_effect_num=10**5, interac
 
 def local_visualize(data_dict_local, folder="./results/", name="demo", save_png=False, save_eps=False):
 
+    idx = np.argsort(np.abs(data_dict_local["scores"][data_dict_local["active_indice"]]))[::-1]
+
     max_ids = len(data_dict_local["active_indice"])
     fig = plt.figure(figsize=(round((len(data_dict_local["active_indice"]) + 1) * 0.6), 4))
-    plt.bar(np.arange(len(data_dict_local["active_indice"])), data_dict_local["scores"][data_dict_local["active_indice"]])
+    plt.bar(np.arange(len(data_dict_local["active_indice"])), data_dict_local["scores"][data_dict_local["active_indice"]][idx])
     plt.xticks(np.arange(len(data_dict_local["active_indice"])),
-            data_dict_local["effect_names"][data_dict_local["active_indice"]], rotation=60)
+            data_dict_local["effect_names"][data_dict_local["active_indice"]][idx], rotation=60)
 
     if "actual" in data_dict_local.keys():
         title = "Predicted: %0.4f | Actual: %0.4f" % (data_dict_local["predicted"], data_dict_local["actual"])

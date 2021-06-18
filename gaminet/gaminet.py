@@ -14,14 +14,14 @@ class GAMINet(tf.keras.Model):
                  interact_num=20,
                  subnet_arch=[40] * 5,
                  interact_arch=[40] * 5,
-                 lr_bp=0.0001,
+                 lr_bp=[1e-4, 1e-4, 1e-4],
                  batch_size=200,
                  task_type="Regression",
                  activation_func=tf.nn.relu,
                  main_effect_epochs=5000,
                  interaction_epochs=5000,
                  tuning_epochs=500,
-                 early_stop_thres=50,
+                 early_stop_thres=[50, 50, 50],
                  heredity=True,
                  reg_clarity=0.1,
                  loss_threshold=0.01,
@@ -43,6 +43,9 @@ class GAMINet(tf.keras.Model):
         self.main_effect_epochs = main_effect_epochs
         self.interaction_epochs = interaction_epochs
         self.early_stop_thres = early_stop_thres
+        self.early_stop_thres1 = early_stop_thres[0]
+        self.early_stop_thres2 = early_stop_thres[1]
+        self.early_stop_thres3 = early_stop_thres[2]
 
         self.heredity = heredity
         self.reg_clarity = reg_clarity
@@ -105,7 +108,9 @@ class GAMINet(tf.keras.Model):
                                 activation_func=self.activation_func)
         self.output_layer = OutputLayer(input_num=self.input_num, interact_num=self.interact_num)
 
-        self.optimizer = tf.keras.optimizers.Adam(learning_rate=self.lr_bp)
+        self.optimizer1 = tf.keras.optimizers.Adam(learning_rate=self.lr_bp[0])
+        self.optimizer2 = tf.keras.optimizers.Adam(learning_rate=self.lr_bp[1])
+        self.optimizer3 = tf.keras.optimizers.Adam(learning_rate=self.lr_bp[2])
         if self.task_type == "Regression":
             self.loss_fn = tf.keras.losses.MeanSquaredError()
         elif self.task_type == "Classification":
@@ -194,7 +199,7 @@ class GAMINet(tf.keras.Model):
             if train_weights[i].name in trainable_weights_names:
                 train_weights_list.append(train_weights[i])
         grads = tape.gradient(total_loss, train_weights_list)
-        self.optimizer.apply_gradients(zip(grads, train_weights_list))
+        self.optimizer1.apply_gradients(zip(grads, train_weights_list))
 
     @tf.function
     def train_interaction(self, inputs, labels, sample_weight=None):
@@ -212,7 +217,7 @@ class GAMINet(tf.keras.Model):
             if train_weights[i].name in trainable_weights_names:
                 train_weights_list.append(train_weights[i])
         grads = tape.gradient(total_loss, train_weights_list)
-        self.optimizer.apply_gradients(zip(grads, train_weights_list))
+        self.optimizer2.apply_gradients(zip(grads, train_weights_list))
 
     @tf.function
     def train_all(self, inputs, labels, sample_weight=None):
@@ -232,7 +237,7 @@ class GAMINet(tf.keras.Model):
             if train_weights[i].name in trainable_weights_names:
                 train_weights_list.append(train_weights[i])
         grads = tape_maineffects.gradient(total_loss_maineffects, train_weights_list)
-        self.optimizer.apply_gradients(zip(grads, train_weights_list))
+        self.optimizer3.apply_gradients(zip(grads, train_weights_list))
 
         train_weights_list = []
         train_weights = self.interact_blocks.weights
@@ -242,7 +247,7 @@ class GAMINet(tf.keras.Model):
             if train_weights[i].name in trainable_weights_names:
                 train_weights_list.append(train_weights[i])
         grads = tape_intearction.gradient(total_loss_interactions, train_weights_list)
-        self.optimizer.apply_gradients(zip(grads, train_weights_list))
+        self.optimizer3.apply_gradients(zip(grads, train_weights_list))
 
     def get_main_effect_rank(self):
 
@@ -359,7 +364,7 @@ class GAMINet(tf.keras.Model):
             if self.err_val_main_effect_training[-1] < best_validation:
                 best_validation = self.err_val_main_effect_training[-1]
                 last_improvement = epoch
-            if epoch - last_improvement > self.early_stop_thres:
+            if epoch - last_improvement > self.early_stop_thres1:
                 if self.verbose:
                     print("Early stop at epoch %d, with validation loss: %0.5f" % (epoch + 1, self.err_val_main_effect_training[-1]))
                 break
@@ -461,7 +466,7 @@ class GAMINet(tf.keras.Model):
             if self.err_val_interaction_training[-1] < best_validation:
                 best_validation = self.err_val_interaction_training[-1]
                 last_improvement = epoch
-            if epoch - last_improvement > self.early_stop_thres:
+            if epoch - last_improvement > self.early_stop_thres2:
                 if self.verbose:
                     print("Early stop at epoch %d, with validation loss: %0.5f" % (epoch + 1, self.err_val_interaction_training[-1]))
                 break
@@ -524,7 +529,7 @@ class GAMINet(tf.keras.Model):
             if self.err_val_tuning[-1] < best_validation:
                 best_validation = self.err_val_tuning[-1]
                 last_improvement = epoch
-            if epoch - last_improvement > self.early_stop_thres:
+            if epoch - last_improvement > self.early_stop_thres3:
                 if self.verbose:
                     print("Early stop at epoch %d, with validation loss: %0.5f" % (epoch + 1, self.err_val_tuning[-1]))
                 break
@@ -786,7 +791,9 @@ class GAMINet(tf.keras.Model):
             model_dict = pickle.load(input_file)
         for key, item in model_dict.items():
             setattr(self, key, item)
-        self.optimizer.lr = model_dict["lr_bp"]
+        self.optimizer1.lr = model_dict["lr_bp"][0]
+        self.optimizer2.lr = model_dict["lr_bp"][1]
+        self.optimizer3.lr = model_dict["lr_bp"][2]
 
     def save(self, folder="./", name="model"):
 
@@ -825,7 +832,6 @@ class GAMINet(tf.keras.Model):
         model_dict["cfeature_index_list_"] = self.cfeature_index_list_
         model_dict["nfeature_index_list_"] = self.nfeature_index_list_
 
-        # build
         model_dict["interaction_list"] = self.interaction_list
         model_dict["interact_num_added"] = self.interact_num_added 
         model_dict["interaction_status"] = self.interaction_status
