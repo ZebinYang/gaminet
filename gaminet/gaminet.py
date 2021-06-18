@@ -108,9 +108,7 @@ class GAMINet(tf.keras.Model):
                                 activation_func=self.activation_func)
         self.output_layer = OutputLayer(input_num=self.input_num, interact_num=self.interact_num)
 
-        self.optimizer1 = tf.keras.optimizers.Adam(learning_rate=self.lr_bp[0])
-        self.optimizer2 = tf.keras.optimizers.Adam(learning_rate=self.lr_bp[1])
-        self.optimizer3 = tf.keras.optimizers.Adam(learning_rate=self.lr_bp[2])
+        self.optimizer = tf.keras.optimizers.Adam()
         if self.task_type == "Regression":
             self.loss_fn = tf.keras.losses.MeanSquaredError()
         elif self.task_type == "Classification":
@@ -199,7 +197,7 @@ class GAMINet(tf.keras.Model):
             if train_weights[i].name in trainable_weights_names:
                 train_weights_list.append(train_weights[i])
         grads = tape.gradient(total_loss, train_weights_list)
-        self.optimizer1.apply_gradients(zip(grads, train_weights_list))
+        self.optimizer.apply_gradients(zip(grads, train_weights_list))
 
     @tf.function
     def train_interaction(self, inputs, labels, sample_weight=None):
@@ -217,7 +215,7 @@ class GAMINet(tf.keras.Model):
             if train_weights[i].name in trainable_weights_names:
                 train_weights_list.append(train_weights[i])
         grads = tape.gradient(total_loss, train_weights_list)
-        self.optimizer2.apply_gradients(zip(grads, train_weights_list))
+        self.optimizer.apply_gradients(zip(grads, train_weights_list))
 
     @tf.function
     def train_all(self, inputs, labels, sample_weight=None):
@@ -237,7 +235,7 @@ class GAMINet(tf.keras.Model):
             if train_weights[i].name in trainable_weights_names:
                 train_weights_list.append(train_weights[i])
         grads = tape_maineffects.gradient(total_loss_maineffects, train_weights_list)
-        self.optimizer3.apply_gradients(zip(grads, train_weights_list))
+        self.optimizer.apply_gradients(zip(grads, train_weights_list))
 
         train_weights_list = []
         train_weights = self.interact_blocks.weights
@@ -247,7 +245,7 @@ class GAMINet(tf.keras.Model):
             if train_weights[i].name in trainable_weights_names:
                 train_weights_list.append(train_weights[i])
         grads = tape_intearction.gradient(total_loss_interactions, train_weights_list)
-        self.optimizer3.apply_gradients(zip(grads, train_weights_list))
+        self.optimizer.apply_gradients(zip(grads, train_weights_list))
 
     def get_main_effect_rank(self):
 
@@ -582,6 +580,8 @@ class GAMINet(tf.keras.Model):
         # step 1: main effects
         if self.verbose:
             print("#" * 10 + "Stage 1: main effect training start." + "#" * 10)
+        
+        self.optimizer.lr.assign(self.lr_bp[0])
         self.fit_main_effect(tr_x, tr_y, val_x, val_y, sample_weight)
         if self.verbose:
             print("#" * 10 + "Stage 1: main effect training stop." + "#" * 10)
@@ -599,11 +599,13 @@ class GAMINet(tf.keras.Model):
         if self.verbose:
             print("#" * 10 + "Stage 2: interaction training start." + "#" * 10)
         self.add_interaction(tr_x, tr_y, val_x, val_y, sample_weight)
+        self.optimizer.lr.assign(self.lr_bp[1])
         self.fit_interaction(tr_x, tr_y, val_x, val_y, sample_weight)
         if self.verbose:
             print("#" * 10 + "Stage 2: interaction training stop." + "#" * 10)
         self.prune_interaction(val_x, val_y, sample_weight)
 
+        self.optimizer.lr.assign(self.lr_bp[2])
         self.fine_tune_all(tr_x, tr_y, val_x, val_y, sample_weight)
         self.active_indice = 1 + np.hstack([-1, self.active_main_effect_index, self.input_num + self.active_interaction_index]).astype(int)
         self.effect_names = np.hstack(["Intercept", np.array(self.feature_list_), [self.feature_list_[self.interaction_list[i][0]] + " x "
@@ -791,9 +793,7 @@ class GAMINet(tf.keras.Model):
             model_dict = pickle.load(input_file)
         for key, item in model_dict.items():
             setattr(self, key, item)
-        self.optimizer1.lr = model_dict["lr_bp"][0]
-        self.optimizer2.lr = model_dict["lr_bp"][1]
-        self.optimizer3.lr = model_dict["lr_bp"][2]
+        self.optimizer.lr = model_dict["lr_bp"][0]
 
     def save(self, folder="./", name="model"):
 
