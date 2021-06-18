@@ -273,11 +273,11 @@ class GAMINet(tf.keras.Model):
 
         componment_scales = [0 for i in range(self.input_num + self.interact_num_added)]
         main_effect_norm = [self.maineffect_blocks.subnets[i].moving_norm.numpy()[0] for i in range(self.input_num)]
-        beta = (self.output_layer.main_effect_weights.numpy() * np.array([main_effect_norm]).reshape([-1, 1])
+        beta = (self.output_layer.main_effect_weights.numpy() ** 2 * np.array([main_effect_norm]).reshape([-1, 1])
              * self.output_layer.main_effect_switcher.numpy())
 
         interaction_norm = [self.interact_blocks.interacts[i].moving_norm.numpy()[0] for i in range(self.interact_num_added)]
-        gamma = (self.output_layer.interaction_weights.numpy()[:self.interact_num_added]
+        gamma = (self.output_layer.interaction_weights.numpy()[:self.interact_num_added] ** 2
               * np.array([interaction_norm]).reshape([-1, 1])
               * self.output_layer.interaction_switcher.numpy()[:self.interact_num_added])
         gamma = np.vstack([gamma, np.zeros((self.interact_num - self.interact_num_added, 1))])
