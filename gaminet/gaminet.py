@@ -173,11 +173,13 @@ class GAMINet(tf.keras.Model):
 
     def evaluate(self, x, y, sample_weight=None, main_effect_training=False, interaction_training=False):
         if self.interaction_status:
-            return self.evaluate_graph_inter(tf.cast(x, tf.float32), tf.cast(y, tf.float32), tf.cast(sample_weight, tf.float32),
+            return self.evaluate_graph_inter(tf.cast(x, tf.float32), tf.cast(y, tf.float32),
+                                  tf.cast(sample_weight, tf.float32) if sample_weight is not None else None,
                                   main_effect_training=main_effect_training,
                                   interaction_training=interaction_training).numpy()
         else:
-            return self.evaluate_graph_init(tf.cast(x, tf.float32), tf.cast(y, tf.float32), tf.cast(sample_weight, tf.float32),
+            return self.evaluate_graph_init(tf.cast(x, tf.float32), tf.cast(y, tf.float32),
+                                  tf.cast(sample_weight, tf.float32) if sample_weight is not None else None,
                                   main_effect_training=main_effect_training,
                                   interaction_training=interaction_training).numpy()
 
@@ -760,7 +762,7 @@ class GAMINet(tf.keras.Model):
         if self.interact_num > 0:
             interaction_output = self.interact_blocks.__call__(tf.cast(tf.constant(x), tf.float32)).numpy()
         else:
-            interaction_output = np.array([])
+            interaction_output = np.empty(shape=(x.shape[0], 0))
 
         main_effect_weights = ((self.output_layer.main_effect_weights.numpy()) * self.output_layer.main_effect_switcher.numpy()).ravel()
         interaction_weights = ((self.output_layer.interaction_weights.numpy()[:self.interact_num_added])

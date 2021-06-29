@@ -234,10 +234,19 @@ class InteractionBlock(tf.keras.layers.Layer):
 
     def set_interaction_list(self, interaction_list):
 
+        self.interacts = []
         self.interaction_list = interaction_list
         self.interact_num_filtered = len(interaction_list)
+        mono_list = self.mono_increasing_list + self.mono_decreasing_list
         for i in range(self.interact_num_filtered):
-            self.interacts[i].set_interaction(interaction_list[i])
+            interact = Interactnetwork(self.feature_list,
+                                      self.cfeature_index_list,
+                                      self.dummy_values,
+                                      self.interact_arch,
+                                      self.activation_func,
+                                      interact_id=i)
+            interact.set_interaction(interaction_list[i])
+            self.interacts.append(interact)
 
     def call(self, inputs, sample_weight=None, training=False):
 
