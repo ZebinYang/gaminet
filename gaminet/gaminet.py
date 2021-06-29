@@ -327,8 +327,9 @@ class GAMINet(tf.keras.Model):
         main_weights = tf.multiply(self.output_layer.main_effect_switcher, self.output_layer.main_effect_weights)
         for idx, subnet in enumerate(self.maineffect_blocks.subnets):
             if idx in self.nfeature_index_list_:
-                if (idx in self.mono_increasing_list) or (idx in self.mono_decreasing_list):
-                    subnet.lattice_layer_bias.assign(- subnet.moving_mean)
+                if idx in self.mono_list:
+                    subnet_bias = subnet.lattice_layer_bias - subnet.moving_mean
+                    subnet.lattice_layer_bias.assign(subnet_bias)
                 else:
                     subnet_bias = subnet.output_layer.bias - subnet.moving_mean
                     subnet.output_layer.bias.assign(subnet_bias)
@@ -841,6 +842,10 @@ class GAMINet(tf.keras.Model):
         model_dict["reg_clarity"] = self.reg_clarity
         model_dict["loss_threshold"] = self.loss_threshold
 
+        model_dict["mono_increasing_list"] = self.mono_increasing_list
+        model_dict["mono_decreasing_list"] = self.mono_decreasing_list
+        model_dict["lattice_size"] = self.lattice_size
+
         model_dict["verbose"] = self.verbose
         model_dict["val_ratio"]= self.val_ratio
         model_dict["random_state"] = self.random_state
@@ -870,7 +875,7 @@ class GAMINet(tf.keras.Model):
 
         model_dict["clarity_loss"] = self.clarity_loss
         model_dict["data_dict_density"] = self.data_dict_density
-        
+
         model_dict["err_train_main_effect_training"] = self.err_train_main_effect_training
         model_dict["err_val_main_effect_training"] = self.err_val_main_effect_training
         model_dict["err_train_interaction_training"] = self.err_train_interaction_training
@@ -886,6 +891,9 @@ class GAMINet(tf.keras.Model):
         model_dict["active_main_effect_index"] = self.active_main_effect_index
         model_dict["active_interaction_index"] = self.active_interaction_index
 
+        model_dict["tr_idx"] = self.tr_idx
+        model_dict["val_idx"] = self.val_idx
+        
         if not os.path.exists(folder):
             os.makedirs(folder)
         save_path = folder + name + ".pickle"
