@@ -439,7 +439,7 @@ class NonNegative(tf.keras.constraints.Constraint):
     def __call__(self, w):
 
         mono_weights = []
-        if len(self.mono_decreasing_list) > 0:
+        if len(self.mono_increasing_list) > 0:
             mono_increasing_weights = tf.gather(w, self.mono_increasing_list)
             mono_increasing_weights = mono_increasing_weights * tf.cast(tf.math.greater_equal(mono_increasing_weights, 0.), 
                                                     mono_increasing_weights.dtype)
