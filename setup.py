@@ -14,7 +14,7 @@ package_data = {
 }
 
 setup(name='gaminet',
-      version='0.4.1',
+      version='0.5.0',
       description='Explainable Neural Networks based on Generalized Additive Models with Structured Interactions',
       url='https://github.com/ZebinYang/GAMINet',
       author='Zebin Yang',

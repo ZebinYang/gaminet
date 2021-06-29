@@ -26,6 +26,9 @@ class GAMINet(tf.keras.Model):
                  reg_clarity=0.1,
                  loss_threshold=0.01,
                  val_ratio=0.2,
+                 mono_increasing_list=None,
+                 mono_decreasing_list=None,
+                 lattice_size=10,
                  verbose=False,
                  random_state=0):
 
@@ -51,6 +54,11 @@ class GAMINet(tf.keras.Model):
         self.reg_clarity = reg_clarity
         self.loss_threshold = loss_threshold
 
+        self.mono_increasing_list = [] if mono_increasing_list is None else mono_increasing_list
+        self.mono_decreasing_list = [] if mono_decreasing_list is None else mono_decreasing_list
+        self.mono_list = self.mono_increasing_list + self.mono_decreasing_list
+        self.lattice_size = lattice_size
+        
         self.verbose = verbose
         self.val_ratio = val_ratio
         self.random_state = random_state
@@ -99,14 +107,20 @@ class GAMINet(tf.keras.Model):
                                  nfeature_index_list=self.nfeature_index_list_,
                                  cfeature_index_list=self.cfeature_index_list_,
                                  subnet_arch=self.subnet_arch,
-                                 activation_func=self.activation_func)
+                                 activation_func=self.activation_func,
+                                 mono_list=self.mono_list,
+                                 lattice_size=self.lattice_size)
         self.interact_blocks = InteractionBlock(interact_num=self.interact_num,
                                 feature_list=self.feature_list_,
                                 cfeature_index_list=self.cfeature_index_list_,
                                 dummy_values=self.dummy_values_,
                                 interact_arch=self.interact_arch,
-                                activation_func=self.activation_func)
-        self.output_layer = OutputLayer(input_num=self.input_num, interact_num=self.interact_num)
+                                activation_func=self.activation_func,
+                                mono_list=self.mono_list,
+                                lattice_size=self.lattice_size)
+        self.output_layer = OutputLayer(input_num=self.input_num, interact_num=self.interact_num,
+                              mono_increasing_list=self.mono_increasing_list,
+                              mono_decreasing_list=self.mono_decreasing_list,)
 
         self.optimizer = tf.keras.optimizers.Adam()
         if self.task_type == "Regression":
@@ -313,8 +327,11 @@ class GAMINet(tf.keras.Model):
         main_weights = tf.multiply(self.output_layer.main_effect_switcher, self.output_layer.main_effect_weights)
         for idx, subnet in enumerate(self.maineffect_blocks.subnets):
             if idx in self.nfeature_index_list_:
-                subnet_bias = subnet.output_layer.bias - subnet.moving_mean
-                subnet.output_layer.bias.assign(subnet_bias)
+                if (idx in self.mono_increasing_list) or (idx in self.mono_decreasing_list):
+                    subnet.lattice_layer_bias.assign(- subnet.moving_mean)
+                else:
+                    subnet_bias = subnet.output_layer.bias - subnet.moving_mean
+                    subnet.output_layer.bias.assign(subnet_bias)
             elif idx in self.cfeature_index_list_:
                 subnet_bias = subnet.output_layer_bias - subnet.moving_mean
                 subnet.output_layer_bias.assign(subnet_bias)
@@ -329,8 +346,13 @@ class GAMINet(tf.keras.Model):
         for idx, interact in enumerate(self.interact_blocks.interacts):
             if idx >= len(self.interaction_list):
                 break
-            interact_bias = interact.output_layer.bias - interact.moving_mean
-            interact.output_layer.bias.assign(interact_bias)
+
+            if (interact.interaction[0] in self.mono_list) or (interact.interaction[1] in self.mono_list):
+                interact_bias = interact.lattice_layer_bias - interact.moving_mean
+                interact.lattice_layer_bias.assign(interact_bias)
+            else:
+                interact_bias = interact.output_layer.bias - interact.moving_mean
+                interact.output_layer.bias.assign(interact_bias)
             output_bias = output_bias + tf.multiply(interact.moving_mean, tf.gather(interaction_weights, idx, axis=0))
         self.output_layer.output_bias.assign(output_bias)
 
@@ -352,7 +374,7 @@ class GAMINet(tf.keras.Model):
                 batch_yy = tr_y[offset:(offset + self.batch_size)]
                 batch_sw = tr_sw[offset:(offset + self.batch_size)]
                 self.train_main_effect(tf.cast(batch_xx, tf.float32), tf.cast(batch_yy, tf.float32), tf.cast(batch_sw, tf.float32))
-
+            
             self.err_train_main_effect_training.append(self.evaluate(tr_x, tr_y, tr_sw,
                                                  main_effect_training=False, interaction_training=False))
             self.err_val_main_effect_training.append(self.evaluate(val_x, val_y, sample_weight[self.val_idx],
