@@ -118,9 +118,10 @@ class GAMINet(tf.keras.Model):
                                 activation_func=self.activation_func,
                                 mono_list=self.mono_list,
                                 lattice_size=self.lattice_size)
-        self.output_layer = OutputLayer(input_num=self.input_num, interact_num=self.interact_num,
+        self.output_layer = OutputLayer(input_num=self.input_num,
+                              interact_num=self.interact_num,
                               mono_increasing_list=self.mono_increasing_list,
-                              mono_decreasing_list=self.mono_decreasing_list,)
+                              mono_decreasing_list=self.mono_decreasing_list)
 
         self.optimizer = tf.keras.optimizers.Adam()
         if self.task_type == "Regression":
@@ -453,10 +454,8 @@ class GAMINet(tf.keras.Model):
 
         self.interaction_list = interaction_list_all[:self.interact_num]
         self.interact_num_added = len(self.interaction_list)
-        interaction_switcher = np.zeros((self.interact_num, 1))
-        interaction_switcher[:self.interact_num_added] = 1
-        self.output_layer.interaction_switcher.assign(tf.constant(interaction_switcher, dtype=tf.float32))
         self.interact_blocks.set_interaction_list(self.interaction_list)
+        self.output_layer.set_interaction_list(self.interaction_list)
 
     def fit_interaction(self, tr_x, tr_y, val_x, val_y, sample_weight=None):
 

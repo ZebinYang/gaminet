@@ -202,6 +202,9 @@ class Interactnetwork(tf.keras.layers.Layer):
         self.interact_id = interact_id
         self.interaction = None
 
+    def set_interaction(self, interaction):
+
+        self.interaction = interaction
         for nodes in self.interact_arch:
             self.layers.append(layers.Dense(nodes, activation=self.activation_func, kernel_initializer=tf.keras.initializers.Orthogonal()))
         self.output_layer = layers.Dense(1, activation=tf.identity, kernel_initializer=tf.keras.initializers.Orthogonal())
@@ -219,10 +222,6 @@ class Interactnetwork(tf.keras.layers.Layer):
                                 shape=[1], initializer=tf.zeros_initializer(), trainable=False)
         self.moving_norm = self.add_weight(name="norm_" + str(self.interact_id),
                                 shape=[1], initializer=tf.ones_initializer(), trainable=False)
-
-    def set_interaction(self, interaction):
-
-        self.interaction = interaction
 
     def onehot_encoding(self, inputs):
 
@@ -288,14 +287,28 @@ class MonoInteractnetwork(tf.keras.layers.Layer):
         self.interact_id = interact_id
         self.interaction = None
 
-        self.lattice_layer_input2d = tfl.layers.PWLCalibration(input_keypoints=np.linspace(0, 1, num=2, dtype=np.float32), units=2,
-                                             output_min=0.0, output_max=lattice_size - 1.0)
-        self.lattice_layer2d = tfl.layers.Lattice(lattice_sizes=[self.lattice_size, self.lattice_size],
-                                    monotonicities=self.increasing)
-        self.lattice_layer_bias = self.add_weight(name="lattice_layer2d_bias_" + str(self.interact_id),
-                                         shape=[1],
-                                         initializer=tf.zeros_initializer(),
-                                         trainable=False)
+    def set_interaction(self, interaction):
+
+        units = 2
+        increasing = []
+        self.interaction = interaction
+        if self.interaction[0] in self.cfeature_index_list:
+            increasing += ["none" for i in range(len(self.dummy_values[self.feature_list[self.interaction[0]]]))]
+            units += len(self.dummy_values[self.feature_list[self.interaction[0]]]) - 1
+        else:
+            increasing += [self.increasing[0]]
+        if self.interaction[1] in self.cfeature_index_list:
+            increasing += ["none" for i in range(len(self.dummy_values[self.feature_list[self.interaction[1]]]))]
+            units += len(self.dummy_values[self.feature_list[self.interaction[1]]]) - 1
+        else:
+            increasing += [self.increasing[0]]
+
+        self.lattice_layer_input2d = tfl.layers.PWLCalibration(input_keypoints=np.linspace(0, 1, num=2, dtype=np.float32), units=units,
+                                             output_min=0.0, output_max=self.lattice_size - 1.0)
+        self.lattice_layer2d = tfl.layers.Lattice(lattice_sizes=[self.lattice_size for i in range(units)],
+                                    monotonicities=increasing)
+        self.lattice_layer_bias = self.add_weight(name="lattice_layer2d_bias_" + str(self.interact_id), shape=[1],
+                                    initializer=tf.zeros_initializer(), trainable=False)
 
         self.min_value1 = self.add_weight(name="min1" + str(self.interact_id), shape=[1],
                                           initializer=tf.constant_initializer(np.inf), trainable=False)
@@ -310,10 +323,6 @@ class MonoInteractnetwork(tf.keras.layers.Layer):
                                 shape=[1], initializer=tf.zeros_initializer(), trainable=False)
         self.moving_norm = self.add_weight(name="norm_" + str(self.interact_id),
                                 shape=[1], initializer=tf.ones_initializer(), trainable=False)
-
-    def set_interaction(self, interaction):
-
-        self.interaction = interaction
 
     def onehot_encoding(self, inputs):
 
@@ -374,8 +383,8 @@ class InteractionBlock(tf.keras.layers.Layer):
         self.dummy_values = dummy_values
         self.cfeature_index_list = cfeature_index_list
 
+        self.interact_num_added = 0
         self.interact_num = interact_num
-        self.interact_num_filtered = 0
         self.interact_arch = interact_arch
         self.activation_func = activation_func
         self.lattice_size = lattice_size
@@ -385,8 +394,8 @@ class InteractionBlock(tf.keras.layers.Layer):
 
         self.interacts = []
         self.interaction_list = interaction_list
-        self.interact_num_filtered = len(interaction_list)
-        for i in range(self.interact_num_filtered):
+        self.interact_num_added = len(interaction_list)
+        for i in range(self.interact_num_added):
             if (interaction_list[i][0] in self.mono_list) or (interaction_list[i][1] in self.mono_list):
                 increasing = ['none', 'none']
                 if interaction_list[i][0] in self.mono_list:
@@ -414,7 +423,7 @@ class InteractionBlock(tf.keras.layers.Layer):
 
         self.interact_outputs = []
         for i in range(self.interact_num):
-            if i >= self.interact_num_filtered:
+            if i >= self.interact_num_added:
                 self.interact_outputs.append(tf.zeros([inputs.shape[0], 1]))
             else:
                 interact = self.interacts[i]
@@ -430,7 +439,7 @@ class InteractionBlock(tf.keras.layers.Layer):
 
 
 class NonNegative(tf.keras.constraints.Constraint):
-    
+
     def __init__(self, mono_increasing_list, mono_decreasing_list):
 
         self.mono_increasing_list = mono_increasing_list
@@ -440,24 +449,23 @@ class NonNegative(tf.keras.constraints.Constraint):
 
         mono_weights = []
         if len(self.mono_increasing_list) > 0:
-            mono_increasing_weights = tf.gather(w, self.mono_increasing_list)
-            mono_increasing_weights = mono_increasing_weights * tf.cast(tf.math.greater_equal(mono_increasing_weights, 0.), 
-                                                    mono_increasing_weights.dtype)
+            mono_increasing_weights = tf.abs(tf.gather(w, self.mono_increasing_list))
             w = tf.tensor_scatter_nd_update(w, [[item] for item in self.mono_increasing_list], mono_increasing_weights)
         if len(self.mono_decreasing_list) > 0:
-            mono_decreasing_weights = tf.gather(w, self.mono_decreasing_list)
-            mono_decreasing_weights = mono_decreasing_weights * tf.cast(tf.math.less_equal(mono_decreasing_weights, 0.), 
-                                                    mono_decreasing_weights.dtype)
+            mono_decreasing_weights = - tf.abs(tf.gather(w, self.mono_decreasing_list))
             w = tf.tensor_scatter_nd_update(w, [[item] for item in self.mono_decreasing_list], mono_decreasing_weights)
         return w
 
 
 class OutputLayer(tf.keras.layers.Layer):
 
-    def __init__(self, input_num, interact_num, mono_increasing_list, mono_decreasing_list):
+    def __init__(self, input_num, interact_num,mono_increasing_list, mono_decreasing_list):
 
         super(OutputLayer, self).__init__()
+
+        self.interaction = []
         self.input_num = input_num
+        self.interact_num_added = 0
         self.interact_num = interact_num
         self.mono_increasing_list = mono_increasing_list
         self.mono_decreasing_list = mono_decreasing_list
@@ -471,12 +479,12 @@ class OutputLayer(tf.keras.layers.Layer):
                                               shape=[self.input_num, 1],
                                               initializer=tf.ones_initializer(),
                                               trainable=False)
-
+        
         self.interaction_weights = self.add_weight(name="interaction_weights",
-                                              shape=[self.interact_num, 1],
-                                              initializer=tf.keras.initializers.Orthogonal(),
-                                              constraint=NonNegative(self.mono_increasing_list, self.mono_decreasing_list),
-                                              trainable=True)
+                                  shape=[self.interact_num, 1],
+                                  initializer=tf.keras.initializers.Orthogonal(),
+                                  constraint=NonNegative([], []),
+                                  trainable=True)
         self.interaction_switcher = self.add_weight(name="interaction_switcher",
                                               shape=[self.interact_num, 1],
                                               initializer=tf.ones_initializer(),
@@ -486,9 +494,24 @@ class OutputLayer(tf.keras.layers.Layer):
                                            initializer=tf.zeros_initializer(),
                                            trainable=True)
 
+    def set_interaction_list(self, interaction_list):
+
+        self.mono_increasing_interact_list = []
+        self.mono_decreasing_interact_list = []
+        self.interaction_list = interaction_list
+        self.interact_num_added = len(interaction_list)
+        for i, interaction in enumerate(self.interaction_list):
+            if (interaction[0] in self.mono_increasing_list) or (interaction[1] in self.mono_increasing_list):
+                self.mono_increasing_interact_list.append(i)
+            if (interaction[0] in self.mono_decreasing_list) or (interaction[1] in self.mono_decreasing_list):
+                self.mono_decreasing_interact_list.append(i)
+        self.interaction_weights.constraint.mono_increasing_list = self.mono_increasing_interact_list
+        self.interaction_weights.constraint.mono_decreasing_list = self.mono_decreasing_interact_list
+
     def call(self, inputs):
+
         self.input_main_effect = inputs[:, :self.input_num]
-        if self.interact_num > 0:
+        if self.interact_num_added > 0:
             self.input_interaction = inputs[:, self.input_num:]
             output = (tf.matmul(self.input_main_effect, self.main_effect_switcher * self.main_effect_weights)
                    + tf.matmul(self.input_interaction, self.interaction_switcher * self.interaction_weights)
@@ -496,5 +519,4 @@ class OutputLayer(tf.keras.layers.Layer):
         else:
             output = (tf.matmul(self.input_main_effect, self.main_effect_switcher * self.main_effect_weights)
                    + self.output_bias)
-
         return output
