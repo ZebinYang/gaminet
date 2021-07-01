@@ -97,6 +97,7 @@ model = GAMINet(meta_info=meta_info, interact_num=20,
                 main_effect_epochs=5000, interaction_epochs=5000, tuning_epochs=500, 
                 lr_bp=[0.0001, 0.0001, 0.0001], early_stop_thres=[50, 50, 50],
                 heredity=True, loss_threshold=0.01, reg_clarity=1,
+                mono_increasing_list=[], mono_decreasing_list=[], ## the indices list of features
                 verbose=False, val_ratio=0.2, random_state=random_state)
 
 model.fit(train_x, train_y)
