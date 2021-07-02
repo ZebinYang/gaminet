@@ -106,7 +106,7 @@ class MonoNumerNet(tf.keras.layers.Layer):
         self.subnet_id = subnet_id
         self.lattice_size = lattice_size
         self.lattice_layer = tfl.layers.Lattice(lattice_sizes=[self.lattice_size], monotonicities=['increasing'])
-        self.lattice_layer_input = tfl.layers.PWLCalibration(input_keypoints=np.linspace(0, 1, num=2, dtype=np.float32),
+        self.lattice_layer_input = tfl.layers.PWLCalibration(input_keypoints=np.linspace(0, 1, num=8, dtype=np.float32),
                                     output_min=0.0, output_max=self.lattice_size - 1.0)
         self.lattice_layer_bias = self.add_weight(name="lattice_layer_bias_" + str(self.subnet_id), shape=[1],
                                     initializer=tf.zeros_initializer(), trainable=False)
@@ -223,7 +223,7 @@ class Interactnetwork(tf.keras.layers.Layer):
         self.moving_norm = self.add_weight(name="norm_" + str(self.interact_id),
                                 shape=[1], initializer=tf.ones_initializer(), trainable=False)
 
-    def onehot_encoding(self, inputs):
+    def preprocessing(self, inputs):
 
         interact_input_list = []
         if self.interaction[0] in self.cfeature_index_list:
@@ -248,7 +248,7 @@ class Interactnetwork(tf.keras.layers.Layer):
             self.min_value2.assign(tf.minimum(self.min_value2, tf.reduce_min(inputs[:, 1])))
             self.max_value2.assign(tf.maximum(self.max_value2, tf.reduce_max(inputs[:, 1])))
 
-        x = tf.stack(self.onehot_encoding(inputs), 1)
+        x = tf.stack(self.preprocessing(inputs), 1)
         for dense_layer in self.layers:
             x = dense_layer(x)
         self.output_original = self.output_layer(x)
@@ -289,24 +289,22 @@ class MonoInteractnetwork(tf.keras.layers.Layer):
 
     def set_interaction(self, interaction):
 
-        units = 2
-        increasing = []
         self.interaction = interaction
         if self.interaction[0] in self.cfeature_index_list:
-            increasing += ["none" for i in range(len(self.dummy_values[self.feature_list[self.interaction[0]]]))]
-            units += len(self.dummy_values[self.feature_list[self.interaction[0]]]) - 1
+            depth = len(self.dummy_values[self.feature_list[self.interaction[0]]])
+            self.lattice_layer_input1 = tfl.layers.CategoricalCalibration(num_buckets=depth, output_min=0.0, output_max=1.0)
         else:
-            increasing += [self.increasing[0]]
-        if self.interaction[1] in self.cfeature_index_list:
-            increasing += ["none" for i in range(len(self.dummy_values[self.feature_list[self.interaction[1]]]))]
-            units += len(self.dummy_values[self.feature_list[self.interaction[1]]]) - 1
-        else:
-            increasing += [self.increasing[0]]
+            self.lattice_layer_input1 = tfl.layers.PWLCalibration(input_keypoints=np.linspace(0, 1, num=8, dtype=np.float32),
+                                             output_min=0.0, output_max=self.lattice_size[0] - 1.0)
 
-        self.lattice_layer_input2d = tfl.layers.PWLCalibration(input_keypoints=np.linspace(0, 1, num=2, dtype=np.float32), units=units,
-                                             output_min=0.0, output_max=self.lattice_size - 1.0)
-        self.lattice_layer2d = tfl.layers.Lattice(lattice_sizes=[self.lattice_size for i in range(units)],
-                                    monotonicities=increasing)
+        if self.interaction[1] in self.cfeature_index_list:
+            depth = len(self.dummy_values[self.feature_list[self.interaction[1]]])
+            self.lattice_layer_input2 = tfl.layers.CategoricalCalibration(num_buckets=depth, output_min=0.0, output_max=1.0)
+        else:
+            self.lattice_layer_input2 = tfl.layers.PWLCalibration(input_keypoints=np.linspace(0, 1, num=8, dtype=np.float32),
+                                             output_min=0.0, output_max=self.lattice_size[1] - 1.0)
+
+        self.lattice_layer2d = tfl.layers.Lattice(lattice_sizes=self.lattice_size, monotonicities=self.increasing)
         self.lattice_layer_bias = self.add_weight(name="lattice_layer2d_bias_" + str(self.interact_id), shape=[1],
                                     initializer=tf.zeros_initializer(), trainable=False)
 
@@ -324,21 +322,17 @@ class MonoInteractnetwork(tf.keras.layers.Layer):
         self.moving_norm = self.add_weight(name="norm_" + str(self.interact_id),
                                 shape=[1], initializer=tf.ones_initializer(), trainable=False)
 
-    def onehot_encoding(self, inputs):
+    def preprocessing(self, inputs):
 
         interact_input_list = []
         if self.interaction[0] in self.cfeature_index_list:
-            interact_input1 = tf.one_hot(indices=tf.cast(inputs[:, 0], tf.int32),
-                               depth=len(self.dummy_values[self.feature_list[self.interaction[0]]]))
-            interact_input_list.extend(tf.unstack(interact_input1, axis=-1))
+            interact_input_list.append(tf.reshape(inputs[:, 0], (-1, 1)))
         else:
-            interact_input_list.append(tf.clip_by_value(inputs[:, 0], self.min_value1, self.max_value1))
+            interact_input_list.append(tf.reshape(tf.clip_by_value(inputs[:, 0], self.min_value1, self.max_value1), (-1, 1)))
         if self.interaction[1] in self.cfeature_index_list:
-            interact_input2 = tf.one_hot(indices=tf.cast(inputs[:, 1], tf.int32),
-                               depth=len(self.dummy_values[self.feature_list[self.interaction[1]]]))
-            interact_input_list.extend(tf.unstack(interact_input2, axis=-1))
+            interact_input_list.append(tf.reshape(inputs[:, 1], (-1, 1)))
         else:
-            interact_input_list.append(tf.clip_by_value(inputs[:, 1], self.min_value2, self.max_value2))
+            interact_input_list.append(tf.reshape(tf.clip_by_value(inputs[:, 1], self.min_value2, self.max_value2), (-1, 1)))
         return interact_input_list
 
     def call(self, inputs, sample_weight=None, training=False):
@@ -349,7 +343,8 @@ class MonoInteractnetwork(tf.keras.layers.Layer):
             self.min_value2.assign(tf.minimum(self.min_value2, tf.reduce_min(inputs[:, 1])))
             self.max_value2.assign(tf.maximum(self.max_value2, tf.reduce_max(inputs[:, 1])))
 
-        lattice_input2d = self.lattice_layer_input2d(tf.stack(self.onehot_encoding(inputs), 1))
+        x = self.preprocessing(inputs)
+        lattice_input2d = tf.keras.layers.Concatenate(axis=1)([self.lattice_layer_input1(x[0]), self.lattice_layer_input2(x[1])])
         self.output_original = self.lattice_layer2d(lattice_input2d) + self.lattice_layer_bias
 
         if training:
@@ -397,17 +392,20 @@ class InteractionBlock(tf.keras.layers.Layer):
         self.interact_num_added = len(interaction_list)
         for i in range(self.interact_num_added):
             if (interaction_list[i][0] in self.mono_list) or (interaction_list[i][1] in self.mono_list):
+                lattice_size = [2, 2]
                 increasing = ['none', 'none']
                 if interaction_list[i][0] in self.mono_list:
                     increasing[0] = 'increasing'
+                    lattice_size[0] = self.lattice_size
                 if interaction_list[i][1] in self.mono_list:
                     increasing[1] = 'increasing'
+                    lattice_size[1] = self.lattice_size
 
                 interact = MonoInteractnetwork(self.feature_list,
                                       self.cfeature_index_list,
                                       self.dummy_values,
                                       increasing=increasing,
-                                      lattice_size=self.lattice_size,
+                                      lattice_size=lattice_size,
                                       interact_id=i)
             else:
                 interact = Interactnetwork(self.feature_list,

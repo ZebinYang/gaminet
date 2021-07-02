@@ -90,7 +90,7 @@ train_x, test_x, train_y, test_y, task_type, meta_info, get_metric = data_genera
 
 Run GAMI-Net
 ```python
-## Note the current GAMINet API requires input features being normalized within 0 to 1. 
+## Note the current GAMINet API requires input features being normalized within 0 to 1.
 model = GAMINet(meta_info=meta_info, interact_num=20, 
                 interact_arch=[40] * 5, subnet_arch=[40] * 5, 
                 batch_size=200, task_type=task_type, activation_func=tf.nn.relu, 
