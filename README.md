@@ -153,9 +153,11 @@ local_visualize(data_dict_local[0], save_png=True, folder=simu_dir, name='s1_loc
 
 ```latex
 @article{yang2021gami,
-  title={GAMI-Net: An Explainable Neural Network based on Generalized Additive Models with Structured Interactions},
-  author={Yang, Zebin and Zhang, Aijun and Sudjianto, Agus},
-  journal={Pattern Recognition (Accepted)},
-  year={2021}
+   title={GAMI-Net: An Explainable Neural Network based on Generalized Additive Models with Structured Interactions},
+   author={Yang, Zebin and Zhang, Aijun and Sudjianto, Agus},
+   journal={Pattern Recognition},
+   volume = {120},
+   pages = {108192},
+   year={2021}
 }
 ```
