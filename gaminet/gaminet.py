@@ -137,9 +137,9 @@ class GAMINet(tf.keras.Model):
         self.maineffect_outputs = self.maineffect_blocks(inputs, sample_weight, training=main_effect_training)
         if self.interaction_status:
             self.interact_outputs = self.interact_blocks(inputs, sample_weight, training=interaction_training)
+            main_weights = tf.multiply(self.output_layer.main_effect_switcher, self.output_layer.main_effect_weights)
+            interaction_weights = tf.multiply(self.output_layer.interaction_switcher, self.output_layer.interaction_weights)
             for i, (k1, k2) in enumerate(self.interaction_list):
-                main_weights = tf.multiply(self.output_layer.main_effect_switcher, self.output_layer.main_effect_weights)
-                interaction_weights = tf.multiply(self.output_layer.interaction_switcher, self.output_layer.interaction_weights)
                 a1 = tf.multiply(tf.gather(self.maineffect_outputs, [k1], axis=1), tf.gather(main_weights, [k1], axis=0))
                 a2 = tf.multiply(tf.gather(self.maineffect_outputs, [k2], axis=1), tf.gather(main_weights, [k2], axis=0))
                 b = tf.multiply(tf.gather(self.interact_outputs, [i], axis=1), tf.gather(interaction_weights, [i], axis=0))

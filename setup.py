@@ -14,11 +14,11 @@ package_data = {
 }
 
 setup(name='gaminet',
-      version='0.5.2',
+      version='0.5.3',
       description='Explainable Neural Networks based on Generalized Additive Models with Structured Interactions',
       url='https://github.com/ZebinYang/GAMINet',
       author='Zebin Yang',
-      author_email='yangzb2010@hku.hk',
+      author_email='yangzb2010@connect.hku.hk',
       license='GPL',
       packages=['gaminet'],
       package_data=package_data,
