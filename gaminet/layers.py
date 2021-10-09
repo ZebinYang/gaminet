@@ -307,6 +307,10 @@ class MonoConInteractnetwork(tf.keras.layers.Layer):
             elif self.constraint[0] == "convexity":
                 self.lattice_layer_input1 = tfl.layers.PWLCalibration(input_keypoints=np.linspace(0, 1, num=8, dtype=np.float32),
                                             output_min=0.0, output_max=self.lattice_size[0] - 1.0, convexity='convex')
+            else:
+                self.lattice_layer_input1 = tfl.layers.PWLCalibration(input_keypoints=np.linspace(0, 1, num=8, dtype=np.float32),
+                                            output_min=0.0, output_max=self.lattice_size[0] - 1.0)
+
         if self.interaction[1] in self.cfeature_index_list:
             depth = len(self.dummy_values[self.feature_list[self.interaction[1]]])
             self.lattice_layer_input2 = tfl.layers.CategoricalCalibration(num_buckets=depth, output_min=0.0, output_max=1.0)
@@ -317,6 +321,9 @@ class MonoConInteractnetwork(tf.keras.layers.Layer):
             elif self.constraint[1] == "convexity":
                 self.lattice_layer_input2 = tfl.layers.PWLCalibration(input_keypoints=np.linspace(0, 1, num=8, dtype=np.float32),
                                             output_min=0.0, output_max=self.lattice_size[1] - 1.0, convexity='convex')
+            else:
+                self.lattice_layer_input2 = tfl.layers.PWLCalibration(input_keypoints=np.linspace(0, 1, num=8, dtype=np.float32),
+                                            output_min=0.0, output_max=self.lattice_size[1] - 1.0)
 
         self.lattice_layer2d = tfl.layers.Lattice(lattice_sizes=self.lattice_size, monotonicities=['increasing', 'increasing'])
         self.lattice_layer_bias = self.add_weight(name="lattice_layer2d_bias_" + str(self.interact_id), shape=[1],
