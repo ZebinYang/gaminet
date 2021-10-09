@@ -97,17 +97,21 @@ class NumerNet(tf.keras.layers.Layer):
         output = self.output_original
         return output
 
-    
-class MonoNumerNet(tf.keras.layers.Layer):
 
-    def __init__(self, lattice_size, subnet_id):
-        super(MonoNumerNet, self).__init__()
+class MonoConNumerNet(tf.keras.layers.Layer):
+
+    def __init__(self, constraint, lattice_size, subnet_id):
+        super(MonoConNumerNet, self).__init__()
 
         self.subnet_id = subnet_id
         self.lattice_size = lattice_size
         self.lattice_layer = tfl.layers.Lattice(lattice_sizes=[self.lattice_size], monotonicities=['increasing'])
-        self.lattice_layer_input = tfl.layers.PWLCalibration(input_keypoints=np.linspace(0, 1, num=8, dtype=np.float32),
-                                    output_min=0.0, output_max=self.lattice_size - 1.0, monotonicity='increasing')
+        if constraint == "monotonicity":
+            self.lattice_layer_input = tfl.layers.PWLCalibration(input_keypoints=np.linspace(0, 1, num=8, dtype=np.float32),
+                                        output_min=0.0, output_max=self.lattice_size - 1.0, monotonicity='increasing')
+        elif constraint == "convexity":
+            self.lattice_layer_input = tfl.layers.PWLCalibration(input_keypoints=np.linspace(0, 1, num=8, dtype=np.float32),
+                                        output_min=0.0, output_max=self.lattice_size - 1.0, convexity='convex')
         self.lattice_layer_bias = self.add_weight(name="lattice_layer_bias_" + str(self.subnet_id), shape=[1],
                                     initializer=tf.zeros_initializer(), trainable=False)
 
@@ -149,7 +153,7 @@ class MonoNumerNet(tf.keras.layers.Layer):
 class MainEffectBlock(tf.keras.layers.Layer):
 
     def __init__(self, feature_list, nfeature_index_list, cfeature_index_list, dummy_values,
-                 subnet_arch, activation_func, mono_list, lattice_size):
+                 subnet_arch, activation_func, mono_list, con_list, lattice_size):
         super(MainEffectBlock, self).__init__()
 
         self.subnet_arch = subnet_arch
@@ -162,12 +166,15 @@ class MainEffectBlock(tf.keras.layers.Layer):
         self.nfeature_index_list = nfeature_index_list
         self.cfeature_index_list = cfeature_index_list
         self.mono_list = mono_list
+        self.con_list = con_list
 
         self.subnets = []
         for i in range(self.subnet_num):
             if i in self.nfeature_index_list:
                 if i in self.mono_list:
-                    self.subnets.append(MonoNumerNet(self.lattice_size, subnet_id=i))
+                    self.subnets.append(MonoConNumerNet("monotonicity", self.lattice_size, subnet_id=i))
+                elif i in self.con_list:
+                    self.subnets.append(MonoConNumerNet("convexity", self.lattice_size, subnet_id=i))
                 else:
                     self.subnets.append(NumerNet(self.subnet_arch, self.activation_func, subnet_id=i))
             elif i in self.cfeature_index_list:
@@ -273,16 +280,16 @@ class Interactnetwork(tf.keras.layers.Layer):
         return output
 
 
-class MonoInteractnetwork(tf.keras.layers.Layer):
+class MonoConInteractnetwork(tf.keras.layers.Layer):
 
-    def __init__(self, feature_list, cfeature_index_list, dummy_values, lattice_size, increasing, interact_id):
-        super(MonoInteractnetwork, self).__init__()
+    def __init__(self, feature_list, cfeature_index_list, dummy_values, lattice_size, constraint, interact_id):
+        super(MonoConInteractnetwork, self).__init__()
 
         self.feature_list = feature_list
         self.dummy_values = dummy_values
         self.cfeature_index_list = cfeature_index_list
         
-        self.increasing = increasing
+        self.constraint = constraint
         self.lattice_size = lattice_size
         self.interact_id = interact_id
         self.interaction = None
@@ -294,17 +301,24 @@ class MonoInteractnetwork(tf.keras.layers.Layer):
             depth = len(self.dummy_values[self.feature_list[self.interaction[0]]])
             self.lattice_layer_input1 = tfl.layers.CategoricalCalibration(num_buckets=depth, output_min=0.0, output_max=1.0)
         else:
-            self.lattice_layer_input1 = tfl.layers.PWLCalibration(input_keypoints=np.linspace(0, 1, num=8, dtype=np.float32),
-                                     output_min=0.0, output_max=self.lattice_size[0] - 1.0, monotonicity='increasing')
-
+            if self.constraint[0] == "monotonicity":
+                self.lattice_layer_input1 = tfl.layers.PWLCalibration(input_keypoints=np.linspace(0, 1, num=8, dtype=np.float32),
+                                            output_min=0.0, output_max=self.lattice_size[0] - 1.0, monotonicity='increasing')
+            elif self.constraint[0] == "convexity":
+                self.lattice_layer_input1 = tfl.layers.PWLCalibration(input_keypoints=np.linspace(0, 1, num=8, dtype=np.float32),
+                                            output_min=0.0, output_max=self.lattice_size[0] - 1.0, convexity='convex')
         if self.interaction[1] in self.cfeature_index_list:
             depth = len(self.dummy_values[self.feature_list[self.interaction[1]]])
             self.lattice_layer_input2 = tfl.layers.CategoricalCalibration(num_buckets=depth, output_min=0.0, output_max=1.0)
         else:
-            self.lattice_layer_input2 = tfl.layers.PWLCalibration(input_keypoints=np.linspace(0, 1, num=8, dtype=np.float32),
-                                     output_min=0.0, output_max=self.lattice_size[1] - 1.0, monotonicity='increasing')
+            if self.constraint[1] == "monotonicity":
+                self.lattice_layer_input2 = tfl.layers.PWLCalibration(input_keypoints=np.linspace(0, 1, num=8, dtype=np.float32),
+                                            output_min=0.0, output_max=self.lattice_size[1] - 1.0, monotonicity='increasing')
+            elif self.constraint[1] == "convexity":
+                self.lattice_layer_input2 = tfl.layers.PWLCalibration(input_keypoints=np.linspace(0, 1, num=8, dtype=np.float32),
+                                            output_min=0.0, output_max=self.lattice_size[1] - 1.0, convexity='convex')
 
-        self.lattice_layer2d = tfl.layers.Lattice(lattice_sizes=self.lattice_size, monotonicities=self.increasing)
+        self.lattice_layer2d = tfl.layers.Lattice(lattice_sizes=self.lattice_size, monotonicities=['increasing', 'increasing'])
         self.lattice_layer_bias = self.add_weight(name="lattice_layer2d_bias_" + str(self.interact_id), shape=[1],
                                     initializer=tf.zeros_initializer(), trainable=False)
 
@@ -370,7 +384,7 @@ class MonoInteractnetwork(tf.keras.layers.Layer):
 class InteractionBlock(tf.keras.layers.Layer):
 
     def __init__(self, interact_num, feature_list, cfeature_index_list, dummy_values,
-                 interact_arch, activation_func, mono_list, lattice_size):
+                 interact_arch, activation_func, mono_list, con_list, lattice_size):
 
         super(InteractionBlock, self).__init__()
 
@@ -384,6 +398,7 @@ class InteractionBlock(tf.keras.layers.Layer):
         self.activation_func = activation_func
         self.lattice_size = lattice_size
         self.mono_list = mono_list
+        self.con_list = con_list
 
     def set_interaction_list(self, interaction_list):
 
@@ -393,18 +408,24 @@ class InteractionBlock(tf.keras.layers.Layer):
         for i in range(self.interact_num_added):
             if (interaction_list[i][0] in self.mono_list) or (interaction_list[i][1] in self.mono_list):
                 lattice_size = [2, 2]
-                increasing = ['none', 'none']
+                constraint = [None, None]
                 if interaction_list[i][0] in self.mono_list:
-                    increasing[0] = 'increasing'
+                    constraint[0] = 'increasing'
+                    lattice_size[0] = self.lattice_size
+                elif interaction_list[i][0] in self.con_list
+                    constraint[0] = 'convex'
                     lattice_size[0] = self.lattice_size
                 if interaction_list[i][1] in self.mono_list:
-                    increasing[1] = 'increasing'
+                    constraint[1] = 'increasing'
+                    lattice_size[1] = self.lattice_size
+                elif interaction_list[i][1] in self.con_list
+                    constraint[1] = 'convex'
                     lattice_size[1] = self.lattice_size
 
-                interact = MonoInteractnetwork(self.feature_list,
+                interact = MonoConInteractnetwork(self.feature_list,
                                       self.cfeature_index_list,
                                       self.dummy_values,
-                                      increasing=increasing,
+                                      constraint=constraint,
                                       lattice_size=lattice_size,
                                       interact_id=i)
             else:
@@ -438,10 +459,12 @@ class InteractionBlock(tf.keras.layers.Layer):
 
 class NonNegative(tf.keras.constraints.Constraint):
 
-    def __init__(self, mono_increasing_list, mono_decreasing_list):
+    def __init__(self, mono_increasing_list, mono_decreasing_list, convex_list, concave_list):
 
         self.mono_increasing_list = mono_increasing_list
         self.mono_decreasing_list = mono_decreasing_list
+        self.convex_list = convex_list
+        self.concave_list = concave_list
 
     def __call__(self, w):
 
@@ -452,12 +475,17 @@ class NonNegative(tf.keras.constraints.Constraint):
         if len(self.mono_decreasing_list) > 0:
             mono_decreasing_weights = - tf.abs(tf.gather(w, self.mono_decreasing_list))
             w = tf.tensor_scatter_nd_update(w, [[item] for item in self.mono_decreasing_list], mono_decreasing_weights)
+        if len(self.convex_list) > 0:
+            convex_weights = tf.abs(tf.gather(w, self.convex_list))
+            w = tf.tensor_scatter_nd_update(w, [[item] for item in self.convex_list], convex_weights)
+        if len(self.concave_list) > 0:
+            concave_weights = - tf.abs(tf.gather(w, self.concave_list))
+            w = tf.tensor_scatter_nd_update(w, [[item] for item in self.concave_list], concave_weights)
         return w
-
 
 class OutputLayer(tf.keras.layers.Layer):
 
-    def __init__(self, input_num, interact_num,mono_increasing_list, mono_decreasing_list):
+    def __init__(self, input_num, interact_num, mono_increasing_list, mono_decreasing_list, convex_list, concave_list):
 
         super(OutputLayer, self).__init__()
 
@@ -467,7 +495,9 @@ class OutputLayer(tf.keras.layers.Layer):
         self.interact_num = interact_num
         self.mono_increasing_list = mono_increasing_list
         self.mono_decreasing_list = mono_decreasing_list
-        
+        self.convex_list = convex_list
+        self.concave_list = concave_list
+
         self.main_effect_weights = self.add_weight(name="subnet_weights",
                                               shape=[self.input_num, 1],
                                               initializer=tf.keras.initializers.Orthogonal(),
@@ -477,7 +507,7 @@ class OutputLayer(tf.keras.layers.Layer):
                                               shape=[self.input_num, 1],
                                               initializer=tf.ones_initializer(),
                                               trainable=False)
-        
+
         self.interaction_weights = self.add_weight(name="interaction_weights",
                                   shape=[self.interact_num, 1],
                                   initializer=tf.keras.initializers.Orthogonal(),
@@ -505,6 +535,8 @@ class OutputLayer(tf.keras.layers.Layer):
                 self.mono_decreasing_interact_list.append(i)
         self.interaction_weights.constraint.mono_increasing_list = self.mono_increasing_interact_list
         self.interaction_weights.constraint.mono_decreasing_list = self.mono_decreasing_interact_list
+        self.interaction_weights.constraint.convex_list = self.convex_list
+        self.interaction_weights.constraint.concave_list = self.concave_list
 
     def call(self, inputs):
 

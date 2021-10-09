@@ -28,7 +28,9 @@ class GAMINet(tf.keras.Model):
                  val_ratio=0.2,
                  mono_increasing_list=None,
                  mono_decreasing_list=None,
-                 lattice_size=10,
+                 convex_list=None,
+                 concave_list=None,
+                 lattice_size=2,
                  verbose=False,
                  random_state=0):
 
@@ -57,6 +59,9 @@ class GAMINet(tf.keras.Model):
         self.mono_increasing_list = [] if mono_increasing_list is None else mono_increasing_list
         self.mono_decreasing_list = [] if mono_decreasing_list is None else mono_decreasing_list
         self.mono_list = self.mono_increasing_list + self.mono_decreasing_list
+        self.convex_list = [] if convex_list is None else convex_list
+        self.concave_list = [] if concave_list is None else concave_list
+        self.conv_list = self.convex_list + self.concave_list
         self.lattice_size = lattice_size
         
         self.verbose = verbose
@@ -109,6 +114,7 @@ class GAMINet(tf.keras.Model):
                                  subnet_arch=self.subnet_arch,
                                  activation_func=self.activation_func,
                                  mono_list=self.mono_list,
+                                 con_list=self.con_list,
                                  lattice_size=self.lattice_size)
         self.interact_blocks = InteractionBlock(interact_num=self.interact_num,
                                 feature_list=self.feature_list_,
@@ -117,11 +123,14 @@ class GAMINet(tf.keras.Model):
                                 interact_arch=self.interact_arch,
                                 activation_func=self.activation_func,
                                 mono_list=self.mono_list,
+                                con_list=self.con_list,
                                 lattice_size=self.lattice_size)
         self.output_layer = OutputLayer(input_num=self.input_num,
                               interact_num=self.interact_num,
                               mono_increasing_list=self.mono_increasing_list,
-                              mono_decreasing_list=self.mono_decreasing_list)
+                              mono_decreasing_list=self.mono_decreasing_list,
+                              convex_list=self.convex_list,
+                              concave_list=self.concave_list)
 
         self.optimizer = tf.keras.optimizers.Adam()
         if self.task_type == "Regression":
@@ -411,11 +420,12 @@ class GAMINet(tf.keras.Model):
             self.main_effect_val_loss.append(val_loss)
 
         best_idx = np.argmin(self.main_effect_val_loss)
-        best_loss = np.min(self.main_effect_val_loss)
-        if best_loss > 0:
-            if np.sum((self.main_effect_val_loss / best_loss - 1) < self.loss_threshold) > 0:
-                best_idx = np.where((self.main_effect_val_loss / best_loss - 1) < self.loss_threshold)[0][0]
-            
+        loss_best = np.min(self.main_effect_val_loss)
+        loss_range = np.max(self.main_effect_val_loss) - np.min(self.main_effect_val_loss)
+        if loss_best > 0:
+            if np.sum(((self.main_effect_val_loss - loss_best) / loss_range) > self.loss_threshold) > 0:
+                best_idx = np.where(((self.main_effect_val_loss - loss_best) / loss_range) > self.loss_threshold)[0][-1]
+
         self.active_main_effect_index = sorted_index[:best_idx]
         main_effect_switcher = np.zeros((self.input_num, 1))
         main_effect_switcher[self.active_main_effect_index] = 1
@@ -511,11 +521,12 @@ class GAMINet(tf.keras.Model):
             self.interaction_val_loss.append(val_loss)
 
         best_idx = np.argmin(self.interaction_val_loss)
-        best_loss = np.min(self.interaction_val_loss)
-        if best_loss > 0:
-            if np.sum((self.interaction_val_loss / best_loss - 1) < self.loss_threshold) > 0:
-                best_idx = np.where((self.interaction_val_loss / best_loss - 1) < self.loss_threshold)[0][0]
-            
+        loss_best = np.min(self.interaction_val_loss)
+        loss_range = np.max(self.interaction_val_loss) - np.min(self.interaction_val_loss)
+        if loss_best > 0:
+            if np.sum(((self.interaction_val_loss - loss_best) / loss_range) > self.loss_threshold) > 0:
+                best_idx = np.where(((self.interaction_val_loss - loss_best) / loss_range) > self.loss_threshold)[0][-1]
+
         self.active_interaction_index = sorted_index[:best_idx]
         interaction_switcher = np.zeros((self.interact_num, 1))
         interaction_switcher[self.active_interaction_index] = 1

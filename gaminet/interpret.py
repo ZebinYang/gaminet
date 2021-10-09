@@ -54,28 +54,14 @@ def autogen_schema(X, ordinal_max_items=2, feature_names=None, feature_types=Non
         A dictionary - schema that encapsulates column information,
         such as type and domain.
     """
-    schema = OrderedDict()
     col_number = 0
-    if isinstance(X, np.ndarray):
-        if feature_names is None:
-            feature_names = ["col_" + str(i) for i in range(X.shape[1])]
-
-        # NOTE: Use rolled out infer_objects for old pandas.
-        # As used from SO:
-        # https://stackoverflow.com/questions/47393134/attributeerror-dataframe-object-has-no-attribute-infer-objects
-        X = pd.DataFrame(X, columns=feature_names)
-        try:
-            X = X.infer_objects()
-        except AttributeError:
-            for k in list(X):
-                X[k] = pd.to_numeric(X[k], errors="ignore")
-
-    if isinstance(X, NDFrame):
-        for name, col_dtype in zip(X.dtypes.index, X.dtypes):
-            schema[name] = {}
+    schema = OrderedDict()
+    for idx, (name, col_dtype) in enumerate(zip(X.dtypes.index, X.dtypes)):
+        schema[name] = {}
+        if feature_types is not None:
+            schema[name]["type"] = feature_types[idx]
+        else:
             if is_numeric_dtype(col_dtype):
-                # schema[name]['type'] = 'continuous'
-                # TODO: Fix this once we know it works.
                 if len(set(X[name])) > ordinal_max_items:
                     schema[name]["type"] = "continuous"
                 else:
@@ -88,16 +74,8 @@ def autogen_schema(X, ordinal_max_items=2, feature_names=None, feature_types=Non
             else:  # pragma: no cover
                 warnings.warn("Unknown column: " + name, RuntimeWarning)
                 schema[name]["type"] = "unknown"
-            schema[name]["column_number"] = col_number
-            col_number += 1
-
-        # Override if feature_types is passed as arg.
-        if feature_types is not None:
-            for idx, name in enumerate(X.dtypes.index):
-                schema[name]["type"] = feature_types[idx]
-    else:  # pragma: no cover
-        raise TypeError("GA2M only supports numpy arrays or pandas dataframes.")
-
+        schema[name]["column_number"] = col_number
+        col_number += 1
     return schema
 
 
@@ -170,9 +148,24 @@ class EBMPreprocessor(BaseEstimator, TransformerMixin):
             self.col_types_.append(col_info["type"])
             if col_info["type"] == "continuous":
                 col_data = col_data.astype(float)
+                col_data = col_data[~np.isnan(col_data)]
 
-                uniq_vals = set(col_data[~np.isnan(col_data)])
-                if len(uniq_vals) < self.max_n_bins:
+                iteration = 0
+                uniq_vals = set()
+                batch_size = 1000
+                small_unival = True
+                while True:
+                    start = iteration * batch_size
+                    end = (iteration + 1) * batch_size
+                    uniq_vals.update(set(col_data[start:end]))
+                    iteration += 1
+                    if len(uniq_vals) >= self.max_n_bins:
+                        small_unival = False
+                        break
+                    if end >= col_data.shape[0]:
+                        break
+
+                if small_unival:
                     bins = list(sorted(uniq_vals))
                 else:
                     if self.binning_strategy == "uniform":
@@ -192,11 +185,11 @@ class EBMPreprocessor(BaseEstimator, TransformerMixin):
 
                 _, bin_edges = np.histogram(col_data, bins=bins)
 
-                hist_counts, hist_edges = np.histogram(col_data, bins="doane")
+                # hist_counts, hist_edges = np.histogram(col_data, bins="doane")
                 self.col_bin_edges_[col_idx] = bin_edges
 
-                self.hist_edges_[col_idx] = hist_edges
-                self.hist_counts_[col_idx] = hist_counts
+                # self.hist_edges_[col_idx] = hist_edges
+                # self.hist_counts_[col_idx] = hist_counts
                 self.col_n_bins_[col_idx] = len(bin_edges)
             elif col_info["type"] == "ordinal":
                 mapping = {val: indx for indx, val in enumerate(col_info["order"])}
