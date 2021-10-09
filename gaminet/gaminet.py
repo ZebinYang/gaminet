@@ -337,7 +337,7 @@ class GAMINet(tf.keras.Model):
         main_weights = tf.multiply(self.output_layer.main_effect_switcher, self.output_layer.main_effect_weights)
         for idx, subnet in enumerate(self.maineffect_blocks.subnets):
             if idx in self.nfeature_index_list_:
-                if idx in self.mono_list:
+                if idx in self.mono_list + self.con_list:
                     subnet_bias = subnet.lattice_layer_bias - subnet.moving_mean
                     subnet.lattice_layer_bias.assign(subnet_bias)
                 else:
@@ -358,7 +358,7 @@ class GAMINet(tf.keras.Model):
             if idx >= len(self.interaction_list):
                 break
 
-            if (interact.interaction[0] in self.mono_list) or (interact.interaction[1] in self.mono_list):
+            if (interact.interaction[0] in self.mono_list + self.con_list) or (interact.interaction[1] in self.mono_list + self.con_list):
                 interact_bias = interact.lattice_layer_bias - interact.moving_mean
                 interact.lattice_layer_bias.assign(interact_bias)
             else:
@@ -422,9 +422,9 @@ class GAMINet(tf.keras.Model):
         best_idx = np.argmin(self.main_effect_val_loss)
         loss_best = np.min(self.main_effect_val_loss)
         loss_range = np.max(self.main_effect_val_loss) - np.min(self.main_effect_val_loss)
-        if loss_best > 0:
-            if np.sum(((self.main_effect_val_loss - loss_best) / loss_range) > self.loss_threshold) > 0:
-                best_idx = np.where(((self.main_effect_val_loss - loss_best) / loss_range) > self.loss_threshold)[0][-1]
+        if loss_range > 0:
+            if np.sum(((self.main_effect_val_loss - loss_best) / loss_range) < self.loss_threshold) > 0:
+                best_idx = np.where(((self.main_effect_val_loss - loss_best) / loss_range) < self.loss_threshold)[0][0]
 
         self.active_main_effect_index = sorted_index[:best_idx]
         main_effect_switcher = np.zeros((self.input_num, 1))
@@ -523,9 +523,9 @@ class GAMINet(tf.keras.Model):
         best_idx = np.argmin(self.interaction_val_loss)
         loss_best = np.min(self.interaction_val_loss)
         loss_range = np.max(self.interaction_val_loss) - np.min(self.interaction_val_loss)
-        if loss_best > 0:
-            if np.sum(((self.interaction_val_loss - loss_best) / loss_range) > self.loss_threshold) > 0:
-                best_idx = np.where(((self.interaction_val_loss - loss_best) / loss_range) > self.loss_threshold)[0][-1]
+        if loss_range > 0:
+            if np.sum(((self.interaction_val_loss - loss_best) / loss_range) < self.loss_threshold) > 0:
+                best_idx = np.where(((self.interaction_val_loss - loss_best) / loss_range) < self.loss_threshold)[0][0]
 
         self.active_interaction_index = sorted_index[:best_idx]
         interaction_switcher = np.zeros((self.interact_num, 1))

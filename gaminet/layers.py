@@ -501,7 +501,8 @@ class OutputLayer(tf.keras.layers.Layer):
         self.main_effect_weights = self.add_weight(name="subnet_weights",
                                               shape=[self.input_num, 1],
                                               initializer=tf.keras.initializers.Orthogonal(),
-                                              constraint=NonNegative(self.mono_increasing_list, self.mono_decreasing_list),
+                                              constraint=NonNegative(self.mono_increasing_list, self.mono_decreasing_list,
+                                                            self.convex_list, self.concave_list),
                                               trainable=True)
         self.main_effect_switcher = self.add_weight(name="subnet_switcher",
                                               shape=[self.input_num, 1],
@@ -511,7 +512,7 @@ class OutputLayer(tf.keras.layers.Layer):
         self.interaction_weights = self.add_weight(name="interaction_weights",
                                   shape=[self.interact_num, 1],
                                   initializer=tf.keras.initializers.Orthogonal(),
-                                  constraint=NonNegative([], []),
+                                  constraint=NonNegative([], [], [], []),
                                   trainable=True)
         self.interaction_switcher = self.add_weight(name="interaction_switcher",
                                               shape=[self.interact_num, 1],
