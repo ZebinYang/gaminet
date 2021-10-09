@@ -412,13 +412,13 @@ class InteractionBlock(tf.keras.layers.Layer):
                 if interaction_list[i][0] in self.mono_list:
                     constraint[0] = 'increasing'
                     lattice_size[0] = self.lattice_size
-                elif interaction_list[i][0] in self.con_list
+                elif interaction_list[i][0] in self.con_list:
                     constraint[0] = 'convex'
                     lattice_size[0] = self.lattice_size
                 if interaction_list[i][1] in self.mono_list:
                     constraint[1] = 'increasing'
                     lattice_size[1] = self.lattice_size
-                elif interaction_list[i][1] in self.con_list
+                elif interaction_list[i][1] in self.con_list:
                     constraint[1] = 'convex'
                     lattice_size[1] = self.lattice_size
 
