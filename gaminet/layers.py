@@ -406,20 +406,20 @@ class InteractionBlock(tf.keras.layers.Layer):
         self.interaction_list = interaction_list
         self.interact_num_added = len(interaction_list)
         for i in range(self.interact_num_added):
-            if (interaction_list[i][0] in self.mono_list) or (interaction_list[i][1] in self.mono_list):
+            if (interaction_list[i][0] in self.mono_list + self.con_list) or (interaction_list[i][1] in self.mono_list + self.con_list):
                 lattice_size = [2, 2]
                 constraint = [None, None]
                 if interaction_list[i][0] in self.mono_list:
-                    constraint[0] = 'increasing'
+                    constraint[0] = 'monotonicity'
                     lattice_size[0] = self.lattice_size
                 elif interaction_list[i][0] in self.con_list:
-                    constraint[0] = 'convex'
+                    constraint[0] = 'convexity'
                     lattice_size[0] = self.lattice_size
                 if interaction_list[i][1] in self.mono_list:
-                    constraint[1] = 'increasing'
+                    constraint[1] = 'monotonicity'
                     lattice_size[1] = self.lattice_size
                 elif interaction_list[i][1] in self.con_list:
-                    constraint[1] = 'convex'
+                    constraint[1] = 'convexity'
                     lattice_size[1] = self.lattice_size
 
                 interact = MonoConInteractnetwork(self.feature_list,
