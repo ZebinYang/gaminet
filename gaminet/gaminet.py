@@ -61,7 +61,7 @@ class GAMINet(tf.keras.Model):
         self.mono_list = self.mono_increasing_list + self.mono_decreasing_list
         self.convex_list = [] if convex_list is None else convex_list
         self.concave_list = [] if concave_list is None else concave_list
-        self.conv_list = self.convex_list + self.concave_list
+        self.con_list = self.convex_list + self.concave_list
         self.lattice_size = lattice_size
         
         self.verbose = verbose
