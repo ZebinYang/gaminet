@@ -297,7 +297,7 @@ class MonoConInteractnetwork(tf.keras.layers.Layer):
         self.cfeature_index_list = cfeature_index_list
         
         self.monotonicity = monotonicity
-        self.convexity = constraint
+        self.convexity = convexity
         self.lattice_size = lattice_size
         self.interact_id = interact_id
         self.interaction = None
