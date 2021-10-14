@@ -106,8 +106,8 @@ class GAMINet(tf.keras.Model):
         self.interaction_status = False
         self.input_num = self.nfeature_num_ + self.cfeature_num_
         self.max_interact_num = int(round(self.input_num * (self.input_num - 1) / 2))
-        self.interact_num = min(interact_num, self.max_interact_num)
-        self.include_interaction_list = include_interaction_list
+        self.include_interaction_list = list(set(include_interaction_list))
+        self.interact_num = min(interact_num + len(self.include_interaction_list), self.max_interact_num)
 
         self.maineffect_blocks = MainEffectBlock(feature_list=self.feature_list_,
                                  dummy_values=self.dummy_values_,

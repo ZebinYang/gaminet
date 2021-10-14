@@ -558,6 +558,8 @@ class OutputLayer(tf.keras.layers.Layer):
 
     def set_interaction_list(self, interaction_list):
 
+        self.convex_interact_list = []
+        self.concave_interact_list = []
         self.mono_increasing_interact_list = []
         self.mono_decreasing_interact_list = []
         self.interaction_list = interaction_list
@@ -567,10 +569,16 @@ class OutputLayer(tf.keras.layers.Layer):
                 self.mono_increasing_interact_list.append(i)
             if (interaction[0] in self.mono_decreasing_list) or (interaction[1] in self.mono_decreasing_list):
                 self.mono_decreasing_interact_list.append(i)
+                
+            if (interaction[0] in self.convex_list) or (interaction[1] in self.convex_list):
+                self.convex_interact_list.append(i)
+            if (interaction[0] in self.concave_list) or (interaction[1] in self.concave_list):
+                self.concave_interact_list.append(i)
+
         self.interaction_weights.constraint.mono_increasing_list = self.mono_increasing_interact_list
         self.interaction_weights.constraint.mono_decreasing_list = self.mono_decreasing_interact_list
-        self.interaction_weights.constraint.convex_list = self.convex_list
-        self.interaction_weights.constraint.concave_list = self.concave_list
+        self.interaction_weights.constraint.convex_list = self.convex_interact_list
+        self.interaction_weights.constraint.concave_list = self.concave_interact_list
 
     def call(self, inputs):
 
