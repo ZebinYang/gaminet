@@ -108,7 +108,7 @@ class MonoConNumerNet(tf.keras.layers.Layer):
         self.lattice_layer = tfl.layers.Lattice(lattice_sizes=[self.lattice_size], monotonicities=['increasing'])
         
         self.lattice_layer_input = tfl.layers.PWLCalibration(input_keypoints=np.linspace(0, 1, num=8, dtype=np.float32),
-                                        output_min=0.0, output_max=self.lattice_size[0] - 1.0)
+                                        output_min=0.0, output_max=self.lattice_size - 1.0)
         if self.monotonicity[0] == True:
             self.lattice_layer_input.monotonicity = 'increasing'
         if self.convexity[0] == True:
