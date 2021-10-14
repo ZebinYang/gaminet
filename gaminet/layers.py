@@ -114,7 +114,7 @@ class MonoConNumerNet(tf.keras.layers.Layer):
         if self.monotonicity == True:
             self.lattice_layer_input.monotonicity = 'increasing'
         if self.convexity == True:
-            self.lattice_layer_input.monotonicity = 'convex'
+            self.lattice_layer_input.convexity = 'convex'
         self.lattice_layer_bias = self.add_weight(name="lattice_layer_bias_" + str(self.subnet_id), shape=[1],
                                     initializer=tf.zeros_initializer(), trainable=False)
 
@@ -314,7 +314,7 @@ class MonoConInteractnetwork(tf.keras.layers.Layer):
             if self.monotonicity[0] == True:
                 self.lattice_layer_input1.monotonicity = 'increasing'
             if self.convexity[0] == True:
-                self.lattice_layer_input1.monotonicity = 'convex'
+                self.lattice_layer_input1.convexity = 'convex'
 
         if self.interaction[1] in self.cfeature_index_list:
             depth = len(self.dummy_values[self.feature_list[self.interaction[1]]])
@@ -325,7 +325,7 @@ class MonoConInteractnetwork(tf.keras.layers.Layer):
             if self.monotonicity[0] == True:
                 self.lattice_layer_input2.monotonicity = 'increasing'
             if self.convexity[0] == True:
-                self.lattice_layer_input2.monotonicity = 'convex'
+                self.lattice_layer_input2.convexity = 'convex'
 
         self.lattice_layer2d = tfl.layers.Lattice(lattice_sizes=self.lattice_size, monotonicities=['increasing', 'increasing'])
         self.lattice_layer_bias = self.add_weight(name="lattice_layer2d_bias_" + str(self.interact_id), shape=[1],
