@@ -31,6 +31,7 @@ class GAMINet(tf.keras.Model):
                  convex_list=None,
                  concave_list=None,
                  lattice_size=2,
+                 include_interaction_list=[],
                  verbose=False,
                  random_state=0):
 
@@ -106,6 +107,7 @@ class GAMINet(tf.keras.Model):
         self.input_num = self.nfeature_num_ + self.cfeature_num_
         self.max_interact_num = int(round(self.input_num * (self.input_num - 1) / 2))
         self.interact_num = min(interact_num, self.max_interact_num)
+        self.include_interaction_list = include_interaction_list
 
         self.maineffect_blocks = MainEffectBlock(feature_list=self.feature_list_,
                                  dummy_values=self.dummy_values_,
@@ -466,7 +468,7 @@ class GAMINet(tf.keras.Model):
                           task_type=self.task_type,
                           active_main_effect_index=np.arange(self.input_num))
 
-        self.interaction_list = interaction_list_all[:self.interact_num]
+        self.interaction_list = list(set(self.include_interaction_list + interaction_list_all[:self.interact_num]))
         self.interact_num_added = len(self.interaction_list)
         self.interact_blocks.set_interaction_list(self.interaction_list)
         self.output_layer.set_interaction_list(self.interaction_list)
