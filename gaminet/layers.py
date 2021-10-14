@@ -111,9 +111,9 @@ class MonoConNumerNet(tf.keras.layers.Layer):
         
         self.lattice_layer_input = tfl.layers.PWLCalibration(input_keypoints=np.linspace(0, 1, num=8, dtype=np.float32),
                                         output_min=0.0, output_max=self.lattice_size - 1.0)
-        if self.monotonicity[0] == True:
+        if self.monotonicity == True:
             self.lattice_layer_input.monotonicity = 'increasing'
-        if self.convexity[0] == True:
+        if self.convexity == True:
             self.lattice_layer_input.monotonicity = 'convex'
         self.lattice_layer_bias = self.add_weight(name="lattice_layer_bias_" + str(self.subnet_id), shape=[1],
                                     initializer=tf.zeros_initializer(), trainable=False)
