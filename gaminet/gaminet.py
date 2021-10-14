@@ -633,7 +633,7 @@ class GAMINet(tf.keras.Model):
             return
 
         # step2: interaction
-        if self.interact_num == 0:
+        if (self.interact_num == 0) and len(self.include_interaction_list) == 0:
             if self.verbose:
                 print("#" * 10 + "Max interaction is specified to zero, training stop." + "#" * 10)
             return
