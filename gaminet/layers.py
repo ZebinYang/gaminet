@@ -100,10 +100,12 @@ class NumerNet(tf.keras.layers.Layer):
 
 class MonoConNumerNet(tf.keras.layers.Layer):
 
-    def __init__(self, constraint, lattice_size, subnet_id):
+    def __init__(self, monotonicity, convexity, lattice_size, subnet_id):
         super(MonoConNumerNet, self).__init__()
 
         self.subnet_id = subnet_id
+        self.monotonicity = monotonicity
+        self.convexity = convexity
         self.lattice_size = lattice_size
         self.lattice_layer = tfl.layers.Lattice(lattice_sizes=[self.lattice_size], monotonicities=['increasing'])
         
@@ -172,10 +174,14 @@ class MainEffectBlock(tf.keras.layers.Layer):
         self.subnets = []
         for i in range(self.subnet_num):
             if i in self.nfeature_index_list:
+                monotonicity = False
+                convexity = False
                 if i in self.mono_list:
-                    self.subnets.append(MonoConNumerNet("monotonicity", self.lattice_size, subnet_id=i))
-                elif i in self.con_list:
-                    self.subnets.append(MonoConNumerNet("convexity", self.lattice_size, subnet_id=i))
+                    monotonicity = True
+                if i in self.con_list:
+                    convexity = True
+                if monotonicity or convexity:
+                    self.subnets.append(MonoConNumerNet(monotonicity, convexity, self.lattice_size, subnet_id=i))
                 else:
                     self.subnets.append(NumerNet(self.subnet_arch, self.activation_func, subnet_id=i))
             elif i in self.cfeature_index_list:
