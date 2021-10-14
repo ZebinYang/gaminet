@@ -627,7 +627,7 @@ class GAMINet(tf.keras.Model):
         if self.verbose:
             print("#" * 10 + "Stage 1: main effect training stop." + "#" * 10)
         self.prune_main_effect(val_x, val_y, sample_weight)
-        if len(self.active_main_effect_index) == 0:
+        if (len(self.active_main_effect_index) == 0) and self.heredity:
             if self.verbose:
                 print("#" * 10 + "No main effect is selected, training stop." + "#" * 10)
             return
