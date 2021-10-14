@@ -385,7 +385,7 @@ class GAMINet(tf.keras.Model):
                 batch_yy = tr_y[offset:(offset + self.batch_size)]
                 batch_sw = tr_sw[offset:(offset + self.batch_size)]
                 self.train_main_effect(tf.cast(batch_xx, tf.float32), tf.cast(batch_yy, tf.float32), tf.cast(batch_sw, tf.float32))
-            
+
             self.err_train_main_effect_training.append(self.evaluate(tr_x, tr_y, tr_sw,
                                                  main_effect_training=False, interaction_training=False))
             self.err_val_main_effect_training.append(self.evaluate(val_x, val_y, sample_weight[self.val_idx],
@@ -520,13 +520,15 @@ class GAMINet(tf.keras.Model):
             val_loss = self.evaluate(val_x, val_y, sample_weight[self.val_idx], main_effect_training=False, interaction_training=False)
             self.interaction_val_loss.append(val_loss)
 
-        best_idx = np.argmin(self.interaction_val_loss)
-        loss_best = np.min(self.interaction_val_loss)
-        loss_range = np.max(self.interaction_val_loss) - np.min(self.interaction_val_loss)
+        combined_val_loss = self.main_effect_val_loss[:len(self.active_main_effect_index) + 1] + self.interaction_val_loss[1:]
+        best_idx = np.argmin(combined_val_loss)
+        loss_best = np.min(combined_val_loss)
+        loss_range = np.max(combined_val_loss) - np.min(combined_val_loss)
         if loss_range > 0:
-            if np.sum(((self.interaction_val_loss - loss_best) / loss_range) < self.loss_threshold) > 0:
-                best_idx = np.where(((self.interaction_val_loss - loss_best) / loss_range) < self.loss_threshold)[0][0]
+            if np.sum(((combined_val_loss - loss_best) / loss_range) < self.loss_threshold) > 0:
+                best_idx = np.where(((combined_val_loss - loss_best) / loss_range) < self.loss_threshold)[0][0]
 
+        best_idx = best_idx - len(self.active_main_effect_index)
         self.active_interaction_index = sorted_index[:best_idx]
         interaction_switcher = np.zeros((self.interact_num, 1))
         interaction_switcher[self.active_interaction_index] = 1
