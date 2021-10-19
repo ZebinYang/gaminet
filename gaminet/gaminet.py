@@ -159,8 +159,8 @@ class GAMINet(tf.keras.Model):
                 a2 = tf.multiply(tf.gather(self.maineffect_outputs, [k2], axis=1), tf.gather(main_weights, [k2], axis=0))
                 b = tf.multiply(tf.gather(self.interact_outputs, [i], axis=1), tf.gather(interaction_weights, [i], axis=0))
                 if sample_weight is not None:
-                    self.clarity_loss += tf.abs(tf.reduce_mean(tf.multiply(tf.multiply(a1, b), sample_weight)))
-                    self.clarity_loss += tf.abs(tf.reduce_mean(tf.multiply(tf.multiply(a2, b), sample_weight)))
+                    self.clarity_loss += tf.abs(tf.reduce_mean(tf.multiply(tf.multiply(a1, b), sample_weight.reshape(-1, 1))))
+                    self.clarity_loss += tf.abs(tf.reduce_mean(tf.multiply(tf.multiply(a2, b), sample_weight.reshape(-1, 1))))
                 else:
                     self.clarity_loss += tf.abs(tf.reduce_mean(tf.multiply(a1, b)))
                     self.clarity_loss += tf.abs(tf.reduce_mean(tf.multiply(a2, b)))

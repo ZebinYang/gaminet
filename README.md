@@ -7,6 +7,7 @@ The following environments are required:
 
 - Python 3.7 + (anaconda is preferable)
 - tensorflow>=2.0.0
+- tensorflow-lattice>=2.0.8
 - numpy>=1.15.2
 - pandas>=0.19.2
 - matplotlib>=3.1.3
@@ -15,6 +16,8 @@ The following environments are required:
 ```shell
 pip install gaminet
 ```
+
+To use it on GPU, conda install tensorflow==2.2, pip install tensorflow-lattice==2.0.8, conda install tensorflow-estimators==2.2
 
 ## Usage
 
