@@ -8,12 +8,13 @@ import matplotlib
 from matplotlib import gridspec
 from matplotlib import pyplot as plt
 from matplotlib.ticker import MaxNLocator
+from joblib import Parallel, delayed
 
 from .interpret import *
 
 
 def get_interaction_list(tr_x, val_x, tr_y, val_y, pred_tr, pred_val, feature_list, feature_type_list, 
-                 active_main_effect_index, task_type="Regression"):
+                 active_main_effect_index, task_type="Regression", n_jobs=1):
 
     if task_type == "Regression":
         num_classes_ = -1
@@ -53,17 +54,14 @@ def get_interaction_list(tr_x, val_x, tr_y, val_y, pred_tr, pred_val, feature_li
         )
     ) as native_ebm:
 
-        interaction_scores = []
-        interaction_indices = [item for item in combinations(range(len(preprocessor_.col_types_)), 2)]
-        for pair in interaction_indices:
-            if (pair[0] in active_main_effect_index) or (pair[1] in active_main_effect_index):
-                score = native_ebm.fast_interaction_score(pair)
-                interaction_scores.append((pair, score))
+        def evaluate_parallel(pair):
+            return pair, native_ebm.fast_interaction_score(pair)
 
-        ranked_scores = list(
-            sorted(interaction_scores, key=lambda item: item[1], reverse=True)
-        )
-
+        all_pairs = [pair for pair in combinations(range(len(preprocessor_.col_types_)), 2)
+                   if (pair[0] in active_main_effect_index) or (pair[1] in active_main_effect_index)]
+        interaction_scores = Parallel(n_jobs=n_jobs, backend="threading")(delayed(evaluate_parallel)(pair) for pair in all_pairs)
+    
+    ranked_scores = list(sorted(interaction_scores, key=lambda item: item[1], reverse=True))
     interaction_list = [ranked_scores[i][0] for i in range(len(ranked_scores))]
     return interaction_list
 
@@ -223,7 +221,7 @@ def feature_importance_visualize(data_dict_global, folder="./results/", name="de
             fig.savefig("%s.png" % save_path, bbox_inches="tight", dpi=100)
 
 
-def global_visualize_density(data_dict_global, main_effect_num=10**5, interaction_num=10**5, cols_per_row=4,
+def global_visualize_density(data_dict_global, main_effect_num=None, interaction_num=None, cols_per_row=4,
                         save_png=False, save_eps=False, folder="./results/", name="demo"):
 
     maineffect_count = 0
@@ -359,7 +357,7 @@ def global_visualize_density(data_dict_global, main_effect_num=10**5, interactio
             fig.savefig("%s.png" % save_path, bbox_inches="tight", dpi=100)
 
 
-def global_visualize_wo_density(data_dict_global, main_effect_num=10**5, interaction_num=10**5, cols_per_row=4,
+def global_visualize_wo_density(data_dict_global, main_effect_num=None, interaction_num=None, cols_per_row=4,
                         save_png=False, save_eps=False, folder="./results/", name="demo"):
 
     maineffect_count = 0
