@@ -66,7 +66,7 @@ def get_interaction_list(tr_x, val_x, tr_y, val_y, pred_tr, pred_val, feature_li
     return interaction_list
 
 
-def plot_regularization(data_dict_logs, log_scale=True, save_eps=False, save_png=False, folder="./results/", name="trajectory_plot"):
+def plot_regularization(data_dict_logs, log_scale=True, save_eps=False, save_png=False, folder="./results/", name="demo"):
 
     main_loss = data_dict_logs["main_effect_val_loss"]
     inter_loss = data_dict_logs["interaction_val_loss"]
@@ -130,7 +130,7 @@ def plot_regularization(data_dict_logs, log_scale=True, save_eps=False, save_png
         fig.savefig("%s.png" % save_path, bbox_inches="tight", dpi=100)
 
 
-def plot_trajectory(data_dict_logs, log_scale=True, save_eps=False, save_png=False, folder="./results/", name="trajectory_plot"):
+def plot_trajectory(data_dict_logs, log_scale=True, save_eps=False, save_png=False, folder="./results/", name="demo"):
 
     t1, t2, t3 = [data_dict_logs["err_train_main_effect_training"],
               data_dict_logs["err_train_interaction_training"], data_dict_logs["err_train_tuning"]]
