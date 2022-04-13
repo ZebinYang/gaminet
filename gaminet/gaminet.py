@@ -469,7 +469,10 @@ class GAMINet(tf.keras.Model):
                           active_main_effect_index=np.arange(self.input_num))
 
         self.interaction_list = list(set(self.include_interaction_list +
-                            interaction_list_all[:(self.interact_num - len(self.include_interaction_list))]))
+                             interaction_list_all[:self.interact_num - len(self.include_interaction_list)]))
+        if self.interact_num - len(self.interaction_list) > 0:
+            self.interaction_list = self.interaction_list + interaction_list_all[self.interact_num:
+                                     self.interact_num + self.interact_num - len(self.interaction_list)]
         self.interact_num_added = len(self.interaction_list)
         self.interact_blocks.set_interaction_list(self.interaction_list)
         self.output_layer.set_interaction_list(self.interaction_list)
