@@ -471,6 +471,12 @@ class GAMINet(tf.keras.Model):
         self.interaction_list = list(set(self.include_interaction_list +
                              interaction_list_all[:self.interact_num - len(self.include_interaction_list)]))
         if self.interact_num - len(self.interaction_list) > 0:
+
+            self.interaction_list = list(set(self.interaction_list +
+                        interaction_list_all[self.interact_num - len(self.include_interaction_list):
+                        self.interact_num - len(self.include_interaction_list) +
+                        self.interact_num - len(self.interaction_list)]))
+
             self.interaction_list = self.interaction_list + interaction_list_all[self.interact_num:
                                      self.interact_num + self.interact_num - len(self.interaction_list)]
         self.interact_num_added = len(self.interaction_list)
