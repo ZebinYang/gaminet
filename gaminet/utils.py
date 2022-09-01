@@ -238,6 +238,9 @@ def global_visualize_density(data_dict_global, main_effect_num=None, interaction
     active_interaction_index = active_index[active_index >= maineffect_count][:interaction_num]
     max_ids = len(active_univariate_index) + len(active_interaction_index)
 
+    if max_ids == 0:
+        return 
+
     idx = 0
     fig = plt.figure(figsize=(6 * cols_per_row, 4.6 * int(np.ceil(max_ids / cols_per_row))))
     outer = gridspec.GridSpec(int(np.ceil(max_ids / cols_per_row)), cols_per_row, wspace=0.25, hspace=0.35)
@@ -373,6 +376,9 @@ def global_visualize_wo_density(data_dict_global, main_effect_num=None, interact
     active_univariate_index = active_index[active_index < maineffect_count][:main_effect_num]
     active_interaction_index = active_index[active_index >= maineffect_count][:interaction_num]
     max_ids = len(active_univariate_index) + len(active_interaction_index)
+
+    if max_ids == 0:
+        return 
 
     idx = 0
     fig = plt.figure(figsize=(5.2 * cols_per_row, 4 * int(np.ceil(max_ids / cols_per_row))))

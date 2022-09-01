@@ -640,12 +640,16 @@ class GAMINet(tf.keras.Model):
         if (len(self.active_main_effect_index) == 0) and self.heredity:
             if self.verbose:
                 print("#" * 10 + "No main effect is selected, training stop." + "#" * 10)
+            self.active_indice = np.array([0]).astype(int)
+            self.effect_names = np.array(["Intercept"])
             return
 
         # step2: interaction
         if (self.interact_num == 0) and len(self.include_interaction_list) == 0:
             if self.verbose:
                 print("#" * 10 + "Max interaction is specified to zero, training stop." + "#" * 10)
+            self.active_indice = 1 + np.hstack([-1, self.active_main_effect_index]).astype(int)
+            self.effect_names = np.hstack(["Intercept", np.array(self.feature_list_)])
             return
         if self.verbose:
             print("#" * 10 + "Stage 2: interaction training start." + "#" * 10)
