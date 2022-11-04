@@ -107,8 +107,6 @@ class MonoConNumerNet(tf.keras.layers.Layer):
         self.monotonicity = monotonicity
         self.convexity = convexity
         self.lattice_size = lattice_size
-        self.lattice_layer = tfl.layers.Lattice(lattice_sizes=[self.lattice_size], monotonicities=['increasing'])
-        
         self.lattice_layer_input = tfl.layers.PWLCalibration(input_keypoints=np.linspace(0, 1, num=8, dtype=np.float32),
                                         output_min=0.0, output_max=self.lattice_size - 1.0)
         if monotonicity:
@@ -130,8 +128,7 @@ class MonoConNumerNet(tf.keras.layers.Layer):
             self.max_value.assign(tf.maximum(self.max_value, tf.reduce_max(inputs)))
 
         x = tf.clip_by_value(inputs, self.min_value, self.max_value)
-        lattice_input = self.lattice_layer_input(x)
-        self.output_original = self.lattice_layer(lattice_input) + self.lattice_layer_bias
+        self.output_original = self.lattice_layer_input(x) + self.lattice_layer_bias
 
         if training:
             if sample_weight is None:
