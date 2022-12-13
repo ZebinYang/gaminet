@@ -5,12 +5,11 @@ package_data = {
         "lib/lib_ebmcore_win_x64.dll",
         "lib/lib_ebmcore_linux_x64.so",
         "lib/lib_ebmcore_mac_x64.dylib",
-        "lib/lib_ebmcore_win_x64.pdb"
     ]
 }
 
 setup(name='gaminet',
-      version='0.5.9',
+      version='0.6.0',
       description='Explainable Neural Networks based on Generalized Additive Models with Structured Interactions',
       url='https://github.com/ZebinYang/GAMINet',
       author='Zebin Yang',

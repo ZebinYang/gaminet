@@ -2,20 +2,22 @@
 
 # Distributed under the MIT software license
 
+import ctypes as ct
+import numpy as np
 import os
 import struct
-import numpy as np
-import ctypes as ct
-from sys import platform
-from numpy.ctypeslib import ndpointer
 from collections import OrderedDict
+from numpy.ctypeslib import ndpointer
 from pandas.core.generic import NDFrame
-from sklearn.utils.validation import check_is_fitted
 from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.utils.validation import check_is_fitted
+from sys import platform
+
 try:
     from pandas.api.types import is_numeric_dtype, is_string_dtype
 except ImportError:  # pragma: no cover
     from pandas.core.dtypes.common import is_numeric_dtype, is_string_dtype
+
 
 def gen_attributes(col_types, col_n_bins):
     # Create Python form of attributes
@@ -83,13 +85,13 @@ class EBMPreprocessor(BaseEstimator, TransformerMixin):
     """ Transformer that preprocesses data to be ready before EBM. """
 
     def __init__(
-        self,
-        schema=None,
-        max_n_bins=255,
-        missing_constant=0,
-        unknown_constant=0,
-        feature_names=None,
-        binning_strategy="uniform",
+            self,
+            schema=None,
+            max_n_bins=255,
+            missing_constant=0,
+            unknown_constant=0,
+            feature_names=None,
+            binning_strategy="uniform",
     ):
         """ Initializes EBM preprocessor.
         Args:
@@ -255,7 +257,7 @@ class EBMPreprocessor(BaseEstimator, TransformerMixin):
 
         return X_new.astype(np.int64)
 
-    
+
 class Native:
     """Layer/Class responsible for native function calls."""
 
@@ -362,7 +364,7 @@ class Native:
         is_64_bit = bitsize == 64
 
         script_path = os.path.dirname(os.path.abspath(__file__))
-        package_path = script_path # os.path.join(script_path, "..", "..")
+        package_path = script_path  # os.path.join(script_path, "..", "..")
 
         debug_str = ""
         if platform == "linux" or platform == "linux2" and is_64_bit:
@@ -389,19 +391,19 @@ class NativeEBM:
     """
 
     def __init__(
-        self,
-        attributes,
-        attribute_sets,
-        X_train,
-        y_train,
-        X_val,
-        y_val,
-        model_type="regression",
-        num_inner_bags=0,
-        num_classification_states=2,
-        training_scores=None,
-        validation_scores=None,
-        random_state=1337,
+            self,
+            attributes,
+            attribute_sets,
+            X_train,
+            y_train,
+            X_val,
+            y_val,
+            model_type="regression",
+            num_inner_bags=0,
+            num_classification_states=2,
+            training_scores=None,
+            validation_scores=None,
+            random_state=1337,
     ):
 
         # TODO: Update documentation for training/val scores args.
@@ -496,7 +498,7 @@ class NativeEBM:
 
         attribute_set_indexes = []
         attribute_sets_ar = (
-            self.native.EbmCoreFeatureCombination * len(attribute_sets)
+                self.native.EbmCoreFeatureCombination * len(attribute_sets)
         )()
         for idx, attribute_set in enumerate(attribute_sets):
             attribute_sets_ar[idx].countFeaturesInCombination = attribute_set[
