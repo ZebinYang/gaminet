@@ -265,11 +265,11 @@ class GAMINet(tf.keras.Model):
     def train_all(self, inputs, labels, sample_weight=None):
 
         with tf.GradientTape() as tape_maineffects:
-            with tf.GradientTape() as tape_intearction:
+            with tf.GradientTape() as tape_interaction:
                 pred = self.__call__(inputs, sample_weight, main_effect_training=True, interaction_training=False)
                 total_loss_maineffects = self.loss_fn(labels, pred, sample_weight=sample_weight)
-                total_loss_interactions = self.loss_fn(labels, pred,
-                                                       sample_weight=sample_weight) + self.reg_clarity * self.clarity_loss
+                total_loss_interactions = (self.loss_fn(labels, pred, sample_weight=sample_weight) +
+                                           self.reg_clarity * self.clarity_loss)
 
         train_weights_list = []
         train_weights = self.maineffect_blocks.weights
@@ -289,36 +289,34 @@ class GAMINet(tf.keras.Model):
         for i in range(len(train_weights)):
             if train_weights[i].name in trainable_weights_names:
                 train_weights_list.append(train_weights[i])
-        grads = tape_intearction.gradient(total_loss_interactions, train_weights_list)
+        grads = tape_interaction.gradient(total_loss_interactions, train_weights_list)
         apply_grds.extend(zip(grads, train_weights_list))
         self.optimizer_all.apply_gradients(apply_grds)
 
     def get_main_effect_rank(self):
 
-        sorted_index = np.array([])
-        componment_scales = [0 for i in range(self.input_num)]
         main_effect_norm = [self.maineffect_blocks.subnets[i].moving_norm.numpy()[0] for i in range(self.input_num)]
-        beta = (self.output_layer.main_effect_weights.numpy() ** 2 * np.array([main_effect_norm]).reshape([-1, 1]))
-        componment_scales = (np.abs(beta) / np.sum(np.abs(beta))).reshape([-1])
-        sorted_index = np.argsort(componment_scales)[::-1]
-        return sorted_index, componment_scales
+        beta = (self.output_layer.main_effect_weights.numpy() ** 2 *
+                np.array([main_effect_norm]).reshape([-1, 1]))
+        component_scales = (np.abs(beta) / np.sum(np.abs(beta))).reshape([-1])
+        sorted_index = np.argsort(component_scales)[::-1]
+        return sorted_index, component_scales
 
     def get_interaction_rank(self):
 
         sorted_index = np.array([])
-        componment_scales = [0 for i in range(self.interact_num_added)]
+        component_scales = [0 for _ in range(self.interact_num_added)]
         if self.interact_num_added > 0:
             interaction_norm = [self.interact_blocks.interacts[i].moving_norm.numpy()[0] for i in
                                 range(self.interact_num_added)]
             gamma = (self.output_layer.interaction_weights.numpy()[:self.interact_num_added] ** 2
                      * np.array([interaction_norm]).reshape([-1, 1]))
-            componment_scales = (np.abs(gamma) / np.sum(np.abs(gamma))).reshape([-1])
-            sorted_index = np.argsort(componment_scales)[::-1]
-        return sorted_index, componment_scales
+            component_scales = (np.abs(gamma) / np.sum(np.abs(gamma))).reshape([-1])
+            sorted_index = np.argsort(component_scales)[::-1]
+        return sorted_index, component_scales
 
     def get_all_active_rank(self):
 
-        componment_scales = [0 for i in range(self.input_num + self.interact_num_added)]
         main_effect_norm = [self.maineffect_blocks.subnets[i].moving_norm.numpy()[0] for i in range(self.input_num)]
         beta = (self.output_layer.main_effect_weights.numpy() ** 2 * np.array([main_effect_norm]).reshape([-1, 1])
                 * self.output_layer.main_effect_switcher.numpy())
@@ -330,28 +328,27 @@ class GAMINet(tf.keras.Model):
                  * self.output_layer.interaction_switcher.numpy()[:self.interact_num_added])
         gamma = np.vstack([gamma, np.zeros((self.interact_num - self.interact_num_added, 1))])
 
-        componment_coefs = np.vstack([beta, gamma])
-        componment_scales = (np.abs(componment_coefs) / np.sum(np.abs(componment_coefs))).reshape([-1])
-        sorted_index = np.argsort(componment_scales)[::-1]
-        return sorted_index, componment_scales
+        component_coefs = np.vstack([beta, gamma])
+        component_scales = (np.abs(component_coefs) / np.sum(np.abs(component_coefs))).reshape([-1])
+        sorted_index = np.argsort(component_scales)[::-1]
+        return sorted_index, component_scales
 
     def estimate_density(self, x, sample_weight):
 
-        n_samples = x.shape[0]
         self.data_dict_density = {}
-        for indice in range(self.input_num):
-            feature_name = self.feature_list_[indice]
-            if indice in self.nfeature_index_list_:
+        for fidx in range(self.input_num):
+            feature_name = self.feature_list_[fidx]
+            if fidx in self.nfeature_index_list_:
                 sx = self.nfeature_scaler_[feature_name]
-                density, bins = np.histogram(sx.inverse_transform(x[:, [indice]]), bins=10,
+                density, bins = np.histogram(sx.inverse_transform(x[:, [fidx]]), bins=10,
                                              weights=sample_weight.reshape(-1, 1), density=True)
                 self.data_dict_density.update({feature_name: {"density": {"names": bins, "scores": density}}})
-            elif indice in self.cfeature_index_list_:
-                unique, counts = np.unique(x[:, indice], return_counts=True)
+            elif fidx in self.cfeature_index_list_:
+                unique, counts = np.unique(x[:, fidx], return_counts=True)
                 density = np.zeros((len(self.dummy_values_[feature_name])))
                 for val in unique:
                     density[val.round().astype(int)] = np.sum(
-                        (x[:, indice] == val).astype(int) * sample_weight) / sample_weight.sum()
+                        (x[:, fidx] == val).astype(int) * sample_weight) / sample_weight.sum()
                 self.data_dict_density.update(
                     {feature_name: {"density": {"names": np.arange(len(self.dummy_values_[feature_name])),
                                                 "scores": density}}})
@@ -446,7 +443,7 @@ class GAMINet(tf.keras.Model):
     def prune_main_effect(self, val_x, val_y, sample_weight=None):
 
         self.main_effect_val_loss = []
-        sorted_index, componment_scales = self.get_main_effect_rank()
+        sorted_index, component_scales = self.get_main_effect_rank()
         self.output_layer.main_effect_switcher.assign(tf.constant(np.zeros((self.input_num, 1)), dtype=tf.float32))
         self.main_effect_val_loss.append(self.evaluate(val_x, val_y, sample_weight[self.val_idx],
                                                        main_effect_training=False, interaction_training=False))
@@ -509,15 +506,15 @@ class GAMINet(tf.keras.Model):
         self.interaction_list = list(set(self.include_interaction_list +
                                          interaction_list_all[:self.interact_num - len(self.include_interaction_list)]))
         if self.interact_num - len(self.interaction_list) > 0:
-            self.interaction_list = list(set(self.interaction_list +
-                                             interaction_list_all[
+            self.interaction_list = list(set(self.interaction_list + interaction_list_all[
                                              self.interact_num - len(self.include_interaction_list):
                                              self.interact_num - len(self.include_interaction_list) +
                                              self.interact_num - len(self.interaction_list)]))
 
             self.interaction_list = self.interaction_list + interaction_list_all[self.interact_num:
-                                                                                 self.interact_num + self.interact_num - len(
-                                                                                     self.interaction_list)]
+                                                                                 self.interact_num +
+                                                                                 self.interact_num -
+                                                                                 len(self.interaction_list)]
         self.interact_num_added = len(self.interaction_list)
         self.interact_blocks.set_interaction_list(self.interaction_list)
         self.output_layer.set_interaction_list(self.interaction_list)
@@ -530,15 +527,20 @@ class GAMINet(tf.keras.Model):
             if isinstance(interact, Interactnetwork):
                 layer = interact.layers[0]
                 interact.min_value1.assign(tf.minimum(interact.min_value1,
-                              tf.reduce_min(tf.cast(tr_x[:, interact.interaction][:, 0], tf.float32))))
+                                           tf.reduce_min(tf.cast(tr_x[:, interact.interaction][:, 0],
+                                                                 tf.float32))))
                 interact.max_value1.assign(tf.maximum(interact.max_value1,
-                              tf.reduce_max(tf.cast(tr_x[:, interact.interaction][:, 0], tf.float32))))
+                                           tf.reduce_max(tf.cast(tr_x[:, interact.interaction][:, 0],
+                                                                 tf.float32))))
                 interact.min_value2.assign(tf.minimum(interact.min_value2,
-                              tf.reduce_min(tf.cast(tr_x[:, interact.interaction][:, 1], tf.float32))))
+                                           tf.reduce_min(tf.cast(tr_x[:, interact.interaction][:, 1],
+                                                                 tf.float32))))
                 interact.max_value2.assign(tf.maximum(interact.max_value2,
-                              tf.reduce_max(tf.cast(tr_x[:, interact.interaction][:, 1], tf.float32))))
+                                           tf.reduce_max(tf.cast(tr_x[:, interact.interaction][:, 1],
+                                                                 tf.float32))))
                 layer.build(input_shape=(1, interact.input_size))
-                xt = tf.stack(interact.preprocess(tf.cast(tr_x[:, interact.interaction], tf.float32)), 1).numpy()
+                xt = tf.stack(interact.preprocess(tf.cast(tr_x[:, interact.interaction], tf.float32)),
+                              1).numpy()
                 layer.bias.assign(-np.dot(xt, layer.weights[0].numpy()).mean(0))
 
         last_improvement = 0
@@ -584,7 +586,7 @@ class GAMINet(tf.keras.Model):
     def prune_interaction(self, val_x, val_y, sample_weight=None):
 
         self.interaction_val_loss = []
-        sorted_index, componment_scales = self.get_interaction_rank()
+        sorted_index, component_scales = self.get_interaction_rank()
         self.output_layer.interaction_switcher.assign(tf.constant(np.zeros((self.interact_num, 1)), dtype=tf.float32))
         self.interaction_val_loss.append(self.evaluate(val_x, val_y, sample_weight[self.val_idx],
                                                        main_effect_training=False, interaction_training=False))
@@ -671,7 +673,6 @@ class GAMINet(tf.keras.Model):
 
         # data loading
         n_samples = train_x.shape[0]
-        n_features = train_x.shape[1]
         indices = np.arange(n_samples)
         if self.task_type == "Regression":
             tr_x, val_x, tr_y, val_y, tr_idx, val_idx = train_test_split(train_x, train_y, indices,
@@ -709,7 +710,7 @@ class GAMINet(tf.keras.Model):
         if (len(self.active_main_effect_index) == 0) and self.heredity:
             if self.verbose:
                 print("#" * 10 + "No main effect is selected, training stop." + "#" * 10)
-            self.active_indice = np.array([0]).astype(int)
+            self.active_indices = np.array([0]).astype(int)
             self.effect_names = np.array(["Intercept"])
             return
 
@@ -717,7 +718,7 @@ class GAMINet(tf.keras.Model):
         if (self.interact_num == 0) and len(self.include_interaction_list) == 0:
             if self.verbose:
                 print("#" * 10 + "Max interaction is specified to zero, training stop." + "#" * 10)
-            self.active_indice = 1 + np.hstack([-1, self.active_main_effect_index]).astype(int)
+            self.active_indices = 1 + np.hstack([-1, self.active_main_effect_index]).astype(int)
             self.effect_names = np.hstack(["Intercept", np.array(self.feature_list_)])
             return
         if self.verbose:
@@ -729,7 +730,7 @@ class GAMINet(tf.keras.Model):
         self.prune_interaction(val_x, val_y, sample_weight)
 
         self.fine_tune_all(tr_x, tr_y, val_x, val_y, sample_weight)
-        self.active_indice = 1 + np.hstack(
+        self.active_indices = 1 + np.hstack(
             [-1, self.active_main_effect_index, self.input_num + self.active_interaction_index]).astype(int)
         self.effect_names = np.hstack(
             ["Intercept", np.array(self.feature_list_), [self.feature_list_[self.interaction_list[i][0]] + " x "
@@ -767,27 +768,27 @@ class GAMINet(tf.keras.Model):
         # By default, we use the same main_grid_size and interact_grid_size as that of the zero mean constraint
         # Alternatively, we can also specify it manually, e.g., when we want to have the same grid size as EBM (256).        
         data_dict_global = self.data_dict_density
-        sorted_index, componment_scales = self.get_all_active_rank()
-        for indice in range(self.input_num):
-            feature_name = self.feature_list_[indice]
-            subnet = self.maineffect_blocks.subnets[indice]
-            if indice in self.nfeature_index_list_:
+        sorted_index, component_scales = self.get_all_active_rank()
+        for fidx in range(self.input_num):
+            feature_name = self.feature_list_[fidx]
+            subnet = self.maineffect_blocks.subnets[fidx]
+            if fidx in self.nfeature_index_list_:
                 sx = self.nfeature_scaler_[feature_name]
                 main_effect_inputs = np.linspace(0, 1, main_grid_size).reshape([-1, 1])
                 main_effect_inputs_original = sx.inverse_transform(main_effect_inputs)
-                main_effect_outputs = (self.output_layer.main_effect_weights.numpy()[indice]
-                                       * self.output_layer.main_effect_switcher.numpy()[indice]
+                main_effect_outputs = (self.output_layer.main_effect_weights.numpy()[fidx]
+                                       * self.output_layer.main_effect_switcher.numpy()[fidx]
                                        * subnet.__call__(tf.cast(tf.constant(main_effect_inputs), tf.float32)).numpy())
                 data_dict_global[feature_name].update({"type": "continuous",
-                                                       "importance": componment_scales[indice],
+                                                       "importance": component_scales[fidx],
                                                        "inputs": main_effect_inputs_original.ravel(),
                                                        "outputs": main_effect_outputs.ravel()})
 
-            elif indice in self.cfeature_index_list_:
+            elif fidx in self.cfeature_index_list_:
                 main_effect_inputs_original = self.dummy_values_[feature_name]
                 main_effect_inputs = np.arange(len(main_effect_inputs_original)).reshape([-1, 1])
-                main_effect_outputs = (self.output_layer.main_effect_weights.numpy()[indice]
-                                       * self.output_layer.main_effect_switcher.numpy()[indice]
+                main_effect_outputs = (self.output_layer.main_effect_weights.numpy()[fidx]
+                                       * self.output_layer.main_effect_switcher.numpy()[fidx]
                                        * subnet.__call__(tf.cast(main_effect_inputs, tf.float32)).numpy())
 
                 main_effect_input_ticks = (
@@ -800,17 +801,17 @@ class GAMINet(tf.keras.Model):
                                                 main_effect_input_ticks]
 
                 data_dict_global[feature_name].update({"type": "categorical",
-                                                       "importance": componment_scales[indice],
+                                                       "importance": component_scales[fidx],
                                                        "inputs": main_effect_inputs_original,
                                                        "outputs": main_effect_outputs.ravel(),
                                                        "input_ticks": main_effect_input_ticks,
                                                        "input_labels": main_effect_input_labels})
 
-        for indice in range(self.interact_num_added):
+        for fidx in range(self.interact_num_added):
 
-            inter_net = self.interact_blocks.interacts[indice]
-            feature_name1 = self.feature_list_[self.interaction_list[indice][0]]
-            feature_name2 = self.feature_list_[self.interaction_list[indice][1]]
+            inter_net = self.interact_blocks.interacts[fidx]
+            feature_name1 = self.feature_list_[self.interaction_list[fidx][0]]
+            feature_name2 = self.feature_list_[self.interaction_list[fidx][1]]
             feature_type1 = "categorical" if feature_name1 in self.cfeature_list_ else "continuous"
             feature_type2 = "categorical" if feature_name2 in self.cfeature_list_ else "continuous"
 
@@ -858,22 +859,22 @@ class GAMINet(tf.keras.Model):
             x1, x2 = np.meshgrid(interact_input_list[0], interact_input_list[1][::-1])
             input_grid = np.hstack([np.reshape(x1, [-1, 1]), np.reshape(x2, [-1, 1])])
 
-            interact_outputs = (self.output_layer.interaction_weights.numpy()[indice]
-                                * self.output_layer.interaction_switcher.numpy()[indice]
+            interact_outputs = (self.output_layer.interaction_weights.numpy()[fidx]
+                                * self.output_layer.interaction_switcher.numpy()[fidx]
                                 * inter_net.__call__(input_grid, training=False).numpy().reshape(x1.shape))
-            data_dict_global.update({feature_name1 + " vs. " + feature_name2: {"type": "pairwise",
-                                                                               "xtype": feature_type1,
-                                                                               "ytype": feature_type2,
-                                                                               "importance": componment_scales[
-                                                                                   self.input_num + indice],
-                                                                               "input1": interact_input1_original,
-                                                                               "input2": interact_input2_original,
-                                                                               "outputs": interact_outputs,
-                                                                               "input1_ticks": interact_input1_ticks,
-                                                                               "input2_ticks": interact_input2_ticks,
-                                                                               "input1_labels": interact_input1_labels,
-                                                                               "input2_labels": interact_input2_labels,
-                                                                               "axis_extent": axis_extent}})
+            data_dict_global.update({feature_name1 + " vs. "
+                                     + feature_name2: {"type": "pairwise",
+                                                       "xtype": feature_type1,
+                                                       "ytype": feature_type2,
+                                                       "importance": component_scales[self.input_num + fidx],
+                                                       "input1": interact_input1_original,
+                                                       "input2": interact_input2_original,
+                                                       "outputs": interact_outputs,
+                                                       "input1_ticks": interact_input1_ticks,
+                                                       "input2_ticks": interact_input2_ticks,
+                                                       "input1_labels": interact_input1_labels,
+                                                       "input2_labels": interact_input2_labels,
+                                                       "axis_extent": axis_extent}})
 
         if save_dict:
             if not os.path.exists(folder):
@@ -894,16 +895,17 @@ class GAMINet(tf.keras.Model):
         else:
             interaction_output = np.empty(shape=(x.shape[0], 0))
 
-        main_effect_weights = ((
-                                   self.output_layer.main_effect_weights.numpy()) * self.output_layer.main_effect_switcher.numpy()).ravel()
+        main_effect_weights = ((self.output_layer.main_effect_weights.numpy()) *
+                               self.output_layer.main_effect_switcher.numpy()).ravel()
         interaction_weights = ((self.output_layer.interaction_weights.numpy()[:self.interact_num_added])
-                               * self.output_layer.interaction_switcher.numpy()[:self.interact_num_added]).ravel()
+                               * self.output_layer.interaction_switcher.numpy()[
+                                 :self.interact_num_added]).ravel()
         interaction_weights = np.hstack([interaction_weights, np.zeros((self.interact_num - self.interact_num_added))])
         scores = np.hstack(
             [np.repeat(intercept[0], x.shape[0]).reshape(-1, 1), np.hstack([main_effect_weights, interaction_weights])
              * np.hstack([main_effect_output, interaction_output])])
 
-        data_dict_local = [{"active_indice": self.active_indice,
+        data_dict_local = [{"active_indices": self.active_indices,
                             "scores": scores[i],
                             "effect_names": self.effect_names,
                             "predicted": predicted[i],
@@ -932,7 +934,7 @@ class GAMINet(tf.keras.Model):
 
         self.__call__(np.random.uniform(0, 1, size=(1, len(self.meta_info) - 1)))
 
-        model_dict = {}
+        model_dict = dict()
         model_dict["meta_info"] = self.meta_info
         model_dict["subnet_arch"] = self.subnet_arch
         model_dict["interact_arch"] = self.interact_arch
@@ -994,7 +996,7 @@ class GAMINet(tf.keras.Model):
         model_dict["main_effect_val_loss"] = self.main_effect_val_loss
         model_dict["interaction_val_loss"] = self.interaction_val_loss
 
-        model_dict["active_indice"] = self.active_indice
+        model_dict["active_indices"] = self.active_indices
         model_dict["effect_names"] = self.effect_names
         model_dict["active_main_effect_index"] = self.active_main_effect_index
         model_dict["active_interaction_index"] = self.active_interaction_index

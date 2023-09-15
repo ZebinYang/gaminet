@@ -227,15 +227,15 @@ def feature_importance_visualize(data_dict_global, folder="./results/", name="de
 def global_visualize_density(data_dict_global, main_effect_num=None, interaction_num=None, cols_per_row=4,
                              save_png=False, save_eps=False, folder="./results/", name="demo"):
     maineffect_count = 0
-    componment_scales = []
+    component_scales = []
     for key, item in data_dict_global.items():
-        componment_scales.append(item["importance"])
+        component_scales.append(item["importance"])
         if item["type"] != "pairwise":
             maineffect_count += 1
 
-    componment_scales = np.array(componment_scales)
-    sorted_index = np.argsort(componment_scales)
-    active_index = sorted_index[componment_scales[sorted_index].cumsum() > 0][::-1]
+    component_scales = np.array(component_scales)
+    sorted_index = np.argsort(component_scales)
+    active_index = sorted_index[component_scales[sorted_index].cumsum() > 0][::-1]
     active_univariate_index = active_index[active_index < maineffect_count][:main_effect_num]
     active_interaction_index = active_index[active_index >= maineffect_count][:interaction_num]
     max_ids = len(active_univariate_index) + len(active_interaction_index)
@@ -246,9 +246,9 @@ def global_visualize_density(data_dict_global, main_effect_num=None, interaction
     idx = 0
     fig = plt.figure(figsize=(6 * cols_per_row, 4.6 * int(np.ceil(max_ids / cols_per_row))))
     outer = gridspec.GridSpec(int(np.ceil(max_ids / cols_per_row)), cols_per_row, wspace=0.25, hspace=0.35)
-    for indice in active_univariate_index:
+    for fidx in active_univariate_index:
 
-        feature_name = list(data_dict_global.keys())[indice]
+        feature_name = list(data_dict_global.keys())[fidx]
         if data_dict_global[feature_name]["type"] == "continuous":
 
             inner = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=outer[idx], wspace=0.1, hspace=0.1,
@@ -294,9 +294,9 @@ def global_visualize_density(data_dict_global, main_effect_num=None, interaction
         ax1.set_title(feature_name + " (" + str(np.round(100 * data_dict_global[feature_name]["importance"], 1)) + "%)",
                       fontsize=12)
 
-    for indice in active_interaction_index:
+    for fidx in active_interaction_index:
 
-        feature_name = list(data_dict_global.keys())[indice]
+        feature_name = list(data_dict_global.keys())[fidx]
         feature_name1 = feature_name.split(" vs. ")[0]
         feature_name2 = feature_name.split(" vs. ")[1]
         axis_extent = data_dict_global[feature_name]["axis_extent"]
@@ -371,15 +371,15 @@ def global_visualize_density(data_dict_global, main_effect_num=None, interaction
 def global_visualize_wo_density(data_dict_global, main_effect_num=None, interaction_num=None, cols_per_row=4,
                                 save_png=False, save_eps=False, folder="./results/", name="demo"):
     maineffect_count = 0
-    componment_scales = []
+    component_scales = []
     for key, item in data_dict_global.items():
-        componment_scales.append(item["importance"])
+        component_scales.append(item["importance"])
         if item["type"] != "pairwise":
             maineffect_count += 1
 
-    componment_scales = np.array(componment_scales)
-    sorted_index = np.argsort(componment_scales)
-    active_index = sorted_index[componment_scales[sorted_index].cumsum() > 0][::-1]
+    component_scales = np.array(component_scales)
+    sorted_index = np.argsort(component_scales)
+    active_index = sorted_index[component_scales[sorted_index].cumsum() > 0][::-1]
     active_univariate_index = active_index[active_index < maineffect_count][:main_effect_num]
     active_interaction_index = active_index[active_index >= maineffect_count][:interaction_num]
     max_ids = len(active_univariate_index) + len(active_interaction_index)
@@ -390,9 +390,9 @@ def global_visualize_wo_density(data_dict_global, main_effect_num=None, interact
     idx = 0
     fig = plt.figure(figsize=(5.2 * cols_per_row, 4 * int(np.ceil(max_ids / cols_per_row))))
     outer = gridspec.GridSpec(int(np.ceil(max_ids / cols_per_row)), cols_per_row, wspace=0.25, hspace=0.35)
-    for indice in active_univariate_index:
+    for fidx in active_univariate_index:
 
-        feature_name = list(data_dict_global.keys())[indice]
+        feature_name = list(data_dict_global.keys())[fidx]
         if data_dict_global[feature_name]["type"] == "continuous":
 
             ax1 = plt.Subplot(fig, outer[idx])
@@ -418,9 +418,9 @@ def global_visualize_wo_density(data_dict_global, main_effect_num=None, interact
         ax1.set_title(feature_name + " (" + str(np.round(100 * data_dict_global[feature_name]["importance"], 1)) + "%)",
                       fontsize=12)
 
-    for indice in active_interaction_index:
+    for fidx in active_interaction_index:
 
-        feature_name = list(data_dict_global.keys())[indice]
+        feature_name = list(data_dict_global.keys())[fidx]
         axis_extent = data_dict_global[feature_name]["axis_extent"]
 
         ax_main = plt.Subplot(fig, outer[idx])
@@ -461,14 +461,14 @@ def global_visualize_wo_density(data_dict_global, main_effect_num=None, interact
 
 
 def local_visualize(data_dict_local, folder="./results/", name="demo", save_png=False, save_eps=False):
-    idx = np.argsort(np.abs(data_dict_local["scores"][data_dict_local["active_indice"]]))[::-1]
+    idx = np.argsort(np.abs(data_dict_local["scores"][data_dict_local["active_indices"]]))[::-1]
 
-    max_ids = len(data_dict_local["active_indice"])
-    fig = plt.figure(figsize=(round((len(data_dict_local["active_indice"]) + 1) * 0.6), 4))
-    plt.bar(np.arange(len(data_dict_local["active_indice"])),
-            data_dict_local["scores"][data_dict_local["active_indice"]][idx])
-    plt.xticks(np.arange(len(data_dict_local["active_indice"])),
-               data_dict_local["effect_names"][data_dict_local["active_indice"]][idx], rotation=60)
+    max_ids = len(data_dict_local["active_indices"])
+    fig = plt.figure(figsize=(round((len(data_dict_local["active_indices"]) + 1) * 0.6), 4))
+    plt.bar(np.arange(len(data_dict_local["active_indices"])),
+            data_dict_local["scores"][data_dict_local["active_indices"]][idx])
+    plt.xticks(np.arange(len(data_dict_local["active_indices"])),
+               data_dict_local["effect_names"][data_dict_local["active_indices"]][idx], rotation=60)
 
     if "actual" in data_dict_local.keys():
         title = "Predicted: %0.4f | Actual: %0.4f" % (data_dict_local["predicted"], data_dict_local["actual"])
