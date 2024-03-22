@@ -484,9 +484,9 @@ class GAMINet(tf.keras.Model):
             val_x = val_x[val_resample]
             val_y = val_y[val_resample]
 
-        tr_pred = self.__call__(tf.cast(tr_x, tf.float32), sample_weight[self.tr_idx],
+        tr_pred = self.__call__(tf.cast(tr_x, tf.float32),
                                 main_effect_training=False, interaction_training=False).numpy().astype(np.float64)
-        val_pred = self.__call__(tf.cast(val_x, tf.float32), sample_weight[self.val_idx],
+        val_pred = self.__call__(tf.cast(val_x, tf.float32),
                                  main_effect_training=False, interaction_training=False).numpy().astype(np.float64)
         if self.heredity:
             interaction_list_all = get_interaction_list(tr_x, val_x, tr_y.ravel(), val_y.ravel(),
